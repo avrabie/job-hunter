@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Job Hunter: crawls Swiss software-engineering job postings, scores them per user,
+  and drafts CVs and motivation letters (EN/DE) with Claude. Roadmap and rationale: PLAN.md.
+
+  Architecture constraints:
+  - Kotlin 2.x, Spring Boot 4, Spring Modulith modular monolith, Gradle Kotlin DSL.
+  - Servlet MVC + JDBC on virtual threads (not WebFlux/R2DBC): Modulith's event
+    publication registry documents JPA/JDBC/MongoDB/Neo4j backends, not R2DBC; the
+    Anthropic SDK and crawling libraries are blocking.
+  - PostgreSQL with pgvector, Flyway migrations. No Kafka.
+  - Modules (top-level packages): sources, postings, accounts, profile, matching,
+    applications, llm, web, notifications. One OpenSpec capability per module.
+    Modules interact only through their public API or events; ApplicationModules.verify()
+    must pass.
+  - Koog (JetBrains) is the LLM framework, with Claude as provider. Only the llm module
+    imports Koog; other modules use its public services. Koog's Spring Boot starter is
+    beta, so verify Boot 4 compatibility before relying on it.
+  - Auth: external Spring Authorization Server issues JWTs; the backend is an OAuth2
+    resource server (issuer URI + JWKS, roles claim). The React UI uses authorization
+    code + PKCE.
+
+  Domain rules that must hold in every spec:
+  - Multi-user, invite-only. Postings are shared; everything else is per user and every
+    query is scoped by the JWT sub. Each per-user capability needs a scenario proving
+    user A cannot access user B's data.
+  - Generated documents may only use facts from that user's master profile. Never
+    invent skills, employers, dates, or degrees; a validation step flags unsupported claims.
+  - Nothing is ever sent to an employer automatically; a human reviews every draft.
+  - Documents: CV and motivation letter, each in EN and DE. German output uses Swiss
+    conventions (formal "Sie", no ß).
+  - Bring-your-own Anthropic key: write-only in the UI, encrypted at rest, never logged.
+  - CVs and drafts are personal data (nDSG/GDPR): no CV content in logs, support account
+    deletion and export. Real personal data stays out of git (private/ is ignored).
+  - Crawling: respect robots.txt and per-host rate limits, idempotent runs, keep the raw
+    payload. LinkedIn and Indeed are not scraped.
+
+rules:
+  proposal:
+    - State what is explicitly out of scope.
+    - Name which modules and capabilities the change touches.
+    - Call out any effect on personal data, per-user scoping, or Claude cost.
+  specs:
+    - Use requirement/scenario format with concrete, testable scenarios.
+    - Specify module events as contracts (name, payload, publisher, consumers).
+  design:
+    - Note any new dependency and why the existing stack is not enough.
+    - Note effects on module boundaries and the database schema (Flyway migration).
+  tasks:
+    - Keep tasks small enough to complete and verify independently.
+    - Include tests and, for schema changes, the Flyway migration.
+
+operations:
+  apply:
+    guidance:
+      - Pin dependency versions from Maven Central or start.spring.io; do not guess them.
+      - Run the build and tests before marking a task done.
+  archive:
+    guidance:
+      - Summarize the archive outcome and any follow-up changes needed.
