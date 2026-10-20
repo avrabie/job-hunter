@@ -10,6 +10,7 @@ The edge sends `/api` and `/auth` to a Spring Cloud Gateway that fans them out t
 - Pass the `Authorization` header and request and response bodies through untouched. The gateway validates no token, authorizes nothing and keeps no session or state; each service enforces its own access rules.
 - Pass the original host and scheme to `auth` so its redirects and login page use the public URL.
 - Add response security headers through the gateway's built-in secure-headers filter, with the content security policy turned off (see design), without adding Spring Security.
+- Trust forwarded headers from private addresses (required by this Spring Cloud Gateway version) and map downstream connection failures to 502.
 - Set connect and response timeouts and a bounded connection pool (idle and lifetime limits) so a deploy of a downstream service does not cause lingering 500s.
 - Expose liveness and readiness endpoints that do not depend on `backend` or `auth`, read target addresses from environment variables, and add tests and a README for running the three services together locally on port 8080.
 
