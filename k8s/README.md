@@ -1,0 +1,403 @@
+# Kubernetes deployment
+
+Everything needed to run Job Hunter on one Kubernetes node: how the cluster is prepared (`platform/`), what is deployed
+(`base/`), and how it differs per environment (`overlays/local` for a laptop, `overlays/prod` for `https://s4v3.net`).
+
+```
+k8s/
+  README.md            this guide
+  validate.sh          renders both overlays and checks them (schemas, resources, image tags)
+  test-validate.sh     proves validate.sh itself, using test/fixtures
+  platform/            applied once per cluster: kind config, Traefik and cert-manager values, Let's Encrypt issuers
+  base/                namespace, config, secrets template, postgres, backend, auth, gateway, ui, network policies, edge
+  overlays/local/      kind: http://localhost:8080, locally built images, small resources
+  overlays/prod/       s4v3.net: HTTPS, Let's Encrypt, tagged images, full-size resources
+```
+
+Traffic path: browser -> node port 80/443 -> Traefik (Gateway API `edge`) -> `/` to `ui`; `/api` and `/auth` to the
+Spring `gateway` -> `backend` / `auth`. One host, so the browser sees a single origin.
+
+## 1. Tools on your machine
+
+| Tool | Version used | Install |
+|---|---|---|
+| kubectl (includes kustomize) | 1.36.1 | `brew install kubectl` |
+| helm | 3.14.3 | `brew install helm` |
+| kind | 0.32.0 | `brew install kind` |
+| kubeconform | 0.8.0 | `brew install kubeconform` |
+| yq (mikefarah) | 4.54.1 | `brew install yq` |
+| Docker | 29.x | Docker Desktop |
+
+`k8s/validate.sh` needs kubectl, kubeconform and yq. The Kubernetes version used for schema checks is `K8S_VERSION`
+(default `1.34.0`, the newest schema set that kubeconform's schema repository publishes at the time of writing).
+
+## 2. Reaching the real cluster
+
+The Kubernetes API (6443) is closed to the internet. Open an SSH tunnel and leave it running:
+
+```
+ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -L 16443:127.0.0.1:6443 root@s4v3.net
+```
+
+The kubeconfig context `s4v3` points at `https://127.0.0.1:16443`. The API server certificate lists `127.0.0.1`, so
+no `--tls-server-name` is needed (if a future cluster's certificate does not, add `--tls-server-name=kubernetes` to
+`kubectl`). Always name the context, because other contexts (kind, other clusters) exist on the same machine:
+
+```
+alias k='kubectl --context s4v3'
+```
+
+### Starting checks (run once, results recorded 2026-10-20)
+
+```
+k get nodes -o wide
+# node1  Ready  control-plane  v1.36.4  46.224.228.182  Ubuntu 26.04.1 LTS  containerd://2.3.5
+
+k get nodes -o jsonpath='{.items[*].spec.taints}'
+# (empty) the node accepts ordinary pods. If it ever shows a control-plane taint, remove it:
+#   k taint nodes node1 node-role.kubernetes.io/control-plane:NoSchedule-
+
+k -n kube-system get pods | grep calico
+# calico-node-...  1/1 Running   calico-kube-controllers-...  1/1 Running   (Calico v3.31.7 enforces NetworkPolicy)
+
+k get storageclass
+# local-path (default)   rancher.io/local-path   Delete   WaitForFirstConsumer
+```
+
+Whether the CNI really enforces policies is also proven functionally by the network policy test in section 9.
+
+## 3. Firewall (`ufw`)
+
+State found on the server (Kubespray + `ufw`): default deny incoming, allow routed, and these rules:
+
+```
+22/tcp                     ALLOW IN  Anywhere
+Anywhere on lo             ALLOW IN  Anywhere
+Anywhere on cali+          ALLOW IN  Anywhere
+Anywhere on vxlan.calico   ALLOW IN  Anywhere
+Anywhere                   ALLOW IN  10.233.0.0/16        (pod and service CIDRs)
+```
+
+`DEFAULT_FORWARD_POLICY` is `ACCEPT`, so pod traffic is forwarded. Pod CIDR `10.233.64.0/18`, service CIDR
+`10.233.0.0/18`. The API server (6443) has no allow rule and stays closed. Add the two public web ports:
+
+```
+ssh root@s4v3.net 'ufw allow 80/tcp && ufw allow 443/tcp && ufw status verbose'
+```
+
+Do not touch the `22/tcp` rule, the `cali+` / `vxlan.calico` rules or the `10.233.0.0/16` rule: without them pods lose
+networking or you lose SSH.
+
+DNS: `s4v3.net` needs an **A record** to the node's public IPv4 (`46.224.228.182`, already set). The apex cannot be a
+CNAME. Leave other records (for example MX) alone.
+
+Check from **another machine** (not the server) that only the intended ports answer:
+
+```
+nc -zv -w 3 s4v3.net 22 80 443     # all three succeed once Traefik is installed
+nc -zv -w 3 s4v3.net 6443 10250    # both time out or are refused
+```
+
+Traefik publishes ports 80 and 443 with `hostPort`; that traffic is forwarded by the CNI rules and not by `ufw`'s
+input chain, so this external check is the real test and must not be skipped.
+
+## 4. Platform components (once per cluster)
+
+| Component | Pinned version | Source | Status on the Hetzner cluster |
+|---|---|---|---|
+| Kubernetes | v1.36.4 | Kubespray | installed |
+| Calico (CNI) | v3.31.7 | Kubespray | installed |
+| local-path-provisioner | v0.0.37 | Kubespray addon | installed, default storage class |
+| Gateway API CRDs (standard channel) | v1.6.3 | kubernetes-sigs/gateway-api | to install |
+| Traefik | Helm chart `traefik/traefik` 42.0.0 (Traefik v3.7.14) | traefik.github.io/charts | to install |
+| cert-manager | Helm chart `jetstack/cert-manager` v1.21.2 | charts.jetstack.io | to install |
+
+Add the Helm repositories once:
+
+```
+helm repo add traefik https://traefik.github.io/charts
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+```
+
+Every command below takes a context: `--context s4v3` for the real cluster, `--context kind-job-hunter` for the local
+one (section 5). They are written for the real cluster; swap the context for kind.
+
+### 4.1 Storage
+
+local-path-provisioner is already the default class. Verify a claim without a class gets bound (it binds when a pod
+uses it, because the class waits for the first consumer):
+
+```
+cat <<'EOF' | kubectl --context s4v3 apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: pvc-check, namespace: default}
+spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 10Mi}}}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: pvc-check, namespace: default}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: busybox:1.37.0
+      command: [sh, -c, "echo ok > /data/x && cat /data/x"]
+      volumeMounts: [{name: d, mountPath: /data}]
+      resources: {requests: {cpu: 10m, memory: 8Mi}, limits: {memory: 32Mi}}
+  volumes: [{name: d, persistentVolumeClaim: {claimName: pvc-check}}]
+EOF
+kubectl --context s4v3 get pvc pvc-check            # Bound
+kubectl --context s4v3 delete pod/pvc-check pvc/pvc-check
+```
+
+**Local disk is a single point of failure.** Volumes live on the node's disk (`/opt/local-path-provisioner`). There are
+no backups yet; if the server's disk is lost, the database is lost. A backup job is the next infrastructure change.
+The class's reclaim policy is `Delete`: deleting a claim deletes its data.
+
+### 4.2 Gateway API CRDs
+
+```
+kubectl --context s4v3 apply --server-side -f \
+  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
+kubectl --context s4v3 get crd gateways.gateway.networking.k8s.io \
+  -o jsonpath='{.metadata.annotations.gateway\.networking\.k8s\.io/bundle-version}'     # v1.6.3
+```
+
+### 4.3 Traefik (the Gateway API implementation)
+
+```
+helm --kube-context s4v3 upgrade --install traefik traefik/traefik --version 42.0.0 --skip-crds \
+  -n traefik --create-namespace -f k8s/platform/traefik-values.yaml --wait
+kubectl --context s4v3 get gatewayclass            # traefik   traefik.io/gateway-controller   ACCEPTED True
+```
+
+`--skip-crds` keeps the CRDs from step 4.2 as the only source. The values file explains each choice; the important ones:
+Traefik listens on container ports 8000/8443 published as the node's 80/443 (`hostPort`), the Service is `ClusterIP`
+(no cloud load balancer exists), the update strategy is `Recreate` (a second pod could not bind the same host ports),
+access logs are off (requests carry `Authorization` headers and authorization codes in query strings), and the chart's
+own `Gateway` is off because `base/edge.yaml` defines ours.
+
+Check from outside: `curl -i http://s4v3.net/` answers `404 page not found` from Traefik until the application is deployed.
+
+### 4.4 cert-manager and the Let's Encrypt issuers
+
+```
+helm --kube-context s4v3 upgrade --install cert-manager jetstack/cert-manager --version v1.21.2 \
+  -n cert-manager --create-namespace -f k8s/platform/cert-manager-values.yaml --wait
+sed "s/ACME_EMAIL/you@example.org/" k8s/platform/cluster-issuers.yaml | kubectl --context s4v3 apply -f -
+kubectl --context s4v3 get clusterissuer           # letsencrypt-staging and letsencrypt-production, READY True
+```
+
+`ACME_EMAIL` is the contact address registered with Let's Encrypt (expiry warnings go there); it is substituted at apply
+time so the address is not committed. The issuers solve HTTP-01 challenges through the application's Gateway
+(`job-hunter/edge`), so the Gateway must exist before a certificate can be issued. `enableGatewayAPI` is switched on in
+the values file.
+
+## 5. Local test cluster (kind)
+
+Same Kubernetes version (v1.36.4) and the same Traefik and cert-manager as production. Ports 80/443 of the kind node are
+published on `localhost:8080` / `localhost:8443`.
+
+```
+kind create cluster --config k8s/platform/kind-config.yaml        # context kind-job-hunter
+kubectl --context kind-job-hunter apply --server-side -f \
+  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
+helm --kube-context kind-job-hunter upgrade --install traefik traefik/traefik --version 42.0.0 --skip-crds \
+  -n traefik --create-namespace -f k8s/platform/traefik-values.yaml --wait
+kind delete cluster --name job-hunter                              # remove it again
+```
+
+cert-manager is optional locally (the local overlay uses plain HTTP and no issuer).
+
+## 6. Building and publishing images
+
+Images are built with the Spring Boot Gradle plugin (Paketo buildpacks), without a Dockerfile. Names:
+`moldovean/job-hunter-backend`, `moldovean/job-hunter-auth`, `moldovean/job-hunter-gateway` on Docker Hub.
+
+**Docker Desktop on macOS:** the plugin fails with `'username' must not be null` while reading Docker Hub credentials
+from the credential helper. Work around it by pulling the builder and run image with the `docker` CLI first and telling
+the plugin not to pull. The run image tag is printed in the failing build's output; it is currently `0.0.138`.
+
+```
+docker pull paketobuildpacks/builder-noble-java-tiny:latest
+docker pull paketobuildpacks/ubuntu-noble-run-tiny:0.0.138
+```
+
+For the local cluster (native architecture, tag `local`, loaded into kind):
+
+```
+cd backend && ./gradlew bootBuildImage --imageName=job-hunter-backend:local --pullPolicy=IF_NOT_PRESENT -x test
+cd ../auth && ./gradlew bootBuildImage --imageName=job-hunter-auth:local --pullPolicy=IF_NOT_PRESENT -x test
+cd ../gateway && ./gradlew bootBuildImage --imageName=job-hunter-gateway:local --pullPolicy=IF_NOT_PRESENT -x test
+cd ..
+for s in backend auth gateway; do kind load docker-image "job-hunter-${s}:local" --name job-hunter; done
+```
+
+In zsh write `${s}:local` with braces; `$s:local` is parsed as the `:l` modifier and mangles the name.
+
+For production the server is **amd64**; on an Apple-silicon Mac pass the platform, with the amd64 builder and run
+images pulled first (`docker pull --platform linux/amd64 ...` for both images above):
+
+```
+cd backend && ./gradlew bootBuildImage --imageName=moldovean/job-hunter-backend:0.1.0 \
+  --imagePlatform=linux/amd64 --pullPolicy=IF_NOT_PRESENT -x test
+docker login -u moldovean
+docker push moldovean/job-hunter-backend:0.1.0        # same for -auth and -gateway
+```
+
+Pulling the builder for one platform replaces the local copy for the other, so pull again (without `--platform`) before the
+next native build. The amd64 backend build was verified (`docker image inspect` reports `amd64`).
+
+The tag in `overlays/prod/kustomization.yaml` (`images:`) must match what you pushed; `latest` is never used. The
+Docker Hub repositories are assumed **public**. For private repositories create a pull secret and add
+`imagePullSecrets` to the three Deployments:
+
+```
+kubectl --context s4v3 -n job-hunter create secret docker-registry dockerhub \
+  --docker-username=moldovean --docker-password=<access token>
+```
+
+## 7. Deploying
+
+### 7.1 Secrets
+
+Real credentials are created by hand, never committed (`k8s/.gitignore` ignores `**/secrets.yaml`):
+
+```
+cp k8s/base/secrets.yaml.example k8s/base/secrets.yaml
+# replace every CHANGE_ME with a long random value, e.g.  openssl rand -base64 24 | tr -d '/+='
+kubectl --context <ctx> apply -f k8s/base/namespace.yaml
+kubectl --context <ctx> apply -f k8s/base/secrets.yaml
+```
+
+Without this secret the `postgres` pod stays in `CreateContainerConfigError` and the event reads
+`secret "job-hunter-secrets" not found`. The database passwords are used only on first start (the init script creates
+the roles then); changing the Secret later does not change the passwords inside an existing database.
+
+### 7.2 Local
+
+```
+kubectl --context kind-job-hunter apply -k k8s/overlays/local
+kubectl --context kind-job-hunter -n job-hunter get pods          # wait for all Running and Ready
+curl http://localhost:8080/                                       # the placeholder page
+curl http://localhost:8080/auth/.well-known/openid-configuration  # issuer http://localhost:8080/auth
+curl -i http://localhost:8080/api/                                # 401 without a token
+```
+
+To sign in, register a user and fetch a token (authorization code with PKCE; the browser does this for the real UI):
+
+```
+curl -H 'Content-Type: application/json' -d '{"email":"me@example.com","password":"CorrectHorse-Battery9"}' \
+  http://localhost:8080/auth/api/register
+```
+
+The seeded `user@example.com` / `admin@example.com` accounts exist only under the `dev` profile, not in the cluster.
+
+### 7.3 Production
+
+```
+kubectl --context s4v3 apply -f k8s/base/namespace.yaml -f k8s/base/secrets.yaml
+kubectl --context s4v3 apply -k k8s/overlays/prod
+kubectl --context s4v3 -n job-hunter get pods,gateway,httproute,certificate
+```
+
+The certificate is requested automatically for the HTTPS listener. **Try the staging issuer first**: change
+`letsencrypt-production` to `letsencrypt-staging` in `overlays/prod/kustomization.yaml` (annotation on the Gateway),
+apply, and wait for `kubectl -n job-hunter get certificate` to show `READY True`. Staging certificates are not trusted by
+browsers; they prove that DNS, port 80 and the HTTP-01 solver work without using the production rate limits. Then switch
+back to `letsencrypt-production`, delete the `edge-tls` secret and apply again.
+
+`backend` validates tokens against the public issuer `https://s4v3.net/auth`. From inside the cluster that name resolves
+to the node's public IP and the request leaves and re-enters through Traefik's host ports. **Verify this on the first
+rollout** (`kubectl logs deploy/backend`, then call `/api/` with a token). If the node cannot reach its own public IP, add
+a CoreDNS rewrite for `s4v3.net` to `traefik.traefik.svc.cluster.local`, or set
+`SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://auth:9090/auth/oauth2/jwks` on `backend` as the local overlay
+does.
+
+## 8. Environment variables
+
+The names below are the ones each application documents in its own README; the Deployments set exactly these.
+
+| Service | Setting | Environment variable | Value comes from |
+|---|---|---|---|
+| backend | `server.port` | `SERVER_PORT` | `8081` literal |
+| backend | `spring.datasource.url` | `SPRING_DATASOURCE_URL` | literal, `postgres:5432/jobhunter` |
+| backend | `spring.datasource.username` | `SPRING_DATASOURCE_USERNAME` | literal, `backend` |
+| backend | `spring.datasource.password` | `SPRING_DATASOURCE_PASSWORD` | Secret `BACKEND_DB_PASSWORD` |
+| backend | `spring.security.oauth2.resourceserver.jwt.issuer-uri` | `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` | ConfigMap `ISSUER_URI` |
+| backend (local only) | `...jwt.jwk-set-uri` | `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` | overlay literal |
+| auth | `spring.datasource.*` | `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` | literals; Secret `AUTH_DB_PASSWORD` |
+| auth | `app.issuer-uri` | `APP_ISSUER_URI` | ConfigMap `ISSUER_URI` |
+| auth | `app.ui-base-url` | `APP_UI_BASE_URL` | ConfigMap `UI_BASE_URL` |
+| auth | `app.spa.redirect-uris` | `APP_SPA_REDIRECT_URIS` | ConfigMap `SPA_REDIRECT_URIS` |
+| auth | `app.spa.post-logout-redirect-uris` | `APP_SPA_POST_LOGOUT_REDIRECT_URIS` | ConfigMap `SPA_POST_LOGOUT_URIS` |
+| gateway | `microservices.backend.uri` | `MICROSERVICES_BACKEND_URI` | ConfigMap `BACKEND_URI` (`http://backend:8081`) |
+| gateway | `microservices.auth.uri` | `MICROSERVICES_AUTH_URI` | ConfigMap `AUTH_URI` (`http://auth:9090`) |
+| all three | JVM options | `JAVA_TOOL_OPTIONS` | `-XX:ReservedCodeCacheSize=64M` (see below) |
+
+Google login (`APP_GOOGLE_CLIENT_ID` / `APP_GOOGLE_CLIENT_SECRET`) is not configured yet; add them to the Secret and to
+the `auth` Deployment when the Google OAuth client exists. Its redirect URI to register is
+`https://s4v3.net/auth/login/oauth2/code/google`.
+
+No mismatches were found between these names and the other changes' specs and design.
+
+**Memory.** The buildpack's memory calculator reserves 240 MB of JIT code cache by default; with the gateway's 384 Mi (local)
+or 512 Mi limit that leaves no heap or crashes at start (`fixed memory regions require ... which is greater than ...`).
+`JAVA_TOOL_OPTIONS=-XX:ReservedCodeCacheSize=64M` fixes it and the calculator sizes the heap from the remainder.
+
+**Health endpoints** (HTTP, unauthenticated): `backend` `/actuator/health/{liveness,readiness}` on 8081; `gateway` the same on
+8080; `auth` under its context path, `/auth/actuator/health/{liveness,readiness}` on 9090. Readiness of `backend` and `auth`
+includes the database; liveness never does, so a database outage does not restart them. `gateway` readiness does not depend on
+`auth` or `backend`.
+
+## 9. Validation and tests
+
+```
+k8s/validate.sh            # renders overlays/local and overlays/prod; schema-checks them (Kubernetes, Gateway API,
+                           # cert-manager); every container must have CPU/memory requests and a memory limit; no
+                           # image may use `latest` or lack a tag. Exits non-zero and names the resource on failure.
+k8s/test-validate.sh       # runs validate.sh against bad fixtures (wrong field type, missing resources, latest, no tag)
+```
+
+Network policies (default deny, then explicit paths): only `backend` and `auth` reach `postgres`; only the edge reaches `ui`
+and `gateway`; only `gateway` reaches `backend`; `gateway` and `backend` reach `auth`. Test on any cluster:
+
+```
+kubectl -n job-hunter run np-test --rm -i --restart=Never --image=busybox:1.37.0 \
+  --labels=app.kubernetes.io/name=gateway --command -- sh -c 'nc -z -w 4 postgres 5432 && echo OPEN || echo BLOCKED'   # BLOCKED
+# the same with --labels=app.kubernetes.io/name=backend prints OPEN
+```
+
+## 10. How the overlays differ
+
+Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the same five workloads and the same policies.
+
+- **Public addresses** (ConfigMap `app-config`): `http://localhost:8080...` vs `https://s4v3.net...`.
+- **Edge**: local has one HTTP listener for `localhost`; prod has an HTTP listener (redirect and ACME challenge only) and an
+  HTTPS listener for `s4v3.net` with certificate secret `edge-tls`, the issuer annotation, an extra `http-to-https` route
+  (301), and application routes attached to the HTTPS listener.
+- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:0.1.0`.
+- **Resources**: local is smaller (backend 256Mi/768Mi, auth 256Mi/640Mi, gateway 192Mi/384Mi, postgres 128Mi/512Mi);
+  prod uses the base values (backend 512Mi/1Gi, auth 384Mi/768Mi, gateway 256Mi/512Mi, postgres 512Mi/1Gi).
+- **Issuer settings**: `backend` locally gets the signing-key URL of the in-cluster `auth` service, because a pod cannot
+  reach `http://localhost:8080`; it still requires tokens to carry the public issuer.
+
+## 11. Logging and personal data
+
+Containers log to standard output only. Traefik access logs are off; the gateway logs no headers, cookies or query
+strings (see `gateway/README.md`). The Postgres volume holds accounts now and CVs later, so the database is reachable
+only from `backend` and `auth`, has no NodePort or LoadBalancer service, and its credentials come from a Secret that is
+created by hand.
+
+## 12. Things to know
+
+- **`auth` generates its signing key at startup.** After any restart of `auth` every previously issued token stops
+  validating (a fresh sign-in is needed) and two replicas would disagree. A persistent key is a follow-up to
+  `bootstrap-auth`.
+- **Unreachable `auth` with a cold `backend`:** a request with a token is rejected (401) after about 30 seconds, the
+  default connect timeout of the key fetch; `backend` stays running and recovers by itself. Tokens whose keys are already
+  cached keep validating while `auth` is down.
+- **Rollouts** use `Recreate` on one node: a few seconds of downtime per deploy, no pending surge pod.
+- **Single node, local disk, no backups.** See 4.1.

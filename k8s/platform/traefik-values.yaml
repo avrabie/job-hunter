@@ -1,0 +1,52 @@
+# Traefik as the Gateway API implementation. Chart traefik/traefik 42.0.0 (Traefik v3.7.14).
+# Used unchanged on the Hetzner cluster and on kind; see k8s/README.md.
+
+# We write our own Gateway (base/edge.yaml, in the application namespace); the chart only provides the GatewayClass.
+gateway:
+  enabled: false
+gatewayClass:
+  enabled: true
+  name: traefik
+
+providers:
+  kubernetesGateway:
+    enabled: true
+  # Only Gateway API is used. The Ingress and IngressRoute providers stay off.
+  kubernetesCRD:
+    enabled: false
+  kubernetesIngress:
+    enabled: false
+
+ports:
+  # The node's ports 80 and 443 are the only public entry points (no cloud load balancer on a single server).
+  # Gateway listeners therefore use the container ports 8000 (HTTP) and 8443 (HTTPS).
+  web:
+    port: 8000
+    hostPort: 80
+  websecure:
+    port: 8443
+    hostPort: 443
+    http3:
+      enabled: false
+
+service:
+  spec:
+    type: ClusterIP
+
+# A surge pod could not bind the same hostPorts on a single node, so stop the old pod first.
+updateStrategy:
+  type: Recreate
+  rollingUpdate: null
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+# No access logs: requests carry Authorization headers and query strings (authorization codes).
+log:
+  level: INFO
+accessLog:
+  enabled: false

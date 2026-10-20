@@ -1,0 +1,49 @@
+# Production: https://s4v3.net, Let's Encrypt production certificates, explicit image tags, base resource sizes.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - redirect.yaml
+images:
+  - name: moldovean/job-hunter-backend
+    newTag: 0.1.0
+  - name: moldovean/job-hunter-auth
+    newTag: 0.1.0
+  - name: moldovean/job-hunter-gateway
+    newTag: 0.1.0
+patches:
+  - target: {kind: ConfigMap, name: app-config}
+    patch: |-
+      - {op: replace, path: /data/ISSUER_URI, value: "https://s4v3.net/auth"}
+      - {op: replace, path: /data/UI_BASE_URL, value: "https://s4v3.net"}
+      - {op: replace, path: /data/SPA_REDIRECT_URIS, value: "https://s4v3.net/callback"}
+      - {op: replace, path: /data/SPA_POST_LOGOUT_URIS, value: "https://s4v3.net/"}
+  # cert-manager reads the issuer annotation and the listener's certificateRefs, and creates the certificate secret.
+  # For a staging run, change the issuer name to letsencrypt-staging (see README).
+  - target: {kind: Gateway, name: edge}
+    patch: |-
+      - {op: add, path: /metadata/annotations, value: {cert-manager.io/cluster-issuer: letsencrypt-production}}
+      - {op: add, path: /spec/listeners/0/hostname, value: s4v3.net}
+      - op: add
+        path: /spec/listeners/-
+        value:
+          name: https
+          port: 8443
+          protocol: HTTPS
+          hostname: s4v3.net
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: edge-tls
+          allowedRoutes:
+            namespaces:
+              from: Same
+  # The application routes serve HTTPS only; plain HTTP is redirected by redirect.yaml.
+  - target: {kind: HTTPRoute, name: ui}
+    patch: |-
+      - {op: add, path: /spec/hostnames, value: [s4v3.net]}
+      - {op: replace, path: /spec/parentRefs/0/sectionName, value: https}
+  - target: {kind: HTTPRoute, name: gateway}
+    patch: |-
+      - {op: add, path: /spec/hostnames, value: [s4v3.net]}
+      - {op: replace, path: /spec/parentRefs/0/sectionName, value: https}

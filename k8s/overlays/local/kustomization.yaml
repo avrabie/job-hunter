@@ -1,0 +1,52 @@
+# Local kind cluster: plain HTTP on localhost:8080 (platform/kind-config.yaml), locally built images, small resources.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: moldovean/job-hunter-backend
+    newName: job-hunter-backend
+    newTag: local
+  - name: moldovean/job-hunter-auth
+    newName: job-hunter-auth
+    newTag: local
+  - name: moldovean/job-hunter-gateway
+    newName: job-hunter-gateway
+    newTag: local
+patches:
+  # Public addresses as the browser sees them.
+  - target: {kind: ConfigMap, name: app-config}
+    patch: |-
+      - {op: replace, path: /data/ISSUER_URI, value: "http://localhost:8080/auth"}
+      - {op: replace, path: /data/UI_BASE_URL, value: "http://localhost:8080"}
+      - {op: replace, path: /data/SPA_REDIRECT_URIS, value: "http://localhost:8080/callback"}
+      - {op: replace, path: /data/SPA_POST_LOGOUT_URIS, value: "http://localhost:8080/"}
+  # Pods cannot reach http://localhost:8080 (that is themselves), so the backend takes the signing keys from the auth
+  # service directly. It still requires every token's issuer to equal the public issuer above.
+  - target: {kind: Deployment, name: backend}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+          value: http://auth:9090/auth/oauth2/jwks
+  # Hostname and plain HTTP.
+  - target: {kind: Gateway, name: edge}
+    patch: |-
+      - {op: add, path: /spec/listeners/0/hostname, value: localhost}
+  - target: {kind: HTTPRoute}
+    patch: |-
+      - {op: add, path: /spec/hostnames, value: [localhost]}
+  # Small resources for a laptop.
+  - target: {kind: Deployment, name: backend}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/resources, value: {requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 768Mi}}}
+  - target: {kind: Deployment, name: auth}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/resources, value: {requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 640Mi}}}
+  - target: {kind: Deployment, name: gateway}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/resources, value: {requests: {cpu: 50m, memory: 192Mi}, limits: {memory: 384Mi}}}
+  - target: {kind: StatefulSet, name: postgres}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/resources, value: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}}}

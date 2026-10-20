@@ -1,0 +1,31 @@
+# cert-manager chart jetstack/cert-manager v1.21.2. Used unchanged on the Hetzner cluster and on kind.
+crds:
+  enabled: true
+  keep: true
+
+# Lets cert-manager watch Gateway resources and issue certificates for listeners annotated with an issuer.
+config:
+  apiVersion: controller.config.cert-manager.io/v1alpha1
+  kind: ControllerConfiguration
+  enableGatewayAPI: true
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+webhook:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+cainjector:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 128Mi
+    limits:
+      memory: 384Mi

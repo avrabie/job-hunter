@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: job-hunter
+spec:
+  selector:
+    app.kubernetes.io/name: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: job-hunter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: moldovean/job-hunter-gateway:dev
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # The buildpack's memory calculator reserves 240M of JIT code cache by default, which leaves almost no heap
+            # inside a 512Mi limit. 64M is plenty for a service this size; the calculator sizes the heap from the rest.
+            - name: JAVA_TOOL_OPTIONS
+              value: -XX:ReservedCodeCacheSize=64M
+            - name: MICROSERVICES_BACKEND_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: BACKEND_URI
+            - name: MICROSERVICES_AUTH_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: AUTH_URI
+          # Readiness does not depend on auth or backend: the gateway can start before them.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

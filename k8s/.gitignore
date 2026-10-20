@@ -1,0 +1,2 @@
+# Real secrets are created by hand from the *.example templates and never committed.
+**/secrets.yaml

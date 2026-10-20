@@ -1,0 +1,17 @@
+# Non-secret settings. The overlays replace the four public addresses (placeholders here); the in-cluster addresses are
+# the same everywhere. The applications read them through the environment variables named in their Deployments.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: job-hunter
+data:
+  # Public issuer: the `iss` of every token. One stable value, set by the overlay.
+  ISSUER_URI: https://CHANGE_ME.invalid/auth
+  # Where the browser app is served (password reset links) and the redirect URIs registered for the public client.
+  UI_BASE_URL: https://CHANGE_ME.invalid
+  SPA_REDIRECT_URIS: https://CHANGE_ME.invalid/callback
+  SPA_POST_LOGOUT_URIS: https://CHANGE_ME.invalid/
+  # In-cluster addresses.
+  BACKEND_URI: http://backend:8081
+  AUTH_URI: http://auth:9090
