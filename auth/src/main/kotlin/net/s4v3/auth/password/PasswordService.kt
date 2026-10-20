@@ -50,7 +50,7 @@ class PasswordService(
                 expiresAt = Instant.now().plus(TOKEN_TTL),
             ),
         )
-        val link = "${properties.uiBaseUrl.trimEnd('/')}/reset-password?token=$token"
+        val link = "${properties.uiBaseUrl!!.trimEnd('/')}/reset-password?token=$token"
         AfterCommit.run { mailSender.send(mails.passwordReset(user.email, link)) }
     }
 

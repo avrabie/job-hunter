@@ -9,16 +9,17 @@ import org.springframework.validation.annotation.Validated
 @Validated
 @ConfigurationProperties("app")
 data class AuthProperties(
+    // Nullable with a default so that a missing value fails validation with the property name, not a bare NPE.
     /** Fixed public issuer, e.g. https://s4v3.net/auth. Independent of the request's host. */
-    @field:NotBlank val issuerUri: String,
+    @field:NotBlank val issuerUri: String? = null,
     /** Base URL of the UI, used to build password reset links. */
-    @field:NotBlank val uiBaseUrl: String,
-    @field:Valid val spa: Spa,
+    @field:NotBlank val uiBaseUrl: String? = null,
+    @field:Valid val spa: Spa = Spa(),
     val google: Google = Google(),
 ) {
     data class Spa(
-        @field:NotEmpty val redirectUris: List<String>,
-        @field:NotEmpty val postLogoutRedirectUris: List<String>,
+        @field:NotEmpty val redirectUris: List<String> = emptyList(),
+        @field:NotEmpty val postLogoutRedirectUris: List<String> = emptyList(),
     )
 
     data class Google(val clientId: String? = null, val clientSecret: String? = null) {

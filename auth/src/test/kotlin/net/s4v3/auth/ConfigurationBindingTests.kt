@@ -66,7 +66,7 @@ class ConfigurationValidationTests {
                 val failure = ctx.startupFailure
                 assertTrue(failure != null)
                 val text = generateSequence<Throwable>(failure) { it.cause }.joinToString { it.message.orEmpty() }
-                assertTrue("app" in text && ("issuerUri" in text || "issuer-uri" in text), text)
+                assertTrue("app.issuerUri" in text, text)
             }
     }
 }

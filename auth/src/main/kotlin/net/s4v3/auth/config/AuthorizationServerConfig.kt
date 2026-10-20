@@ -41,7 +41,7 @@ class AuthorizationServerConfig(private val properties: AuthProperties) {
     /** Fixed issuer: never derived from the request, so forwarded headers cannot change it. */
     @Bean
     fun authorizationServerSettings(): AuthorizationServerSettings =
-        AuthorizationServerSettings.builder().issuer(properties.issuerUri).build()
+        AuthorizationServerSettings.builder().issuer(properties.issuerUri!!).build()
 
     /** The single public client of the SPA: authorization code and refresh token, PKCE required, no consent. */
     @Bean

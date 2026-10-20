@@ -23,6 +23,6 @@ class IssuerSettingTests {
         }
 
         val text = generateSequence<Throwable>(failure) { it.cause }.mapNotNull { it.message }.joinToString("\n")
-        assertTrue("app.issuer-uri" in text || "app.issuerUri" in text || "issuerUri" in text, text)
+        assertTrue("app.issuerUri" in text, text)
     }
 }

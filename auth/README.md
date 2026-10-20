@@ -18,7 +18,16 @@ docker compose up -d            # PostgreSQL on localhost:5433
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
-Open <http://localhost:9090/auth/.well-known/openid-configuration>. Note the issuer it reports is the **configured**
+Open the login page <http://localhost:9090/auth/login> and sign in with one of the seeded **dev-profile-only**
+accounts (the login is the email):
+
+| Email | Password | Roles |
+|---|---|---|
+| `user@example.com` | `user` | `USER` |
+| `admin@example.com` | `admin` | `USER`, `ADMIN` |
+
+They are created on startup when missing and exist in no other profile. Discovery is at
+<http://localhost:9090/auth/.well-known/openid-configuration>. Note the issuer it reports is the **configured**
 one (`ISSUER_URI`, default `http://localhost:8080/auth`, the address behind the gateway), whatever host you used.
 Running without the gateway, set `ISSUER_URI=http://localhost:9090/auth` in `.env` so tokens and discovery agree.
 
