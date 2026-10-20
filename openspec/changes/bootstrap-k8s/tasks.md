@@ -10,11 +10,11 @@ Apply order for the whole project: `bootstrap-modulith-skeleton`, `bootstrap-aut
 
 ## 2. Cluster guide (`k8s/README.md`, `k8s/platform/`)
 
-- [ ] 2.1 Write the starting checks of the guide: SSH tunnel and tunnelled kubeconfig (`127.0.0.1:6443`, with the `--tls-server-name` fallback), node Ready and schedulable (taint removal command if needed), CNI enforces network policies; verify each command against the existing Hetzner cluster and record the output in the guide
-- [ ] 2.2 Document the `ufw` rules (allow 22, 80, 443; forward policy and pod/service CIDR rules so pod networking works; API server closed) and the DNS A record for `s4v3.net`; verify from another machine that only 22, 80 and 443 answer, and on the cluster that pod-to-pod, DNS and outbound traffic still work
-- [ ] 2.3 Document and pin the Gateway API CRDs and Traefik (Helm values `platform/traefik-values.yaml`: Gateway provider on, `hostPort` 80 and 443, `GatewayClass`); verify on kind that the gateway class is accepted, then on the Hetzner cluster that port 80 answers from outside
-- [ ] 2.4 Document and pin cert-manager with its Gateway API support enabled, and add `platform/cluster-issuers.yaml` (Let's Encrypt staging and production, HTTP-01 through the Gateway); verify both issuers register (Ready) on a cluster with outbound access
-- [ ] 2.5 Document installing local-path-provisioner (pinned) as the default storage class, and state that local disk is a single point of failure with no backups yet; verify a test PVC without a class is bound on the Hetzner cluster and on kind
+- [x] 2.1 Write the starting checks of the guide: SSH tunnel and tunnelled kubeconfig (`127.0.0.1:6443`, with the `--tls-server-name` fallback), node Ready and schedulable (taint removal command if needed), CNI enforces network policies; verify each command against the existing Hetzner cluster and record the output in the guide
+- [x] 2.2 Document the `ufw` rules (allow 22, 80, 443; forward policy and pod/service CIDR rules so pod networking works; API server closed) and the DNS A record for `s4v3.net`; verify from another machine that only 22, 80 and 443 answer, and on the cluster that pod-to-pod, DNS and outbound traffic still work
+- [x] 2.3 Document and pin the Gateway API CRDs and Traefik (Helm values `platform/traefik-values.yaml`: Gateway provider on, `hostPort` 80 and 443, `GatewayClass`); verify on kind that the gateway class is accepted, then on the Hetzner cluster that port 80 answers from outside
+- [x] 2.4 Document and pin cert-manager with its Gateway API support enabled, and add `platform/cluster-issuers.yaml` (Let's Encrypt staging and production, HTTP-01 through the Gateway); verify both issuers register (Ready) on a cluster with outbound access
+- [x] 2.5 Document installing local-path-provisioner (pinned) as the default storage class, and state that local disk is a single point of failure with no backups yet; verify a test PVC without a class is bound on the Hetzner cluster and on kind
 - [x] 2.6 Document the local test cluster (kind create command with the port mapping to `localhost:8080`, delete command); verify the cluster comes up and is deleted again as written
 - [x] 2.7 Document building each image with `bootBuildImage` and pushing to Docker Hub as `moldovean/job-hunter-backend`, `-auth` and `-gateway` with explicit tags (including an optional pull secret for private images); verify `./gradlew bootBuildImage` succeeds for `backend` using the documented command
 
@@ -47,7 +47,7 @@ Apply order for the whole project: `bootstrap-modulith-skeleton`, `bootstrap-aut
 
 - [x] 7.1 Add `base/network-policies.yaml` (default deny ingress, allowed paths from the design); verify on kind that `backend` reaches `postgres` and that a throwaway pod labelled like `gateway` or `ui` is blocked
 - [x] 7.2 Add `overlays/local` (HTTP-only listener on `localhost`, local image names, small resources, a way for pods to reach the issuer URL, e.g. host alias or in-cluster issuer for local use); verify it renders and passes `validate.sh`
-- [ ] 7.3 Add `overlays/prod` (hostname `s4v3.net`, issuer `https://s4v3.net/auth`, HTTPS listener with certificate, HTTP-to-HTTPS redirect route, production issuer annotation, explicit image tags, production resources); verify it renders and passes `validate.sh`, and with the staging issuer that a certificate becomes ready for `s4v3.net` once its A record points at the server
+- [x] 7.3 Add `overlays/prod` (hostname `s4v3.net`, issuer `https://s4v3.net/auth`, HTTPS listener with certificate, HTTP-to-HTTPS redirect route, production issuer annotation, explicit image tags, production resources); verify it renders and passes `validate.sh`, and with the staging issuer that a certificate becomes ready for `s4v3.net` once its A record points at the server
 - [x] 7.4 Verify the two overlays differ only in hostname, TLS and issuer settings, image references and resource sizes by diffing the rendered output, and document the result
 
 ## 8. Integration (needs the `backend`, `auth` and `gateway` images)

@@ -64,7 +64,9 @@ k get storageclass
 # local-path (default)   rancher.io/local-path   Delete   WaitForFirstConsumer
 ```
 
-Whether the CNI really enforces policies is also proven functionally by the network policy test in section 9.
+Proof that the CNI enforces policies (run on the Hetzner cluster, 2026-10-20): in a throwaway namespace a pod served HTTP,
+a `NetworkPolicy` with `policyTypes: [Ingress]` and no rules was applied to it, and a second pod's request timed out
+(`BLOCKED`). Before the policy the same request returned the page.
 
 ## 3. Firewall (`ufw`)
 
@@ -79,11 +81,13 @@ Anywhere                   ALLOW IN  10.233.0.0/16        (pod and service CIDRs
 ```
 
 `DEFAULT_FORWARD_POLICY` is `ACCEPT`, so pod traffic is forwarded. Pod CIDR `10.233.64.0/18`, service CIDR
-`10.233.0.0/18`. The API server (6443) has no allow rule and stays closed. Add the two public web ports:
+`10.233.0.0/18`. The API server (6443) has no allow rule and stays closed. The two public web ports were added:
 
 ```
 ssh root@s4v3.net 'ufw allow 80/tcp && ufw allow 443/tcp && ufw status verbose'
 ```
+
+(Run on 2026-10-20; the rules now appear as `80/tcp` and `443/tcp` ALLOW IN, IPv4 and IPv6.)
 
 Do not touch the `22/tcp` rule, the `cali+` / `vxlan.calico` rules or the `10.233.0.0/16` rule: without them pods lose
 networking or you lose SSH.
@@ -94,12 +98,17 @@ CNAME. Leave other records (for example MX) alone.
 Check from **another machine** (not the server) that only the intended ports answer:
 
 ```
-nc -zv -w 3 s4v3.net 22 80 443     # all three succeed once Traefik is installed
-nc -zv -w 3 s4v3.net 6443 10250    # both time out or are refused
+for p in 22 80 443 6443 10250; do nc -z -w 4 s4v3.net $p && echo "$p open" || echo "$p closed/filtered"; done
+# 22, 80 and 443 open; 6443 and 10250 closed/filtered
 ```
 
 Traefik publishes ports 80 and 443 with `hostPort`; that traffic is forwarded by the CNI rules and not by `ufw`'s
-input chain, so this external check is the real test and must not be skipped.
+input chain (ports 80 and 443 answered even before the `ufw` rules above were added), so this external check is the real
+test and must not be skipped.
+
+Pod networking after the firewall rules, verified in a throwaway namespace on the cluster (2026-10-20): a claim without a
+class bound, a pod reached another pod through a Service, cluster DNS resolved `kubernetes.default.svc.cluster.local`, and
+an outbound HTTPS request to `acme-v02.api.letsencrypt.org` succeeded.
 
 ## 4. Platform components (once per cluster)
 
@@ -126,7 +135,8 @@ one (section 5). They are written for the real cluster; swap the context for kin
 ### 4.1 Storage
 
 local-path-provisioner is already the default class. Verify a claim without a class gets bound (it binds when a pod
-uses it, because the class waits for the first consumer):
+uses it, because the class waits for the first consumer; verified on the Hetzner cluster, 2026-10-20: `Bound`,
+`STORAGECLASS local-path`, the pod wrote and read a file):
 
 ```
 cat <<'EOF' | kubectl --context s4v3 apply -f -
@@ -179,7 +189,8 @@ Traefik listens on container ports 8000/8443 published as the node's 80/443 (`ho
 access logs are off (requests carry `Authorization` headers and authorization codes in query strings), and the chart's
 own `Gateway` is off because `base/edge.yaml` defines ours.
 
-Check from outside: `curl -i http://s4v3.net/` answers `404 page not found` from Traefik until the application is deployed.
+Check from outside: `curl -i http://s4v3.net/` answers `404 page not found` from Traefik until the application is deployed
+(verified 2026-10-20, from a machine outside the server).
 
 ### 4.4 cert-manager and the Let's Encrypt issuers
 
@@ -189,6 +200,8 @@ helm --kube-context s4v3 upgrade --install cert-manager jetstack/cert-manager --
 sed "s/ACME_EMAIL/you@example.org/" k8s/platform/cluster-issuers.yaml | kubectl --context s4v3 apply -f -
 kubectl --context s4v3 get clusterissuer           # letsencrypt-staging and letsencrypt-production, READY True
 ```
+
+Both issuers registered and showed `READY True` on the Hetzner cluster (2026-10-20).
 
 `ACME_EMAIL` is the contact address registered with Let's Encrypt (expiry warnings go there); it is substituted at apply
 time so the address is not committed. The issuers solve HTTP-01 challenges through the application's Gateway
@@ -305,9 +318,15 @@ kubectl --context s4v3 -n job-hunter get pods,gateway,httproute,certificate
 
 The certificate is requested automatically for the HTTPS listener. **Try the staging issuer first**: change
 `letsencrypt-production` to `letsencrypt-staging` in `overlays/prod/kustomization.yaml` (annotation on the Gateway),
-apply, and wait for `kubectl -n job-hunter get certificate` to show `READY True`. Staging certificates are not trusted by
+apply, and wait for `kubectl -n job-hunter get certificate` to show `READY True` (about a minute; the HTTP-01 challenge
+goes `valid` first, and the Gateway needs a few more seconds to serve the new certificate). Staging certificates are not trusted by
 browsers; they prove that DNS, port 80 and the HTTP-01 solver work without using the production rate limits. Then switch
 back to `letsencrypt-production`, delete the `edge-tls` secret and apply again.
+
+This was done on 2026-10-20 with only the Gateway and routes applied (the images did not exist yet): the certificate for
+`s4v3.net` became ready, issued by `(STAGING) Dastardly Durum YR1`, `http://s4v3.net/api/x` answered
+`301 Location: https://s4v3.net/api/x`, and the TLS handshake served the staging certificate. The test resources were then
+removed.
 
 `backend` validates tokens against the public issuer `https://s4v3.net/auth`. From inside the cluster that name resolves
 to the node's public IP and the request leaves and re-enters through Traefik's host ports. **Verify this on the first

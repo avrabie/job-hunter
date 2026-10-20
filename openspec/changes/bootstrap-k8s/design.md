@@ -51,6 +51,16 @@ Assumptions recorded here because they were not stated: the Gateway API implemen
 
 **Module boundaries and database schema.** No Modulith module changes. Database: databases and roles are created by the cluster init script, not by Liquibase; Liquibase keeps owning all tables. The only application-side effect is the `IF NOT EXISTS` note above.
 
+**Implementation notes (learned while building).**
+- *Existing cluster state.* The Kubespray cluster already had Calico (enforces NetworkPolicy, proven on the cluster), local-path-provisioner v0.0.37 as the default storage class, a `ufw` ruleset that already allows pod traffic, and an A record for `s4v3.net`. The guide therefore verifies these instead of installing them; only Gateway API CRDs v1.6.3, Traefik chart 42.0.0 and cert-manager v1.21.2 were installed.
+- *Listener ports.* Traefik's container ports are 8000 and 8443, published as the node's 80 and 443 with `hostPort`, so Gateway listeners use 8000 and 8443. `hostPort` traffic bypasses `ufw`'s input chain (ports 80 and 443 answered before the allow rules existed), so `ufw` rules document intent and the external port check is the real test. Traefik uses the `Recreate` update strategy, because a surge pod cannot bind the same host ports.
+- *Chart CRDs.* The Traefik chart ships its own Gateway API CRDs; it is installed with `--skip-crds` so the pinned v1.6.3 set stays the only source.
+- *Neutral base.* The base carries no hostname and placeholder public URLs; each overlay sets its own, so the overlays differ only in the places the spec lists.
+- *Local issuer.* A pod cannot reach `http://localhost:8080`, so the local overlay gives `backend` the signing-key URL of `auth` (`...jwt.jwk-set-uri`) while it still requires the public issuer in every token. No host alias or CoreDNS rewrite was needed. The production overlay relies on the public name resolving from inside the cluster; this is to be confirmed at the first production rollout.
+- *Memory.* The buildpack's memory calculator reserves 240 MB of code cache and fails below about 420 MB of fixed regions; all three services set `JAVA_TOOL_OPTIONS=-XX:ReservedCodeCacheSize=64M`.
+- *Image build on Docker Desktop.* The Boot Gradle plugin fails with `'username' must not be null` while pulling; pre-pulling the builder and run image with the docker CLI and `--pullPolicy=IF_NOT_PRESENT` works. Production images must be built with `--imagePlatform=linux/amd64` on an Apple-silicon machine.
+- *Follow-ups found.* `auth` generates its signing key at startup, so each restart invalidates all tokens; and a cold `backend` takes about 30 seconds to reject a token when `auth` is down. Both belong to the application changes, not to this one.
+
 ## Risks / Trade-offs
 
 - [Applications are not built yet, so manifests cannot be fully proven] → Tasks split into things checkable now (render, schema, dry-run, placeholder routing) and an integration group that waits for the three images; the stated apply order is skeleton, auth, gateway, then this change.
