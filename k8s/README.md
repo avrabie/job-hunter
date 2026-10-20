@@ -329,11 +329,18 @@ This was done on 2026-10-20 with only the Gateway and routes applied (the images
 removed.
 
 `backend` validates tokens against the public issuer `https://s4v3.net/auth`. From inside the cluster that name resolves
-to the node's public IP and the request leaves and re-enters through Traefik's host ports. **Verify this on the first
-rollout** (`kubectl logs deploy/backend`, then call `/api/` with a token). If the node cannot reach its own public IP, add
-a CoreDNS rewrite for `s4v3.net` to `traefik.traefik.svc.cluster.local`, or set
+to the node's public IP and the request leaves and re-enters through Traefik's host ports. This works on the cluster
+(checked 2026-10-20: a token issued by `https://s4v3.net/auth` is accepted by `backend`; no override is needed). If it
+ever stops working, add a CoreDNS rewrite for `s4v3.net` to `traefik.traefik.svc.cluster.local`, or set
 `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://auth:9090/auth/oauth2/jwks` on `backend` as the local overlay
 does.
+
+**Deployed and verified on 2026-10-20** (images `moldovean/job-hunter-{backend,auth,gateway}:0.1.0`): all five Pods
+Ready, certificate issued by Let's Encrypt (`YR2`, trusted by `curl` without `-k`), `http://` answers 301, the OIDC
+discovery document names `https://s4v3.net/auth`, and a PKCE login through `https://s4v3.net` returns a token with
+`iss=https://s4v3.net/auth`. `/api/` answers 404 with that token (token accepted, no endpoint yet), 401 without a token
+and 401 with a malformed one. The login created the `app_user` row. The check used the account
+`deploy-check@example.com`.
 
 ## 8. Environment variables
 
@@ -420,3 +427,6 @@ created by hand.
   cached keep validating while `auth` is down.
 - **Rollouts** use `Recreate` on one node: a few seconds of downtime per deploy, no pending surge pod.
 - **Single node, local disk, no backups.** See 4.1.
+- **The gateway trusts every caller** (`SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_TRUSTED_PROXIES=.*`) because the edge sends
+  the client's public address in `X-Forwarded-For`, which otherwise makes it discard all forwarded headers. Only the
+  `gateway-from-edge` NetworkPolicy limits who can reach it.

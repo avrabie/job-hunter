@@ -60,6 +60,7 @@ Assumptions recorded here because they were not stated: the Gateway API implemen
 - *Memory.* The buildpack's memory calculator reserves 240 MB of code cache and fails below about 420 MB of fixed regions; all three services set `JAVA_TOOL_OPTIONS=-XX:ReservedCodeCacheSize=64M`.
 - *Image build on Docker Desktop.* The Boot Gradle plugin fails with `'username' must not be null` while pulling; pre-pulling the builder and run image with the docker CLI and `--pullPolicy=IF_NOT_PRESENT` works. Production images must be built with `--imagePlatform=linux/amd64` on an Apple-silicon machine.
 - *Follow-ups found.* `auth` generates its signing key at startup, so each restart invalidates all tokens; and a cold `backend` takes about 30 seconds to reject a token when `auth` is down. Both belong to the application changes, not to this one.
+- *Trusted proxies behind the real edge.* The gateway drops every `X-Forwarded-*` header when `X-Forwarded-For` lists an address outside `trusted-proxies`. Traefik always puts the client's public address there, so `auth` built redirects from `http://auth:9090` in production. It passed on kind, where the client address is Docker's private one. The `gateway` Deployment sets `SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_TRUSTED_PROXIES=.*`; the `gateway-from-edge` NetworkPolicy is what keeps other callers out. A follow-up for `bootstrap-gateway`: make the default in `application.yaml` safe with a public client address, and add a test that sends `X-Forwarded-For` with a public address.
 
 ## Risks / Trade-offs
 

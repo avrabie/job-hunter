@@ -53,6 +53,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: AUTH_URI
+            # The gateway rejects every X-Forwarded-* header when X-Forwarded-For lists an address outside
+            # trusted-proxies, and the edge always adds the client's public address there. Only the edge namespace can
+            # reach this Pod (NetworkPolicy gateway-from-edge), so trust every caller here.
+            - name: SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_TRUSTED_PROXIES
+              value: ".*"
           # Readiness does not depend on auth or backend: the gateway can start before them.
           startupProbe:
             httpGet:
