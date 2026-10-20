@@ -1,0 +1,18 @@
+# Local development: run with `--spring.profiles.active=dev` (see README). Settings come from auth/.env.
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${AUTH_DB_PORT:5433}/authdb
+    username: authuser
+    password: ${AUTH_DB_PASSWORD}
+
+app:
+  issuer-uri: ${ISSUER_URI:http://localhost:8080/auth}
+  ui-base-url: ${UI_BASE_URL:http://localhost:5173}
+  spa:
+    redirect-uris: ${SPA_REDIRECT_URIS:http://localhost:5173/callback}
+    post-logout-redirect-uris: ${SPA_POST_LOGOUT_URIS:http://localhost:5173/}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}

@@ -1,3 +1,35 @@
 spring:
   application:
     name: auth
+
+server:
+  port: 9090
+  servlet:
+    context-path: /auth
+  # Behind the gateway and the edge, build redirects and the login page from the forwarded headers.
+  forward-headers-strategy: framework
+
+# Required (no defaults, so a missing value stops startup naming the setting):
+#   app.issuer-uri, app.spa.redirect-uris, app.spa.post-logout-redirect-uris, app.ui-base-url
+# Optional: app.google.client-id, app.google.client-secret
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+
+logging:
+  level:
+    # At DEBUG this logs "Redirecting to <redirect uri>?code=<authorization code>"; keep codes out of the log
+    # even when security debugging is switched on.
+    org.springframework.security.web.DefaultRedirectStrategy: INFO

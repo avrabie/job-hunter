@@ -1,0 +1,3 @@
+databaseChangeLog:
+  - include:
+      file: db/broken/001-broken.sql

@@ -4,41 +4,41 @@ All work is in `auth/`. Commands run from that folder (`cd auth && ./gradlew ...
 
 ## 1. Build, configuration and local environment
 
-- [ ] 1.1 Add test dependencies (`spring-boot-testcontainers`, `testcontainers-junit-jupiter`, `testcontainers-postgresql`) and a shared Testcontainers configuration using a pinned plain `postgres` image; verify `./gradlew test` starts a container and the generated context test connects
-- [ ] 1.2 Set `server.servlet.context-path=/auth`, port 9090, `forward-headers-strategy=framework`, and the configuration properties (database, issuer, SPA redirect and post-logout URIs, UI base URL, optional Google credentials) with no real secrets; verify with a context test that the properties bind
-- [ ] 1.3 Add `auth/compose.yaml` (Postgres with `authdb`) and `auth/README.md` (run, test, environment variables); verify `docker compose up -d` then `./gradlew bootRun` reaches the point where the missing changelog is the only failure, and fix the README after task 2.1
+- [x] 1.1 Add test dependencies (`spring-boot-testcontainers`, `testcontainers-junit-jupiter`, `testcontainers-postgresql`) and a shared Testcontainers configuration using a pinned plain `postgres` image; verify `./gradlew test` starts a container and the generated context test connects
+- [x] 1.2 Set `server.servlet.context-path=/auth`, port 9090, `forward-headers-strategy=framework`, and the configuration properties (database, issuer, SPA redirect and post-logout URIs, UI base URL, optional Google credentials) with no real secrets; verify with a context test that the properties bind
+- [x] 1.3 Add `auth/compose.yaml` (Postgres with `authdb`) and `auth/README.md` (run, test, environment variables); verify `docker compose up -d` then `./gradlew bootRun` reaches the point where the missing changelog is the only failure, and fix the README after task 2.1
 
 ## 2. Schema and persistence
 
-- [ ] 2.1 Write `db/changelog/db.changelog-master.yaml` and `001-users-roles.sql` (`users` with UUID id, unique index on `lower(email)`, provider columns and partial unique index on provider and provider id; `user_role` with cascade); verify with a test that the changelog applies to an empty database and a second start re-applies nothing
-- [ ] 2.2 Write `002-password-reset.sql` (`password_reset_token` with hash, expiry, used time, cascade); verify the same test still passes and that deleting a user deletes its roles and tokens
-- [ ] 2.3 Add Spring Data JDBC aggregates and repositories for users (with roles) and reset tokens, UUID assigned in code; verify with repository tests including a duplicate email differing only in case being rejected and a duplicate provider subject being rejected
-- [ ] 2.4 Verify a deliberately broken changeset (test-only location) stops startup with an error naming the changeset
+- [x] 2.1 Write `db/changelog/db.changelog-master.yaml` and `001-users-roles.sql` (`users` with UUID id, unique index on `lower(email)`, provider columns and partial unique index on provider and provider id; `user_role` with cascade); verify with a test that the changelog applies to an empty database and a second start re-applies nothing
+- [x] 2.2 Write `002-password-reset.sql` (`password_reset_token` with hash, expiry, used time, cascade); verify the same test still passes and that deleting a user deletes its roles and tokens
+- [x] 2.3 Add Spring Data JDBC aggregates and repositories for users (with roles) and reset tokens, UUID assigned in code; verify with repository tests including a duplicate email differing only in case being rejected and a duplicate provider subject being rejected
+- [x] 2.4 Verify a deliberately broken changeset (test-only location) stops startup with an error naming the changeset
 
 ## 3. Authorization server core
 
-- [ ] 3.1 Configure the authorization server filter chain with the fixed required issuer, the RSA key bean, the delegating password encoder and the `spa` public client (PKCE required, no consent, 15 minute access token, scopes `openid profile email`, redirect URIs from configuration); verify the discovery document at `/auth/.well-known/openid-configuration` has the configured issuer for any `Host` and `X-Forwarded-Host`, and the JWKS validates a token signature
-- [ ] 3.2 Add tests for the SPA client: authorization code with PKCE succeeds, missing challenge is rejected, wrong verifier fails, unregistered redirect is rejected, client credentials and password grants are refused
-- [ ] 3.3 Implement the token customizer (`roles` without prefix, `email`, `name` when scopes and values exist, no password data) and verify with decoded-token assertions for a user with and without a name
-- [ ] 3.4 Verify `/api/me/**` rejects requests without a token with 401 and accepts a token issued by this server
-- [ ] 3.5 Verify logout: the end-session endpoint with an ID token hint redirects to the registered post-logout URI and ends the session
-- [ ] 3.6 Verify startup fails with a message naming the issuer setting when it is missing outside the test profile
+- [x] 3.1 Configure the authorization server filter chain with the fixed required issuer, the RSA key bean, the delegating password encoder and the `spa` public client (PKCE required, no consent, 15 minute access token, scopes `openid profile email`, redirect URIs from configuration); verify the discovery document at `/auth/.well-known/openid-configuration` has the configured issuer for any `Host` and `X-Forwarded-Host`, and the JWKS validates a token signature
+- [x] 3.2 Add tests for the SPA client: authorization code with PKCE succeeds, missing challenge is rejected, wrong verifier fails, unregistered redirect is rejected, client credentials and password grants are refused
+- [x] 3.3 Implement the token customizer (`roles` without prefix, `email`, `name` when scopes and values exist, no password data) and verify with decoded-token assertions for a user with and without a name
+- [x] 3.4 Verify `/api/me/**` rejects requests without a token with 401 and accepts a token issued by this server
+- [x] 3.5 Verify logout: the end-session endpoint with an ID token hint redirects to the registered post-logout URI and ends the session
+- [x] 3.6 Verify startup fails with a message naming the issuer setting when it is missing outside the test profile
 
 ## 4. Registration and form login
 
-- [ ] 4.1 Implement `UserDetailsService` returning a `UserDetails` whose username is the user's UUID, found by email; verify with a test that login by email works and that the token `sub` is the UUID, not the email
-- [ ] 4.2 Implement `POST /auth/api/register` (validation, email lowercased, role `USER`, bcrypt hash, 409 on duplicate, CSRF-exempt); verify with MockMvc tests: success 201, normalised email, duplicate 409, invalid input 400 with field names, password stored as a hash
-- [ ] 4.3 Verify a concurrent registration test (two parallel requests, same email) leaves one row and one 409
-- [ ] 4.4 Verify form login end to end during an authorization request (resumes and returns a code), wrong password and unknown email show the same generic error, and a Google-created account cannot be entered with a password
+- [x] 4.1 Implement `UserDetailsService` returning a `UserDetails` whose username is the user's UUID, found by email; verify with a test that login by email works and that the token `sub` is the UUID, not the email
+- [x] 4.2 Implement `POST /auth/api/register` (validation, email lowercased, role `USER`, bcrypt hash, 409 on duplicate, CSRF-exempt); verify with MockMvc tests: success 201, normalised email, duplicate 409, invalid input 400 with field names, password stored as a hash
+- [x] 4.3 Verify a concurrent registration test (two parallel requests, same email) leaves one row and one 409
+- [x] 4.4 Verify form login end to end during an authorization request (resumes and returns a code), wrong password and unknown email show the same generic error, and a Google-created account cannot be entered with a password
 
 ## 5. Password reset, change and mail
 
-- [ ] 5.1 Implement the `MailSender` interface, the logging implementation (replaceable bean) and an after-commit helper; verify with tests that a message is delivered only after commit and not on rollback
-- [ ] 5.2 Implement `POST /auth/api/password-reset/request` (always 200, send only for accounts with a local password, token from 32 random bytes, hash stored, 30 minute expiry); verify known, unknown and Google-only emails behave as specified and the database holds the hash, never the token
-- [ ] 5.3 Implement `POST /auth/api/password-reset/confirm`; verify success (204, old password stops working), weak password (400, token still usable), expired, reused and unknown tokens give the same generic error
-- [ ] 5.4 Implement `PUT /auth/api/me/password`; verify success, wrong current password, same password, Google-only account, and a test with two users proving user A's request cannot change user B's password
-- [ ] 5.5 Compose the reset link from the UI base URL and send the "password changed" notice after change and reset; verify the logged messages contain the expected link and notice
-- [ ] 5.6 Verify with a log-capture test that submitted passwords, tokens other than the logging sender's reset link, and `Authorization` headers never appear in logs
+- [x] 5.1 Implement the `MailSender` interface, the logging implementation (replaceable bean) and an after-commit helper; verify with tests that a message is delivered only after commit and not on rollback
+- [x] 5.2 Implement `POST /auth/api/password-reset/request` (always 200, send for every enabled account including Google-created ones, token from 32 random bytes, hash stored, 30 minute expiry); verify known, unknown, disabled and Google-created emails behave as specified and the database holds the hash, never the token
+- [x] 5.3 Implement `POST /auth/api/password-reset/confirm`; verify success (204, old password stops working), weak password (400, token still usable), expired, reused and unknown tokens give the same generic error
+- [x] 5.4 Implement `PUT /auth/api/me/password`; verify success, wrong current password, same password, Google-only account, and a test with two users proving user A's request cannot change user B's password
+- [x] 5.5 Compose the reset link from the UI base URL and send the "password changed" notice after change and reset; verify the logged messages contain the expected link and notice
+- [x] 5.6 Verify with a log-capture test that submitted passwords, tokens other than the logging sender's reset link, and `Authorization` headers never appear in logs
 
 ## 6. Google login
 

@@ -32,6 +32,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
     runtimeOnly("org.postgresql:postgresql")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jdbc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
@@ -53,4 +56,6 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Lets flow tests send an arbitrary Host header to prove the issuer does not depend on it.
+    jvmArgs("-Djdk.httpclient.allowRestrictedHeaders=host")
 }

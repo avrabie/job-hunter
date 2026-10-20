@@ -52,7 +52,7 @@ The server SHALL sign a user in on its login page with email and password and SH
 - **THEN** the login fails with the same generic error
 
 ### Requirement: Password reset request
-`POST /auth/api/password-reset/request` SHALL answer 200 whether or not the email has an account, and SHALL send a one-time reset link only for accounts that have a local password.
+`POST /auth/api/password-reset/request` SHALL answer 200 whether or not the email has an account, and SHALL send a one-time reset link for every enabled account, including accounts created through Google (the reset is how they add a password).
 
 #### Scenario: Known email
 - **WHEN** a reset is requested for a registered email
@@ -62,8 +62,12 @@ The server SHALL sign a user in on its login page with email and password and SH
 - **WHEN** a reset is requested for an email without an account
 - **THEN** the response is 200 with the same body and no message is sent
 
-#### Scenario: Google-only account
+#### Scenario: Google-created account
 - **WHEN** a reset is requested for an account created through Google
+- **THEN** the response is 200 and one reset message is handed to the mail sender, and confirming it gives the account a password
+
+#### Scenario: Disabled account
+- **WHEN** a reset is requested for a disabled account
 - **THEN** the response is 200 and no message is sent
 
 ### Requirement: Reset token
