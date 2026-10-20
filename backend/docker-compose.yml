@@ -1,12 +1,15 @@
-# Local PostgreSQL with pgvector for development: `docker compose up -d`
-# The password is read from backend/.env (copy .env.example); it is never committed.
+# Local PostgreSQL with pgvector. Started automatically by `bootRun` / the IDE (spring-boot-docker-compose,
+# development only); or by hand with `docker compose up -d`. Local-only password; override with DB_PASSWORD.
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    labels:
+      # the image name is not plain postgres, so say which service connection this is
+      org.springframework.boot.service-connection: postgres
     environment:
       POSTGRES_DB: jobhunter
       POSTGRES_USER: jobhunter
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobhunterdev}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:

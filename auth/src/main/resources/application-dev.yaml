@@ -1,11 +1,7 @@
-# Local development: run with `--spring.profiles.active=dev` (see README). Settings come from auth/.env.
+# Local development: run with `--spring.profiles.active=dev` (see README). The database comes from compose.yaml (started automatically); other settings from auth/.env if present.
 spring:
   config:
     import: optional:file:.env[.properties]
-  datasource:
-    url: jdbc:postgresql://localhost:${AUTH_DB_PORT:5433}/authdb
-    username: authuser
-    password: ${AUTH_DB_PASSWORD}
 
 app:
   issuer-uri: ${ISSUER_URI:http://localhost:8080/auth}

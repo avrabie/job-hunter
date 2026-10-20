@@ -1,11 +1,7 @@
-# Local development: run with `--spring.profiles.active=dev` (see README). Settings come from backend/.env.
+# Local development: run with `--spring.profiles.active=dev` (see README). The database comes from docker-compose.yml (started automatically); other settings from backend/.env if present.
 spring:
   config:
     import: optional:file:.env[.properties]
-  datasource:
-    url: jdbc:postgresql://localhost:${DB_PORT:5432}/jobhunter
-    username: jobhunter
-    password: ${DB_PASSWORD}
   security:
     oauth2:
       resourceserver:

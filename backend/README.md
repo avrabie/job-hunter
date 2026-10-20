@@ -15,10 +15,13 @@ Roadmap and decisions: [`../PLAN.md`](../PLAN.md). Requirements: `../openspec/`.
 
 ```bash
 cd backend
-cp .env.example .env            # then set DB_PASSWORD in .env (git-ignored)
-docker compose up -d            # PostgreSQL with pgvector on localhost:5432
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
+
+`spring-boot-docker-compose` (development only, not in the image) starts `docker-compose.yml` itself: PostgreSQL
+with pgvector on localhost:5432 with a local-only password, and the app connects without any setting. From the IDE,
+run `BackendApplication` with the working directory `backend/` and the active profile `dev`. Optional overrides
+(for example `ISSUER_URI`) go in `.env` (see `.env.example`).
 
 The app listens on **http://localhost:8081** (8080 is reserved for the gateway when all services run together).
 Liquibase creates the schema on startup.
@@ -28,17 +31,14 @@ curl http://localhost:8081/actuator/health/readiness   # {"status":"UP"}
 curl -i http://localhost:8081/api/anything             # 401: every /api/** call needs a bearer token
 ```
 
-Stop with `Ctrl+C`, and `docker compose down` for the database (add `-v` to delete its data).
-
-PostgreSQL only reads `DB_PASSWORD` when it first creates its data volume. If you change the password later,
-run `docker compose down -v` (this deletes the local data) and start again, otherwise the app fails with
-"password authentication failed".
+Stopping the app stops the container (data stays in the volume; `docker compose down -v` deletes it). PostgreSQL
+reads its password only when it creates the volume, so after changing `DB_PASSWORD` run `docker compose down -v`.
 
 ### Settings
 
 | Setting | Where | Default (dev profile) |
 |---|---|---|
-| `DB_PASSWORD` | `.env` | required, no default |
+| `DB_PASSWORD` | environment | `jobhunterdev` (local compose only) |
 | `DB_PORT` | `.env` | `5432` |
 | `ISSUER_URI` | `.env` | `http://localhost:8080/auth`, the auth service behind the gateway |
 

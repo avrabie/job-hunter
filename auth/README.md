@@ -13,10 +13,16 @@ serves the login page. Requirements: `../openspec/`. Everything is mounted under
 
 ```bash
 cd auth
-cp .env.example .env            # then set AUTH_DB_PASSWORD in .env (git-ignored)
-docker compose up -d            # PostgreSQL on localhost:5433
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
+
+`spring-boot-docker-compose` (development only, not in the image) starts `compose.yaml` itself: PostgreSQL on
+localhost:5433 with a local-only password, and the app connects to it without any setting. It also works from the
+IDE: run `AuthApplication` with the working directory `auth/` and the active profile `dev`. Optional overrides
+(issuer, Google credentials...) go in `.env` (see `.env.example`).
+
+The profile is still needed because the issuer, UI and SPA URLs have no defaults (so production fails fast when they
+are missing) and the sample accounts below exist only there.
 
 Open the login page <http://localhost:9090/auth/login> and sign in with one of the seeded **dev-profile-only**
 accounts (the login is the email):
@@ -31,8 +37,8 @@ They are created on startup when missing and exist in no other profile. Discover
 one (`ISSUER_URI`, default `http://localhost:8080/auth`, the address behind the gateway), whatever host you used.
 Running without the gateway, set `ISSUER_URI=http://localhost:9090/auth` in `.env` so tokens and discovery agree.
 
-Stop with `Ctrl+C`; `docker compose down` stops the database (`-v` deletes its data). PostgreSQL only reads
-`AUTH_DB_PASSWORD` when it first creates the volume; after changing it run `docker compose down -v`.
+Stopping the app stops the container too (data stays in the volume; `docker compose down -v` deletes it). PostgreSQL
+reads its password only when it creates the volume, so after changing `AUTH_DB_PASSWORD` run `docker compose down -v`.
 
 ## Tests
 
@@ -53,7 +59,7 @@ setting. The `dev` profile reads `.env` (see `.env.example`).
 | `app.spa.redirect-uris` (comma separated) | `APP_SPA_REDIRECT_URIS` (dev: `SPA_REDIRECT_URIS`) | `http://localhost:5173/callback` |
 | `app.spa.post-logout-redirect-uris` | `APP_SPA_POST_LOGOUT_REDIRECT_URIS` (dev: `SPA_POST_LOGOUT_URIS`) | `http://localhost:5173/` |
 | `app.google.client-id` / `client-secret` | `APP_GOOGLE_CLIENT_ID` / `APP_GOOGLE_CLIENT_SECRET` (dev: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`) | unset: Google login is off |
-| database | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (dev: `AUTH_DB_PASSWORD`, `AUTH_DB_PORT`) | `localhost:5433/authdb`, user `authuser` |
+| database | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (dev: automatic from `compose.yaml`) | `localhost:5433/authdb`, user `authuser` |
 
 Google login: create an OAuth client in the Google console and register
 `<issuer>/login/oauth2/code/google` (for example `https://s4v3.net/auth/login/oauth2/code/google`) as its redirect URI.
