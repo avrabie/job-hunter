@@ -42,17 +42,17 @@ All work is in `auth/`. Commands run from that folder (`cd auth && ./gradlew ...
 
 ## 6. Google login
 
-- [ ] 6.1 Register the Google client only when credentials are set and add the login-page link; verify the page shows the Google option with credentials and not without, and the server starts without them
-- [ ] 6.2 Implement the OIDC user service with provisioning in a transaction: find by provider and subject (refresh names), else link by email and discard the local password, else create with role `USER`; unverified email is rejected; the principal name is the user's UUID; verify each branch with service tests, including concurrent first sign-ins creating one account
-- [ ] 6.3 Port the authentication-factor authorities mapping for Spring Security 7 and verify a full Google login with a stubbed provider returns tokens whose `sub` equals the same user's UUID as a form login
-- [ ] 6.4 Verify the squatter scenario: register `victim@example.com` with a password, sign in with Google for that email, and confirm the old password fails and password reset restores form login
+- [x] 6.1 Register the Google client only when credentials are set and add the login-page link; verify the page shows the Google option with credentials and not without, and the server starts without them
+- [x] 6.2 Implement the OIDC user service with provisioning in a transaction: find by provider and subject (refresh names), else link by email and discard the local password, else create with role `USER`; unverified email is rejected; the principal name is the user's UUID; verify each branch with service tests, including concurrent first sign-ins creating one account
+- [x] 6.3 Port the authentication-factor authorities mapping for Spring Security 7 and verify a full Google login with a stubbed provider returns tokens whose `sub` equals the same user's UUID as a form login
+- [x] 6.4 Verify the squatter scenario: register `victim@example.com` with a password, sign in with Google for that email, and confirm the old password fails and password reset restores form login
 
 ## 7. Runtime and hand-off to the backend
 
-- [ ] 7.1 Expose `/auth/actuator/health/liveness` and `/readiness` (readiness includes the DB, nothing else exposed) and verify: healthy 200 without a token, database down gives readiness 503 and liveness 200, other actuator endpoints 401 or 404
-- [ ] 7.2 Verify refresh and userinfo with a UUID `sub` (code exchange, refresh token use, userinfo request); if any step assumes the principal name differs, apply the fallback customizer from the design and re-run
-- [ ] 7.3 Document in `auth/README.md` the endpoints, claims, environment variables and how the backend should be configured (issuer URI, claims `roles`, `email`, `name`); verify by following the README from a clean checkout
-- [ ] 7.4 When `backend` exists, run both locally, obtain a token from `auth` and call a `backend` `/api/` endpoint with it; verify the backend creates the user record keyed by the UUID `sub`
+- [x] 7.1 Expose `/auth/actuator/health/liveness` and `/readiness` (readiness includes the DB, nothing else exposed) and verify: healthy 200 without a token, database down gives readiness 503 and liveness 200, other actuator endpoints 401 or 404
+- [x] 7.2 Verify refresh and userinfo with a UUID `sub` (code exchange, refresh token use, userinfo request); if any step assumes the principal name differs, apply the fallback customizer from the design and re-run
+- [x] 7.3 Document in `auth/README.md` the endpoints, claims, environment variables and how the backend should be configured (issuer URI, claims `roles`, `email`, `name`); verify by following the README from a clean checkout
+- [x] 7.4 When `backend` exists, run both locally, obtain a token from `auth` and call a `backend` `/api/` endpoint with it; verify the backend creates the user record keyed by the UUID `sub`
 
 ## Workflow follow-up
 

@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
+import org.springframework.security.web.authentication.HttpStatusEntryPoint
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
+import org.springframework.security.web.util.matcher.OrRequestMatcher
 import org.springframework.http.MediaType
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -27,6 +31,7 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
 import java.time.Instant
+import net.s4v3.auth.google.GoogleOidcUserService
 import net.s4v3.auth.token.PublicClientRefreshConverter
 import net.s4v3.auth.token.PublicClientRefreshProvider
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
@@ -86,21 +91,34 @@ class SecurityConfig {
     fun defaultChain(
         http: HttpSecurity,
         clientRegistrations: ObjectProvider<ClientRegistrationRepository>,
+        googleUsers: GoogleOidcUserService,
     ): SecurityFilterChain {
         http
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.POST, *OPEN_POSTS).permitAll()
-                    .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/actuator/health/liveness", "/actuator/health/readiness").permitAll()
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             }
             // These POSTs act on no session, so there is no ambient authority for a forged request to ride on.
             .csrf { it.ignoringRequestMatchers(*OPEN_POSTS) }
             .formLogin { it.successHandler(loginSuccessHandler()) }
+            // Machine-facing paths answer 401; only browser pages are sent to the login form.
+            .exceptionHandling {
+                it.defaultAuthenticationEntryPointFor(
+                    HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    OrRequestMatcher(
+                        PathPatternRequestMatcher.withDefaults().matcher("/actuator/**"),
+                        PathPatternRequestMatcher.withDefaults().matcher("/api/**"),
+                    ),
+                )
+            }
         if (clientRegistrations.ifAvailable != null) {
             http.oauth2Login { login ->
                 login.redirectionEndpoint { it.baseUri("/login/oauth2/code/*") }
-                login.userInfoEndpoint { it.userAuthoritiesMapper(authorizationCodeFactorMapper()) }
+                login.userInfoEndpoint {
+                    it.oidcUserService(googleUsers).userAuthoritiesMapper(authorizationCodeFactorMapper())
+                }
             }
         }
         return http.build()

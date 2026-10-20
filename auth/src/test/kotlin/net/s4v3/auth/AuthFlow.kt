@@ -108,6 +108,23 @@ class AuthFlow(port: Int, private val clientId: String = "spa") {
         return get(loggedIn.location!!)
     }
 
+    /**
+     * Sign-in through the Google button during an authorization request. The fake Google redirects straight back,
+     * so the whole round trip is followed by hand until the browser would land on the client's redirect URI.
+     * Returns that final redirect (a code on success, an error page redirect when the sign-in was rejected).
+     */
+    fun authorizeWithGoogle(pkce: Pkce): Resp {
+        val authorize = get(authorizeUrl(pkce))
+        check(authorize.status == 302 && authorize.location!!.contains("/login")) { "expected login redirect: $authorize" }
+        var response = get("$base/oauth2/authorization/google")
+        repeat(10) {
+            val location = response.location ?: return response
+            if (location.startsWith(REDIRECT) || location.contains("/login?error")) return response
+            response = get(location)
+        }
+        error("too many redirects: $response")
+    }
+
     fun codeFrom(redirect: Resp): String =
         queryOf(redirect.location!!)["code"] ?: error("no code in ${redirect.location}")
 
