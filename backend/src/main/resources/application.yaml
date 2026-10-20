@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: backend
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    hikari:
+      # Virtual threads make request concurrency cheap; the pool is the real limit on database work.
+      maximum-pool-size: 10
+  modulith:
+    events:
+      jdbc:
+        # Liquibase owns the event_publication table (db/changelog/001-baseline.sql).
+        schema-initialization:
+          enabled: false
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only health is exposed; everything else stays off the web.
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        # Liveness never depends on the database: a database outage must not make Kubernetes restart the pod.
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db

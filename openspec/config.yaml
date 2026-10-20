@@ -9,7 +9,7 @@ context: |
   - Servlet MVC + JDBC on virtual threads (not WebFlux/R2DBC): Modulith's event
     publication registry documents JPA/JDBC/MongoDB/Neo4j backends, not R2DBC; the
     Anthropic SDK and crawling libraries are blocking.
-  - PostgreSQL with pgvector, Flyway migrations. No Kafka.
+  - PostgreSQL with pgvector, Liquibase migrations. No Kafka.
   - Modules (top-level packages): sources, postings, accounts, profile, matching,
     applications, llm, web, notifications. One OpenSpec capability per module.
     Modules interact only through their public API or events; ApplicationModules.verify()
@@ -22,7 +22,7 @@ context: |
     code + PKCE.
 
   Domain rules that must hold in every spec:
-  - Multi-user, invite-only. Postings are shared; everything else is per user and every
+  - Multi-user, users should be able to login with their google account in the auth server. If they log in with a google account and they don't have an acocunt with us, we automatically create them one. Postings are shared; everything else is per user and every
     query is scoped by the JWT sub. Each per-user capability needs a scenario proving
     user A cannot access user B's data.
   - Generated documents may only use facts from that user's master profile. Never
@@ -46,10 +46,10 @@ rules:
     - Specify module events as contracts (name, payload, publisher, consumers).
   design:
     - Note any new dependency and why the existing stack is not enough.
-    - Note effects on module boundaries and the database schema (Flyway migration).
+    - Note effects on module boundaries and the database schema (Liquibase changelog).
   tasks:
     - Keep tasks small enough to complete and verify independently.
-    - Include tests and, for schema changes, the Flyway migration.
+    - Include tests and, for schema changes, the Liquibase changeset.
 
 operations:
   apply:

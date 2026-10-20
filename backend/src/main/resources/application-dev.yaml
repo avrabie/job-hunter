@@ -1,0 +1,17 @@
+# Local development: run with `--spring.profiles.active=dev` (see README). Settings come from backend/.env.
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_PORT:5432}/jobhunter
+    username: jobhunter
+    password: ${DB_PASSWORD}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI:http://localhost:8080/auth}
+
+server:
+  # 8080 is the gateway's port when the three services run together (bootstrap-gateway).
+  port: 8081

@@ -1,0 +1,17 @@
+# Real CVs and letters (personal data)
+private/
+
+# Gradle / build output
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.kotlin/
+
+# Local secrets
+.env

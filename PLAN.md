@@ -2,7 +2,7 @@
 
 Crawl software-engineering job postings in Switzerland, score them against each user's profile, and use Claude to draft a tailored CV and motivation letter (EN/DE) for each good match. A human reviews everything; nothing is sent automatically.
 
-Users: me and friends (invite-only), each with their own account and data. I pay for Claude usage by default; users may optionally bring their own Claude API key.
+Users: open registration (email/password or Google), each with their own account and data. I pay for Claude usage by default; users may optionally bring their own Claude API key.
 
 ## 1. Stack
 
@@ -12,12 +12,14 @@ Users: me and friends (invite-only), each with their own account and data. I pay
 | Framework | Spring Boot 4 (Spring Framework 7), servlet (MVC) + JDBC on virtual threads |
 | Structure | Spring Modulith (modular monolith) |
 | Build | Gradle, Kotlin DSL |
-| DB | PostgreSQL with pgvector (Flyway migrations) |
+| DB | PostgreSQL with pgvector (Liquibase migrations) |
 | UI | React + TypeScript (Vite), OIDC login (`oidc-client-ts`, authorization code + PKCE), OpenAPI-generated client |
-| Auth | My existing Spring Authorization Server, deployed in this cluster; the backend is an OAuth2 resource server validating its JWTs |
+| Auth | Own Spring Authorization Server (`auth` Gradle module in this repo, ported and adapted from the one in Granite-Security/sample-shop); the backend is an OAuth2 resource server validating its JWTs |
+| Gateway | Spring Cloud Gateway (WebFlux, Kotlin) in `gateway/`: stateless path router for `/api` and `/auth`; holds no session or token (modelled on the gateway in Granite-Security/sample-shop) |
+| Repo layout | One repo, three independent Gradle builds, each with its own wrapper: `backend/` (the modulith), `auth/` and `gateway/`; built, tested and deployed separately, no shared code. `k8s/` holds the cluster setup instructions and manifests (Gateway API resources, Kustomize base and overlays) |
 | HTTP | Ktor client or Spring `RestClient`; Playwright only where JS rendering is unavoidable |
 | LLM | Koog (JetBrains Kotlin agent framework) with Claude as the provider; confined to the `llm` module (section 7) |
-| Deploy | Own one-node Kubernetes cluster, Kustomize overlays, Ingress + cert-manager |
+| Deploy | Own one-node Kubernetes cluster, Kustomize overlays, Kubernetes Gateway API (HTTPRoutes; implementation such as Traefik) + cert-manager |
 | Observability | Micrometer + Prometheus/Grafana (later), structured logs |
 
 MVC + JDBC rather than WebFlux + R2DBC: the Modulith event publication registry documents JPA/JDBC/MongoDB/Neo4j backends but not R2DBC (to re-check for Modulith 2.x), and the Anthropic SDK and crawling libraries are blocking. Exact versions are pinned from start.spring.io / Maven Central at scaffold time.
@@ -28,19 +30,22 @@ MVC + JDBC rather than WebFlux + R2DBC: the Modulith event publication registry 
 Browser (React SPA, oidc-client-ts, PKCE)
    |  Bearer JWT
    v
-Ingress (TLS, cert-manager)
-   |-- /auth/**  --> auth-server   (Spring Authorization Server, own DB; issues JWT)
-   |-- /api/**   --> jobhunter     (Spring Boot modulith, resource server, 1 replica)
-   |-- /         --> ui            (React static, nginx)
+Kubernetes Gateway API (Gateway + HTTPRoutes, TLS via cert-manager, by hostname)
+   |-- /          --> ui            (React static, nginx)
+   |-- /auth/**   --> gateway  --> auth       (Spring Authorization Server, own DB; issues JWT)
+   |-- /api/**    --> gateway  --> jobhunter  (Spring Boot modulith, resource server, 1 replica)
 
 jobhunter --> PostgreSQL + pgvector (StatefulSet, PVC)
           --> Claude API, job sites (egress only)
 ```
 
-- Workloads: `auth-server` (+ its Postgres DB), `jobhunter`, `ui`, `postgres`. No Kafka (single backend service; Modulith events are enough).
-- Each service validates the JWT itself (issuer URI + JWKS), like in my other projects; the edge only routes. A gateway can be added later without touching the modulith (open decision, section 10).
+- Workloads: `gateway`, `auth` (+ its Postgres DB), `jobhunter`, `ui`, `postgres`. No Kafka (single backend service; Modulith events are enough).
+- Two different "gateways": the cluster's Gateway API resource is the edge (TLS, hostnames, sends `/` to `ui` and `/api`, `/auth` to the Spring gateway); the Spring Cloud Gateway app is a stateless router behind it.
+- The Spring gateway routes by path only, plus security headers, retries for idempotent requests and connection-pool settings. It is not an OAuth2 client and holds no token or session: the SPA runs authorization code + PKCE itself and sends its own Bearer token. Adding a route there grants access; it does not restrict it.
+- Each service still validates the JWT itself (issuer URI + JWKS); the gateway never authorizes.
+- Lessons carried over from sample-shop's gateway: bound the connection pool (idle and life time) so deploys do not cause 500s from stale connections, and let `X-Forwarded-*` reach `auth` untouched so its issuer is not derived from an internal URI (we also set a fixed issuer).
 - Scheduling runs inside `jobhunter` (db-scheduler/ShedLock, one replica), so no unauthenticated trigger endpoints are needed.
-- The auth-server issuer URL must be a stable public HTTPS URL, since it is the JWT `iss`.
+- The auth service issuer URL must be a stable public HTTPS URL, since it is the JWT `iss`.
 
 ## 3. Pipeline
 
@@ -69,7 +74,7 @@ Modules communicate through events (`JobIngested`, `JobScored`, `ApplicationDraf
 
 - **Shared data:** postings and their embeddings (crawled once for everybody).
 - **Per-user data:** profile, CV, preferences, scores, drafts, application status, API key, usage. Every query is scoped by the user id from the JWT `sub`; this rule is written into each module's spec and covered by tests (user A can never read user B's data).
-- **Invite-only:** self-registration is disabled; accounts are created by me or via invite codes in the auth-server.
+- **Open registration:** anyone can register with email and password or sign in with Google, which creates a local account automatically. Because I pay for Claude by default, new accounts get a small default quota (or must add their own key) so open sign-up cannot run up my bill; numbers are an open question.
 - **Quotas:** per-user limits on scoring and generation calls (and token budget) when using my key; rate limiting on the API. Users on their own key are not limited by my budget.
 - **Bring your own Claude key (optional):**
   - User can add/remove an Anthropic API key in settings. Keys are write-only in the UI (never displayed back).
@@ -126,16 +131,16 @@ Rules: respect robots.txt, per-host rate limits, identifiable User-Agent, idempo
 ## 8. Deployment (own one-node cluster)
 
 - Kustomize overlays (as in my other project); images built by CI and pushed to a registry (to decide).
-- Ingress controller + cert-manager for TLS. Ingress routes `/auth`, `/api`, `/`.
+- Gateway API implementation (e.g. Traefik) + cert-manager for TLS. HTTPRoutes: `/` to `ui`, `/api` and `/auth` to the Spring gateway.
 - Postgres as a StatefulSet with the pgvector image (CloudNativePG optional later). One Postgres instance, separate databases for `authdb` and `jobhunter`.
 - **Backups:** nightly `pg_dump` CronJob to off-node storage. A single node with local disks is the weak point.
 - Resource requests/limits on every workload (Playwright, if used, runs as a separate bounded workload).
-- Secrets: Anthropic key, BYO-key encryption key, DB passwords, auth-server client secrets.
+- Secrets: Anthropic key, BYO-key encryption key, DB passwords, auth service client secrets.
 
 ## 9. Phases
 
 0. **OpenSpec setup** (before any code): install the OpenSpec CLI (`npm install -g @fission-ai/openspec@latest` or `brew install openspec`; needs Node 20.19+), run `openspec init` in `job-hunter/` (select Claude Code), fill `openspec/config.yaml` project context, then deliver the Spring Boot skeleton itself as the first OpenSpec change (`bootstrap-modulith-skeleton`, via propose -> apply -> archive). Write the first specs, one per capability/module, including module events as contracts and the per-user scoping rule. `PLAN.md` stays the high-level roadmap; detailed requirements live in the specs. Every phase below is delivered as one or more OpenSpec changes.
-1. **Skeleton and platform** (`bootstrap-modulith-skeleton` plus follow-ups): Gradle project, Modulith modules, Postgres + Flyway, resource-server security with the reused auth-server, local dev setup, Kustomize base.
+1. **Skeleton and platform** (`bootstrap-modulith-skeleton`, then `bootstrap-auth`, then `bootstrap-gateway`, plus follow-ups; the repo holds three independent Gradle builds, `backend/`, `auth/` and `gateway/`): Gradle project, Modulith modules, Postgres + Liquibase, resource-server security against our own auth service, local dev setup, Kustomize base.
 2. **Ingestion**: 2-3 ATS/API sources, scheduled ingestion, dedupe, posting language detection.
 3. **Matching**: per-user profile import from CV (human-reviewed), `llm` module on Koog (Claude provider), embeddings + pgvector prefilter, Haiku scoring, quotas and usage tracking.
 4. **Generation**: CV + motivation letter drafting (EN/DE), fact validation, PDF/DOCX export; Koog draft/critique/validate graph; BYO key.
@@ -147,15 +152,16 @@ pgvector is used from phase 3 for semantic matching (posting embeddings vs. prof
 
 - Market: Switzerland. UI: React. DB: Postgres + pgvector.
 - Documents: CV and motivation letters in EN and DE.
-- Multi-user (friends only, invite-only); I pay for Claude by default; optional bring-your-own key.
-- Auth: reuse my Spring Authorization Server; backend is a resource server.
+- Multi-user, open registration; I pay for Claude by default; optional bring-your-own key.
+- Auth: our own Spring Authorization Server as a second Gradle module in this repo, ported from sample-shop's `auth-server` and adapted (no Kafka, direct mail that is logged at first and sent via SMTP later); backend is a resource server.
 - Own one-node cluster; modular monolith, MVC + JDBC; no Kafka.
+- Edge: Kubernetes Gateway API (not Ingress) with a separate Spring Cloud Gateway behind it for `/api` and `/auth`.
 
 ## 11. Open questions
 
-- **Auth-server reuse:** it publishes identity events to Kafka and a separate notification service sends reset/verification emails. Without Kafka here, either adapt it to send mail directly or run a minimal notification path. Also review seed users, Google login, invite-only registration, and a client registration for the SPA.
-- Gateway: plain Ingress routing (assumed) or add a gateway later?
-- Kubernetes distro, ingress controller, default StorageClass, container registry.
+- **Auth port:** sample-shop's `auth-server` is Java + JPA + Liquibase + Kafka. Decided: open registration, Liquibase for both modules, RSA signing key generated at startup (all tokens invalid after a restart is accepted), mail logged only at first with SMTP later. Still to decide: language (Kotlin vs keep Java), persistence (JPA vs JDBC), and which clients and endpoints to keep.
+- Spring Cloud Gateway version compatible with Spring Boot 4.1 (verify in `bootstrap-gateway`).
+- Kubernetes distro, Gateway API implementation (Traefik assumed), default StorageClass, container registry.
 - Embedding model: Anthropic has no embeddings API, so choose one (e.g. Voyage AI, or a local model) before phase 3.
 - Quota numbers per user (calls/tokens per month) for my key.
 - Seniority, stack, and canton/remote preferences defaults for scoring.
