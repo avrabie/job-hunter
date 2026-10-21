@@ -27,7 +27,7 @@
 
 ## 5. Local run
 
-- [ ] 5.1 Run the local stack (auth, backend, gateway, Vite) and use the page in a real browser with a dev user: save, reload, edit, force a conflict from a second tab, check the console is clean. Record the result in `ui/README.md`.
+- [x] 5.1 Run the local stack (auth, backend, gateway, Vite) and use the page in a real browser with a dev user: save, reload, edit, force a conflict from a second tab, check the console is clean. Record the result in `ui/README.md`.
 
 ## 6. Deploy and verify
 

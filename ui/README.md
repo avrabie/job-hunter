@@ -57,3 +57,13 @@ Checked by hand in a browser at `https://s4v3.net` on 2026-10-21, with the conso
   clears it and a reload shows the landing page.
 - The only console entry is the browser's own log line for the expected `404` of `GET /api/`; no other errors and no
   Content-Security-Policy violations.
+
+## Profile page check (local)
+
+Checked by hand in a browser on 2026-10-21 against the real local stack (`auth`, `backend`, `gateway`, `pnpm dev`):
+
+- Opening `/profile` signed out starts the sign-in and returns to `/profile`; a reload on `/profile` returns to it too.
+- A lowercase canton is rejected by the API and the message appears at the canton field; the other edits stay.
+- Save shows "Saved (version 1)"; after a reload the values are back; browser storage holds only the `jh.signedIn` hint.
+- A second tab saved version 2; saving from the first tab (still at version 1) showed the conflict notice with the edits kept and Save paused; "Reload" loaded the second tab's values and re-enabled Save.
+- The console showed only Vite's own dev messages.
