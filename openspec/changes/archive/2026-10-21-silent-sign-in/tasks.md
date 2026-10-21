@@ -24,4 +24,4 @@
 
 ## 5. Wrap-up
 
-- [ ] 5.1 Archive with `/opsx:archive silent-sign-in` after 4.2.
+- [x] 5.1 Archive with `/opsx:archive silent-sign-in` after 4.2.
