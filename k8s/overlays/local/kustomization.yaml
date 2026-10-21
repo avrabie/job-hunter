@@ -13,6 +13,9 @@ images:
   - name: moldovean/job-hunter-gateway
     newName: job-hunter-gateway
     newTag: local
+  - name: moldovean/job-hunter-ui
+    newName: job-hunter-ui
+    newTag: local
 patches:
   # Public addresses as the browser sees them.
   - target: {kind: ConfigMap, name: app-config}

@@ -11,6 +11,8 @@ images:
     newTag: 0.1.0
   - name: moldovean/job-hunter-gateway
     newTag: 0.1.0
+  - name: moldovean/job-hunter-ui
+    newTag: 0.1.0
 patches:
   - target: {kind: ConfigMap, name: app-config}
     patch: |-

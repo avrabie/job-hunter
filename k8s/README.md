@@ -226,8 +226,9 @@ cert-manager is optional locally (the local overlay uses plain HTTP and no issue
 
 ## 6. Building and publishing images
 
-Images are built with the Spring Boot Gradle plugin (Paketo buildpacks), without a Dockerfile. Names:
-`moldovean/job-hunter-backend`, `moldovean/job-hunter-auth`, `moldovean/job-hunter-gateway` on Docker Hub.
+The three Spring Boot images are built with the Spring Boot Gradle plugin (Paketo buildpacks), without a Dockerfile; the
+UI image is built from `ui/Dockerfile`. Names: `moldovean/job-hunter-backend`, `moldovean/job-hunter-auth`,
+`moldovean/job-hunter-gateway`, `moldovean/job-hunter-ui` on Docker Hub.
 
 **Docker Desktop on macOS:** the plugin fails with `'username' must not be null` while reading Docker Hub credentials
 from the credential helper. Work around it by pulling the builder and run image with the `docker` CLI first and telling
@@ -263,9 +264,18 @@ docker push moldovean/job-hunter-backend:0.1.0        # same for -auth and -gate
 Pulling the builder for one platform replaces the local copy for the other, so pull again (without `--platform`) before the
 next native build. The amd64 backend build was verified (`docker image inspect` reports `amd64`).
 
+The UI image is a normal Docker build (Node 24 build stage, nginx run stage). Test it first, as the cluster runs it
+(read-only root filesystem, no capabilities, uid 101), then build for amd64 and push:
+
+```
+docker build -t job-hunter-ui:test ui && ui/test-image.sh job-hunter-ui:test
+docker build --platform linux/amd64 -t moldovean/job-hunter-ui:0.1.0 ui
+docker push moldovean/job-hunter-ui:0.1.0
+```
+
 The tag in `overlays/prod/kustomization.yaml` (`images:`) must match what you pushed; `latest` is never used. The
 Docker Hub repositories are assumed **public**. For private repositories create a pull secret and add
-`imagePullSecrets` to the three Deployments:
+`imagePullSecrets` to the four Deployments:
 
 ```
 kubectl --context s4v3 -n job-hunter create secret docker-registry dockerhub \
@@ -294,7 +304,7 @@ the roles then); changing the Secret later does not change the passwords inside 
 ```
 kubectl --context kind-job-hunter apply -k k8s/overlays/local
 kubectl --context kind-job-hunter -n job-hunter get pods          # wait for all Running and Ready
-curl http://localhost:8080/                                       # the placeholder page
+curl http://localhost:8080/                                       # the UI's index.html
 curl http://localhost:8080/auth/.well-known/openid-configuration  # issuer http://localhost:8080/auth
 curl -i http://localhost:8080/api/                                # 401 without a token
 ```
@@ -404,7 +414,7 @@ Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the s
 - **Edge**: local has one HTTP listener for `localhost`; prod has an HTTP listener (redirect and ACME challenge only) and an
   HTTPS listener for `s4v3.net` with certificate secret `edge-tls`, the issuer annotation, an extra `http-to-https` route
   (301), and application routes attached to the HTTPS listener.
-- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:0.1.0`.
+- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:0.1.0` (the four, `ui` included).
 - **Resources**: local is smaller (backend 256Mi/768Mi, auth 256Mi/640Mi, gateway 192Mi/384Mi, postgres 128Mi/512Mi);
   prod uses the base values (backend 512Mi/1Gi, auth 384Mi/768Mi, gateway 256Mi/512Mi, postgres 512Mi/1Gi).
 - **Issuer settings**: `backend` locally gets the signing-key URL of the in-cluster `auth` service, because a pod cannot

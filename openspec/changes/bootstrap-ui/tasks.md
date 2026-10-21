@@ -39,12 +39,12 @@
 
 ## 8. Image
 
-- [ ] 8.1 Write `ui/Dockerfile` (Node 24 build stage, `nginxinc/nginx-unprivileged:1.29.1-alpine` run stage) and `ui/nginx.conf` with fallback, 404 for missing assets and for `/api/` and `/auth/`, cache rules and the four security headers; verify `docker build --platform linux/amd64` succeeds.
-- [ ] 8.2 Verify the container with `docker run --read-only --cap-drop ALL --user 101`: `/` and `/callback?code=x` return 200 `index.html`, `/assets/missing.js` returns 404, `index.html` is `no-cache`, an asset is `immutable`, and all headers are present. Put these checks in `ui/test-image.sh` so they can be re-run.
+- [x] 8.1 Write `ui/Dockerfile` (Node 24 build stage, `nginxinc/nginx-unprivileged:1.29.1-alpine` run stage) and `ui/nginx.conf` with fallback, 404 for missing assets and for `/api/` and `/auth/`, cache rules and the four security headers; verify `docker build --platform linux/amd64` succeeds.
+- [x] 8.2 Verify the container with `docker run --read-only --cap-drop ALL --user 101`: `/` and `/callback?code=x` return 200 `index.html`, `/assets/missing.js` returns 404, `index.html` is `no-cache`, an asset is `immutable`, and all headers are present. Put these checks in `ui/test-image.sh` so they can be re-run.
 
 ## 9. Deploy
 
-- [ ] 9.1 Change `k8s/base/ui.yaml` to the image (`job-hunter-ui`), delete the `ui-content` ConfigMap and its mounts, update the local and prod overlays (image name and tag `0.1.0`), and update `k8s/README.md` sections on images, deploying and overlay differences; verify `k8s/validate.sh` and `openspec validate bootstrap-ui --strict` pass.
+- [x] 9.1 Change `k8s/base/ui.yaml` to the image (`job-hunter-ui`), delete the `ui-content` ConfigMap and its mounts, update the local and prod overlays (image name and tag `0.1.0`), and update `k8s/README.md` sections on images, deploying and overlay differences; verify `k8s/validate.sh` and `openspec validate bootstrap-ui --strict` pass.
 - [ ] 9.2 Push `moldovean/job-hunter-ui:0.1.0` (amd64), confirm an anonymous pull, apply `overlays/prod` to the `s4v3` context and verify the `ui` rollout completes and `curl -sI https://s4v3.net/` shows the new headers.
 - [ ] 9.3 In a real browser at `https://s4v3.net` with the console open: register a new user, sign in, see the shell with the identity and the backend 404 message, reload and stay signed in, sign out and be signed out after a reload; verify no console errors or CSP violations. Record the result in `ui/README.md`.
 
