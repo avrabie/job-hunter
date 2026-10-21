@@ -8,9 +8,9 @@ k8s/
   README.md            this guide
   validate.sh          renders both overlays and checks them (schemas, resources, image tags)
   test-validate.sh     proves validate.sh itself, using test/fixtures
-  platform/            applied once per cluster: kind config, Traefik and cert-manager values, Let's Encrypt issuers
+  platform/            applied once per cluster: Traefik and cert-manager values, Let's Encrypt issuers
   base/                namespace, config, secrets template, postgres, backend, auth, gateway, ui, network policies, edge
-  overlays/local/      kind: http://localhost:8080, locally built images, small resources
+  overlays/local/      http://localhost:8080 with locally built images and small resources (no cluster uses it now)
   overlays/prod/       s4v3.net: HTTPS, Let's Encrypt, tagged images, full-size resources
 ```
 
@@ -23,7 +23,6 @@ Spring `gateway` -> `backend` / `auth`. One host, so the browser sees a single o
 |---|---|---|
 | kubectl (includes kustomize) | 1.36.1 | `brew install kubectl` |
 | helm | 3.14.3 | `brew install helm` |
-| kind | 0.32.0 | `brew install kind` |
 | kubeconform | 0.8.0 | `brew install kubeconform` |
 | yq (mikefarah) | 4.54.1 | `brew install yq` |
 | Docker | 29.x | Docker Desktop |
@@ -41,7 +40,7 @@ ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -L 16443:127.0.0.1:
 
 The kubeconfig context `s4v3` points at `https://127.0.0.1:16443`. The API server certificate lists `127.0.0.1`, so
 no `--tls-server-name` is needed (if a future cluster's certificate does not, add `--tls-server-name=kubernetes` to
-`kubectl`). Always name the context, because other contexts (kind, other clusters) exist on the same machine:
+`kubectl`). Always name the context, because other contexts exist on the same machine:
 
 ```
 alias k='kubectl --context s4v3'
@@ -129,8 +128,7 @@ helm repo add jetstack https://charts.jetstack.io
 helm repo update
 ```
 
-Every command below takes a context: `--context s4v3` for the real cluster, `--context kind-job-hunter` for the local
-one (section 5). They are written for the real cluster; swap the context for kind.
+Every command below names the context explicitly (`--context s4v3`); the default context is the real cluster too.
 
 ### 4.1 Storage
 
@@ -208,23 +206,7 @@ time so the address is not committed. The issuers solve HTTP-01 challenges throu
 (`job-hunter/edge`), so the Gateway must exist before a certificate can be issued. `enableGatewayAPI` is switched on in
 the values file.
 
-## 5. Local test cluster (kind)
-
-Same Kubernetes version (v1.36.4) and the same Traefik and cert-manager as production. Ports 80/443 of the kind node are
-published on `localhost:8080` / `localhost:8443`.
-
-```
-kind create cluster --config k8s/platform/kind-config.yaml        # context kind-job-hunter
-kubectl --context kind-job-hunter apply --server-side -f \
-  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
-helm --kube-context kind-job-hunter upgrade --install traefik traefik/traefik --version 42.0.0 --skip-crds \
-  -n traefik --create-namespace -f k8s/platform/traefik-values.yaml --wait
-kind delete cluster --name job-hunter                              # remove it again
-```
-
-cert-manager is optional locally (the local overlay uses plain HTTP and no issuer).
-
-## 6. Building and publishing images
+## 5. Building and publishing images
 
 The three Spring Boot images are built with the Spring Boot Gradle plugin (Paketo buildpacks), without a Dockerfile; the
 UI image is built from `ui/Dockerfile`. Names: `moldovean/job-hunter-backend`, `moldovean/job-hunter-auth`,
@@ -238,18 +220,6 @@ the plugin not to pull. The run image tag is printed in the failing build's outp
 docker pull paketobuildpacks/builder-noble-java-tiny:latest
 docker pull paketobuildpacks/ubuntu-noble-run-tiny:0.0.138
 ```
-
-For the local cluster (native architecture, tag `local`, loaded into kind):
-
-```
-cd backend && ./gradlew bootBuildImage --imageName=job-hunter-backend:local --pullPolicy=IF_NOT_PRESENT -x test
-cd ../auth && ./gradlew bootBuildImage --imageName=job-hunter-auth:local --pullPolicy=IF_NOT_PRESENT -x test
-cd ../gateway && ./gradlew bootBuildImage --imageName=job-hunter-gateway:local --pullPolicy=IF_NOT_PRESENT -x test
-cd ..
-for s in backend auth gateway; do kind load docker-image "job-hunter-${s}:local" --name job-hunter; done
-```
-
-In zsh write `${s}:local` with braces; `$s:local` is parsed as the `:l` modifier and mangles the name.
 
 For production the server is **amd64**; on an Apple-silicon Mac pass the platform, with the amd64 builder and run
 images pulled first (`docker pull --platform linux/amd64 ...` for both images above):
@@ -282,9 +252,9 @@ kubectl --context s4v3 -n job-hunter create secret docker-registry dockerhub \
   --docker-username=moldovean --docker-password=<access token>
 ```
 
-## 7. Deploying
+## 6. Deploying
 
-### 7.1 Secrets
+### 6.1 Secrets
 
 Real credentials are created by hand, never committed (`k8s/.gitignore` ignores `**/secrets.yaml`):
 
@@ -299,26 +269,7 @@ Without this secret the `postgres` pod stays in `CreateContainerConfigError` and
 `secret "job-hunter-secrets" not found`. The database passwords are used only on first start (the init script creates
 the roles then); changing the Secret later does not change the passwords inside an existing database.
 
-### 7.2 Local
-
-```
-kubectl --context kind-job-hunter apply -k k8s/overlays/local
-kubectl --context kind-job-hunter -n job-hunter get pods          # wait for all Running and Ready
-curl http://localhost:8080/                                       # the UI's index.html
-curl http://localhost:8080/auth/.well-known/openid-configuration  # issuer http://localhost:8080/auth
-curl -i http://localhost:8080/api/                                # 401 without a token
-```
-
-To sign in, register a user and fetch a token (authorization code with PKCE; the browser does this for the real UI):
-
-```
-curl -H 'Content-Type: application/json' -d '{"email":"me@example.com","password":"CorrectHorse-Battery9"}' \
-  http://localhost:8080/auth/api/register
-```
-
-The seeded `user@example.com` / `admin@example.com` accounts exist only under the `dev` profile, not in the cluster.
-
-### 7.3 Production
+### 6.2 Production
 
 ```
 kubectl --context s4v3 apply -f k8s/base/namespace.yaml -f k8s/base/secrets.yaml
@@ -352,7 +303,7 @@ discovery document names `https://s4v3.net/auth`, and a PKCE login through `http
 and 401 with a malformed one. The login created the `app_user` row. The check used the account
 `deploy-check@example.com`.
 
-## 8. Environment variables
+## 7. Environment variables
 
 The names below are the ones each application documents in its own README; the Deployments set exactly these.
 
@@ -388,7 +339,7 @@ or 512 Mi limit that leaves no heap or crashes at start (`fixed memory regions r
 includes the database; liveness never does, so a database outage does not restart them. `gateway` readiness does not depend on
 `auth` or `backend`.
 
-## 9. Validation and tests
+## 8. Validation and tests
 
 ```
 k8s/validate.sh            # renders overlays/local and overlays/prod; schema-checks them (Kubernetes, Gateway API,
@@ -406,7 +357,7 @@ kubectl -n job-hunter run np-test --rm -i --restart=Never --image=busybox:1.37.0
 # the same with --labels=app.kubernetes.io/name=backend prints OPEN
 ```
 
-## 10. How the overlays differ
+## 9. How the overlays differ
 
 Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the same five workloads and the same policies.
 
@@ -420,14 +371,14 @@ Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the s
 - **Issuer settings**: `backend` locally gets the signing-key URL of the in-cluster `auth` service, because a pod cannot
   reach `http://localhost:8080`; it still requires tokens to carry the public issuer.
 
-## 11. Logging and personal data
+## 10. Logging and personal data
 
 Containers log to standard output only. Traefik access logs are off; the gateway logs no headers, cookies or query
 strings (see `gateway/README.md`). The Postgres volume holds accounts now and CVs later, so the database is reachable
 only from `backend` and `auth`, has no NodePort or LoadBalancer service, and its credentials come from a Secret that is
 created by hand.
 
-## 12. Things to know
+## 11. Things to know
 
 - **`auth` generates its signing key at startup.** After any restart of `auth` every previously issued token stops
   validating (a fresh sign-in is needed) and two replicas would disagree. A persistent key is a follow-up to

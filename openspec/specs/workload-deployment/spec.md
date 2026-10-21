@@ -6,11 +6,15 @@ Defines how the database and the application services run in the cluster: config
 ## Requirements
 
 ### Requirement: Workload set
-The base manifests SHALL deploy exactly these workloads in one namespace: `postgres`, `backend`, `auth`, `gateway` and a placeholder `ui`.
+The base manifests SHALL deploy exactly these workloads in one namespace: `postgres`, `backend`, `auth`, `gateway` and `ui`, where `ui` runs the web UI image and carries no page content in a ConfigMap.
 
 #### Scenario: Workloads present
 - **WHEN** the base is rendered
 - **THEN** it contains a workload and a cluster-internal service for each of the five names, and no others
+
+#### Scenario: UI from an image
+- **WHEN** the `ui` workload is rendered
+- **THEN** it uses an application image with an explicit tag and mounts no ConfigMap holding page content
 
 ### Requirement: Databases created on first start
 The `postgres` workload SHALL run a pgvector-enabled PostgreSQL on a persistent volume and SHALL create the databases `authdb` and `jobhunter`, each with its own role, and the `vector` extension in `jobhunter`, on first start only.
