@@ -309,6 +309,8 @@ and 401 with a malformed one. The login created the `app_user` row. The check us
 
 The user checked `https://s4v3.net` in a browser on 2026-10-21 and reported it worked.
 
+**Profile field checks release, 2026-10-21:** `moldovean/job-hunter-ui:0.4.0` (amd64, anonymous pull checked) applied the same way; the `ui` rollout completed, no other workload restarted, and anonymous `GET /api/profile` still answers 401.
+
 ## 7. Environment variables
 
 The names below are the ones each application documents in its own README; the Deployments set exactly these.
@@ -371,7 +373,7 @@ Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the s
 - **Edge**: local has one HTTP listener for `localhost`; prod has an HTTP listener (redirect and ACME challenge only) and an
   HTTPS listener for `s4v3.net` with certificate secret `edge-tls`, the issuer annotation, an extra `http-to-https` route
   (301), and application routes attached to the HTTPS listener.
-- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:<tag>` (the four, `ui` included; prod pins `backend` at `0.2.0`, `auth` at `0.2.0`, `ui` at `0.3.0` and `gateway` at `0.1.0`).
+- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:<tag>` (the four, `ui` included; prod pins `backend` at `0.2.0`, `auth` at `0.2.0`, `ui` at `0.4.0` and `gateway` at `0.1.0`).
 - **Resources**: local is smaller (backend 256Mi/768Mi, auth 256Mi/640Mi, gateway 192Mi/384Mi, postgres 128Mi/512Mi);
   prod uses the base values (backend 512Mi/1Gi, auth 384Mi/768Mi, gateway 256Mi/512Mi, postgres 512Mi/1Gi).
 - **Issuer settings**: `backend` locally gets the signing-key URL of the in-cluster `auth` service, because a pod cannot
