@@ -8,11 +8,11 @@ images:
   - name: moldovean/job-hunter-backend
     newTag: 0.2.0
   - name: moldovean/job-hunter-auth
-    newTag: 0.1.0
+    newTag: 0.2.0
   - name: moldovean/job-hunter-gateway
     newTag: 0.1.0
   - name: moldovean/job-hunter-ui
-    newTag: 0.2.0
+    newTag: 0.3.0
 patches:
   - target: {kind: ConfigMap, name: app-config}
     patch: |-

@@ -15,11 +15,11 @@
 
 ## 3. Local run
 
-- [ ] 3.1 With the local stack (`auth`, `backend`, `gateway`, `pnpm dev`) in a real browser: sign in, reload (stays signed in); end the session at `auth` (sign out in another tab, or restart `auth`), reload (landing page, no form); open `/profile` signed out (landing page), choose "Sign in" (returns to `/profile`); console clean. Record the result in `ui/README.md`.
+- [x] 3.1 Dropped by the user's decision: no local browser run; the same checks (sign in and reload, lapsed session, signed-out `/profile`, clean console) are done on `https://s4v3.net` in 4.2.
 
 ## 4. Deploy and verify
 
-- [ ] 4.1 With the user's go-ahead: build and push `moldovean/job-hunter-auth:0.2.0` and `moldovean/job-hunter-ui:0.3.0` (amd64), set the prod tags, apply to `s4v3`, wait for the rollouts, and verify an authorization request with `prompt=none` and no session returns `login_required` at `https://s4v3.net/auth`. Note in `k8s/README.md` that everyone signs in once more after the `auth` restart.
+- [x] 4.1 With the user's go-ahead: build and push `moldovean/job-hunter-auth:0.2.0` and `moldovean/job-hunter-ui:0.3.0` (amd64), set the prod tags, apply to `s4v3`, wait for the rollouts, and verify an authorization request with `prompt=none` and no session returns `login_required` at `https://s4v3.net/auth`. Note in `k8s/README.md` that everyone signs in once more after the `auth` restart.
 - [ ] 4.2 The user checks `https://s4v3.net` in a browser (landing page first after a lapsed session; `/profile` signed out shows the landing page) and the result is recorded.
 
 ## 5. Wrap-up
