@@ -24,10 +24,12 @@ interface Props {
   onChange: (profile: Profile) => void
   /** Server messages by field path, for example `experience[0].title`. */
   errors: Record<string, string>
+  /** Called with the path of a field the user has just left. */
+  onLeave?: (path: string) => void
 }
 
 /** All sections of the profile as editable fields. Holds no state of its own. */
-export function ProfileForm({ profile, onChange, errors }: Props) {
+export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
   const location = profile.location ?? { city: null, canton: null }
@@ -36,19 +38,26 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
     set('preferences', { ...prefs, ...patch })
 
   return (
-    <>
+    <div
+      onBlur={(e) => {
+        const path = (e.target as HTMLElement).dataset['path']
+        if (path) onLeave?.(path)
+      }}
+    >
       <section>
         <h2>About you</h2>
         <TextInput
           label="City"
           value={location.city}
           error={errors['location.city']}
+          path={'location.city'}
           onChange={(city) => set('location', { ...location, city })}
         />
         <TextInput
           label="Canton"
           value={location.canton}
           error={errors['location.canton']}
+          path={'location.canton'}
           onChange={(canton) => set('location', { ...location, canton })}
         />
         <Select
@@ -57,6 +66,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
           options={WORK_AUTHORISATIONS}
           empty="Not set"
           error={errors['workAuthorisation']}
+          path={'workAuthorisation'}
           onChange={(v) => set('workAuthorisation', v)}
         />
         <Field label="Summary" error={errors['summary']}>
@@ -82,6 +92,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                 label="Language code"
                 value={item.code}
                 error={errors[`languages[${i}].code`]}
+                path={`languages[${i}].code`}
                 onChange={(code) => patch({ code })}
               />
               <Select
@@ -89,6 +100,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                 value={item.level}
                 options={LANGUAGE_LEVELS}
                 error={errors[`languages[${i}].level`]}
+                path={`languages[${i}].level`}
                 onChange={(level) => level && patch({ level })}
               />
             </>
@@ -112,12 +124,14 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   label="Employer"
                   value={item.employer}
                   error={errors[`${at}.employer`]}
+                  path={`${at}.employer`}
                   onChange={(employer) => patch({ employer })}
                 />
                 <TextInput
                   label="Title"
                   value={item.title}
                   error={errors[`${at}.title`]}
+                  path={`${at}.title`}
                   onChange={(title) => patch({ title })}
                 />
                 <TextInput
@@ -125,6 +139,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   type="month"
                   value={item.start}
                   error={errors[`${at}.start`]}
+                  path={`${at}.start`}
                   onChange={(start) => patch({ start })}
                 />
                 <TextInput
@@ -132,12 +147,14 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   type="month"
                   value={item.end}
                   error={errors[`${at}.end`]}
+                  path={`${at}.end`}
                   onChange={(end) => patch({ end: end === '' ? null : end })}
                 />
                 <TextInput
                   label="Location"
                   value={item.location}
                   error={errors[`${at}.location`]}
+                  path={`${at}.location`}
                   onChange={(location) => patch({ location })}
                 />
                 <StringList
@@ -169,18 +186,21 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   label="Institution"
                   value={item.institution}
                   error={errors[`${at}.institution`]}
+                  path={`${at}.institution`}
                   onChange={(institution) => patch({ institution })}
                 />
                 <TextInput
                   label="Degree"
                   value={item.degree}
                   error={errors[`${at}.degree`]}
+                  path={`${at}.degree`}
                   onChange={(degree) => patch({ degree })}
                 />
                 <TextInput
                   label="Field of study"
                   value={item.field}
                   error={errors[`${at}.field`]}
+                  path={`${at}.field`}
                   onChange={(field) => patch({ field })}
                 />
                 <TextInput
@@ -188,6 +208,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   type="month"
                   value={item.start}
                   error={errors[`${at}.start`]}
+                  path={`${at}.start`}
                   onChange={(start) =>
                     patch({ start: start === '' ? null : start })
                   }
@@ -197,6 +218,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                   type="month"
                   value={item.end}
                   error={errors[`${at}.end`]}
+                  path={`${at}.end`}
                   onChange={(end) => patch({ end: end === '' ? null : end })}
                 />
               </>
@@ -219,6 +241,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                 label="Skill name"
                 value={item.name}
                 error={errors[`skills[${i}].name`]}
+                path={`skills[${i}].name`}
                 onChange={(name) => patch({ name })}
               />
               <Select
@@ -227,6 +250,7 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
                 options={SKILL_LEVELS}
                 empty="Not set"
                 error={errors[`skills[${i}].level`]}
+                path={`skills[${i}].level`}
                 onChange={(level) => patch({ level })}
               />
             </>
@@ -247,12 +271,14 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
           label="Workload from (%)"
           value={prefs.workloadMin}
           error={errors['preferences.workloadMin']}
+          path={'preferences.workloadMin'}
           onChange={(workloadMin) => setPrefs({ workloadMin })}
         />
         <NumberInput
           label="Workload to (%)"
           value={prefs.workloadMax}
           error={errors['preferences.workloadMax']}
+          path={'preferences.workloadMax'}
           onChange={(workloadMax) => setPrefs({ workloadMax })}
         />
         <fieldset>
@@ -287,10 +313,11 @@ export function ProfileForm({ profile, onChange, errors }: Props) {
           label="Minimum yearly salary (CHF)"
           value={prefs.minSalaryChf}
           error={errors['preferences.minSalaryChf']}
+          path={'preferences.minSalaryChf'}
           onChange={(minSalaryChf) => setPrefs({ minSalaryChf })}
         />
       </section>
-    </>
+    </div>
   )
 }
 

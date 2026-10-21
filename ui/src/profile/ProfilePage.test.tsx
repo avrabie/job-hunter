@@ -159,6 +159,87 @@ describe('editing lists', () => {
   })
 })
 
+describe('field checks while editing', () => {
+  async function open() {
+    const calls = stubApi(() =>
+      json(200, { version: 0, profile: emptyProfile() }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    return calls
+  }
+
+  it('shows a message when a field is left, without saving', async () => {
+    const calls = await open()
+    await userEvent.type(screen.getByLabelText('Canton'), 'zh')
+    expect(
+      screen.queryByText(/must be two uppercase letters/),
+    ).not.toBeInTheDocument()
+    await userEvent.tab()
+    expect(
+      screen.getByText('Canton: must be two uppercase letters'),
+    ).toBeVisible()
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+  })
+
+  it('clears the message while typing a valid value', async () => {
+    await open()
+    const canton = screen.getByLabelText('Canton')
+    await userEvent.type(canton, 'zh')
+    await userEvent.tab()
+    await userEvent.clear(canton)
+    await userEvent.type(canton, 'ZH')
+    expect(screen.queryByText(/Canton: must be/)).not.toBeInTheDocument()
+  })
+
+  it('does not scold a field that was left valid or never visited', async () => {
+    await open()
+    await userEvent.type(screen.getByLabelText('City'), 'Bern')
+    await userEvent.tab()
+    await userEvent.click(screen.getByRole('button', { name: 'Add position' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows the server message when the browser found no problem', async () => {
+    stubApi((method) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(400, {
+            error: 'validation_failed',
+            fields: { summary: 'must be at most 4000 characters' },
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(
+      await screen.findByText('Summary: must be at most 4000 characters'),
+    ).toBeVisible()
+  })
+
+  it('focuses the first field with a message after a failed save', async () => {
+    stubApi((method) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(400, {
+            error: 'validation_failed',
+            fields: {
+              'experience[0].title': 'must not be blank',
+              'location.canton': 'must be two uppercase letters',
+            },
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(screen.getByRole('button', { name: 'Add position' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByText('Canton: must be two uppercase letters')
+    expect(
+      document.querySelector('[data-path="location.canton"]'),
+    ).toHaveFocus()
+  })
+})
+
 describe('save results', () => {
   it('shows each server message next to its field and keeps the other edits', async () => {
     stubApi((method) =>

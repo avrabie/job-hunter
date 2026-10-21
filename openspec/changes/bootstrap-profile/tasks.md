@@ -25,7 +25,7 @@
 - [x] 4.4 Link from the shell, route in `App.tsx`; tests for load, empty profile, add and remove, field error, conflict, no browser storage or console output, guard on and off.
 - [x] 4.5 Lint, typecheck, build and the image test (`test-image.sh`) pass.
 
-- [ ] 4.6 `ui/src/profile/rules.ts` with the browser-side rules and tests (each rule, valid and invalid values); the form shows a message on blur and clears it while typing; merge with server messages; focus and scroll to the first field with a message after a failed save; tests for message on leaving a field, clearing, and focus. (Signed-out `/profile` showing the landing page is task 2.2 of the change `silent-sign-in`; the signed-out test in `ProfilePage.test.tsx` changes there.)
+- [x] 4.6 `ui/src/profile/rules.ts` with the browser-side rules and tests (each rule, valid and invalid values); the form shows a message on blur and clears it while typing; merge with server messages; focus and scroll to the first field with a message after a failed save; tests for message on leaving a field, clearing, and focus. (Signed-out `/profile` showing the landing page is task 2.2 of the change `silent-sign-in`; the signed-out test in `ProfilePage.test.tsx` changes there.)
 
 ## 5. Local run
 

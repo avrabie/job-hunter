@@ -24,17 +24,21 @@ export function TextInput({
   value,
   onChange,
   error,
+  path,
   type = 'text',
 }: {
   label: string
   value: string | null
   onChange: (value: string) => void
   error?: string | undefined
+  /** Field path, so the form can tell which field was left or should get focus. */
+  path?: string
   type?: 'text' | 'month'
 }) {
   return (
     <Field label={label} error={error}>
       <input
+        data-path={path}
         type={type}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
@@ -48,15 +52,18 @@ export function NumberInput({
   value,
   onChange,
   error,
+  path,
 }: {
   label: string
   value: number | null
   onChange: (value: number | null) => void
   error?: string | undefined
+  path?: string
 }) {
   return (
     <Field label={label} error={error}>
       <input
+        data-path={path}
         type="number"
         inputMode="numeric"
         value={value ?? ''}
@@ -75,6 +82,7 @@ export function Select<T extends string>({
   options,
   onChange,
   error,
+  path,
   empty,
 }: {
   label: string
@@ -82,12 +90,14 @@ export function Select<T extends string>({
   options: readonly T[]
   onChange: (value: T | null) => void
   error?: string | undefined
+  path?: string
   /** Text of the "nothing chosen" option; without it a value is required. */
   empty?: string
 }) {
   return (
     <Field label={label} error={error}>
       <select
+        data-path={path}
         value={value ?? ''}
         onChange={(e) =>
           onChange(e.target.value === '' ? null : (e.target.value as T))
@@ -204,6 +214,7 @@ export function StringList({
             label={`${title} ${i + 1}`}
             value={value}
             error={errors[`${path}[${i}]`]}
+            path={`${path}[${i}]`}
             onChange={(v) => onChange(items.map((x, j) => (j === i ? v : x)))}
           />
           <button
