@@ -46,7 +46,7 @@
 
 - [x] 9.1 Change `k8s/base/ui.yaml` to the image (`job-hunter-ui`), delete the `ui-content` ConfigMap and its mounts, update the local and prod overlays (image name and tag `0.1.0`), and update `k8s/README.md` sections on images, deploying and overlay differences; verify `k8s/validate.sh` and `openspec validate bootstrap-ui --strict` pass.
 - [x] 9.2 Push `moldovean/job-hunter-ui:0.1.0` (amd64), confirm an anonymous pull, apply `overlays/prod` to the `s4v3` context and verify the `ui` rollout completes and `curl -sI https://s4v3.net/` shows the new headers.
-- [ ] 9.3 In a real browser at `https://s4v3.net` with the console open: register a new user, sign in, see the shell with the identity and the backend 404 message, reload and stay signed in, sign out and be signed out after a reload; verify no console errors or CSP violations. Record the result in `ui/README.md`.
+- [x] 9.3 In a real browser at `https://s4v3.net` with the console open: register a new user, sign in, see the shell with the identity and the backend 404 message, reload and stay signed in, sign out and be signed out after a reload; verify no console errors or CSP violations. Record the result in `ui/README.md`.
 
 ## Workflow follow-up
 

@@ -47,3 +47,13 @@ the dev proxy, so keep `pnpm dev` running while you call `/api`. The `dev` profi
 redirect addresses `http://localhost:5173/callback` and `http://localhost:5173/`.
 
 The signed-in page calls `/api/` once and shows "The backend has no endpoints yet." until `backend` has endpoints.
+
+## Production check
+
+Checked by hand in a browser at `https://s4v3.net` on 2026-10-21, with the console open:
+
+- Register, then sign in at `auth`: works.
+- The shell shows the signed-in identity and the "no endpoints yet" message; reload keeps the session; sign-out
+  clears it and a reload shows the landing page.
+- The only console entry is the browser's own log line for the expected `404` of `GET /api/`; no other errors and no
+  Content-Security-Policy violations.
