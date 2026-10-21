@@ -14,6 +14,7 @@ function mount(manager: ReturnType<typeof fakeManager>['manager']) {
         <Routes>
           <Route path="/callback" element={<CallbackPage />} />
           <Route path="/" element={<p>home</p>} />
+          <Route path="/profile" element={<p>profile page</p>} />
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
@@ -35,6 +36,28 @@ describe('CallbackPage', () => {
       expect.stringContaining('code=abc'),
     ])
     expect(hasSignedInHint()).toBe(true)
+  })
+
+  it('opens the page the visitor asked for before signing in', async () => {
+    const { manager, spies } = fakeManager()
+    spies.signinCallback.mockResolvedValue({
+      ...fakeUser(),
+      state: { returnTo: '/profile' },
+    } as never)
+    mount(manager)
+    await waitFor(() =>
+      expect(screen.getByText('profile page')).toBeInTheDocument(),
+    )
+  })
+
+  it('ignores a return address that is not one of ours', async () => {
+    const { manager, spies } = fakeManager()
+    spies.signinCallback.mockResolvedValue({
+      ...fakeUser(),
+      state: { returnTo: 'https://evil.example/' },
+    } as never)
+    mount(manager)
+    await waitFor(() => expect(screen.getByText('home')).toBeInTheDocument())
   })
 
   it('rejects a state mismatch without starting another sign-in', async () => {

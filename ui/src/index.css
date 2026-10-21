@@ -71,3 +71,66 @@ form input {
   color: #b3261e;
   font-size: 0.9rem;
 }
+
+main.wide {
+  max-width: 48rem;
+}
+
+textarea,
+select,
+form input[type='number'] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+fieldset {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+form label.inline {
+  display: inline-block;
+  margin-right: 1rem;
+}
+
+form label.inline input {
+  display: inline;
+  width: auto;
+  margin-right: 0.4rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.row label {
+  flex: 1;
+}
+
+.row button {
+  margin-bottom: 1rem;
+}
+
+.actions.compact {
+  margin-top: 0.5rem;
+}
+
+.notice {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+section {
+  margin-bottom: 2rem;
+}

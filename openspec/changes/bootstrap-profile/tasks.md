@@ -19,11 +19,11 @@
 
 ## 4. UI
 
-- [ ] 4.1 `ui/src/profile/types.ts` and `profileApi.ts` (load, save, mapping of 400 and 409 to typed results) with tests, using the shared fixture of a full profile.
-- [ ] 4.2 `ProfilePage` with sections (location and permit, languages, summary, experience, education, skills, preferences), list add, remove and reorder, dirty tracking and the `beforeunload` guard.
-- [ ] 4.3 Save flow: field errors at fields, conflict notice with "Reload" that keeps edits until chosen, generic failure message; sign-in return to `/profile` for a signed-out visitor.
-- [ ] 4.4 Link from the shell, route in `App.tsx`; tests for load, empty profile, add and remove, field error, conflict, no browser storage or console output, guard on and off.
-- [ ] 4.5 Lint, typecheck, build and the image test (`test-image.sh`) pass.
+- [x] 4.1 `ui/src/profile/types.ts` and `profileApi.ts` (load, save, mapping of 400 and 409 to typed results) with tests, using the shared fixture of a full profile.
+- [x] 4.2 `ProfilePage` with sections (location and permit, languages, summary, experience, education, skills, preferences), list add, remove and reorder, dirty tracking and the `beforeunload` guard.
+- [x] 4.3 Save flow: field errors at fields, conflict notice with "Reload" that keeps edits until chosen, generic failure message; sign-in return to `/profile` for a signed-out visitor.
+- [x] 4.4 Link from the shell, route in `App.tsx`; tests for load, empty profile, add and remove, field error, conflict, no browser storage or console output, guard on and off.
+- [x] 4.5 Lint, typecheck, build and the image test (`test-image.sh`) pass.
 
 ## 5. Local run
 

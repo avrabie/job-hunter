@@ -48,6 +48,28 @@ describe('start-up restore', () => {
     expect(screen.getByTestId('status')).toHaveTextContent('loading')
   })
 
+  it('asks to come back to the page that was open before the reload', async () => {
+    setSignedInHint()
+    window.history.pushState({}, '', '/profile')
+    const { manager, spies } = fakeManager()
+    mount(manager)
+    await waitFor(() => expect(spies.signinRedirect).toHaveBeenCalledTimes(1))
+    expect(spies.signinRedirect).toHaveBeenCalledWith({
+      state: { returnTo: '/profile' },
+    })
+  })
+
+  it('does not take an unknown address as the page to return to', async () => {
+    setSignedInHint()
+    window.history.pushState({}, '', '/some/other/page')
+    const { manager, spies } = fakeManager()
+    mount(manager)
+    await waitFor(() => expect(spies.signinRedirect).toHaveBeenCalledTimes(1))
+    expect(spies.signinRedirect).toHaveBeenCalledWith({
+      state: { returnTo: '/' },
+    })
+  })
+
   it('does not redirect on the callback address', async () => {
     setSignedInHint()
     window.history.pushState({}, '', '/callback?code=x&state=y')

@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch, ApiError } from '../api/apiFetch.ts'
 import { messageForError, messageForStatus } from '../api/messages.ts'
@@ -41,6 +42,9 @@ export function Shell({ identity }: { identity: string }) {
         {status.state === 'checking' ? 'Checking the backend…' : status.text}
       </p>
       <div className="actions">
+        <Link className="button" to="/profile">
+          Your profile
+        </Link>
         <button
           type="button"
           className="secondary"

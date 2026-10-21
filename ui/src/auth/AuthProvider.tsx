@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { AuthContext, type AuthApi, type AuthState } from './authContext.ts'
 import { clearSignedInHint, hasSignedInHint, setSignedInHint } from './hint.ts'
+import { safeReturnTo } from './returnTo.ts'
 
 interface Props {
   manager: UserManager
@@ -43,7 +44,10 @@ export function AuthProvider({ manager, children }: Props) {
       if (redirected.current) return
       redirected.current = true
       try {
-        await manager.signinRedirect()
+        // Come back to the page that was open before the reload.
+        await manager.signinRedirect({
+          state: { returnTo: safeReturnTo(window.location.pathname) },
+        })
       } catch {
         clearSignedInHint()
         if (!cancelled) setState({ status: 'error' })
@@ -66,7 +70,11 @@ export function AuthProvider({ manager, children }: Props) {
     }
   }, [manager, setUser, discard])
 
-  const signIn = useCallback(() => manager.signinRedirect(), [manager])
+  const signIn = useCallback(
+    (returnTo?: string) =>
+      manager.signinRedirect({ state: { returnTo: safeReturnTo(returnTo) } }),
+    [manager],
+  )
 
   const signOut = useCallback(async () => {
     clearSignedInHint()
@@ -80,6 +88,9 @@ export function AuthProvider({ manager, children }: Props) {
         if (!user) throw new Error('Sign-in returned no user')
         setSignedInHint()
         setUser(user)
+        return safeReturnTo(
+          (user.state as { returnTo?: unknown } | undefined)?.returnTo,
+        )
       } catch (e) {
         clearSignedInHint()
         throw e
