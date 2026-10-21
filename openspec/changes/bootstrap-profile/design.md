@@ -27,6 +27,9 @@ No `log.*` call receives a profile or any field of it. Exception messages carry 
 ### Deploy
 `backend` image `0.2.0` and `ui` image `0.2.0` (amd64) pushed to Docker Hub, prod overlay tags updated, applied to `s4v3` with explicit `--context`. The `ui` workload needs no manifest change; `backend` migrates the schema on start.
 
+### Landing page when signed out, live field checks (added 2026-10-21 after a production trial)
+Two changes after the first look at `s4v3.net`. (1) `/profile` no longer starts a sign-in by itself: signed out shows the landing page, and "Sign in" returns to `/profile` (the quiet restore on reload is in the change `silent-sign-in`). (2) Field messages appeared only after a submit, which hides a bad value until the user is far from the field. `ui/src/profile/rules.ts` holds the cheap rules (the same ones the server enforces: see the `profile` spec) and the form runs them on blur and, once a message shows, on change; server messages are merged on top and win. The rules are duplicated on purpose: the browser checks are a convenience, the server is the authority, and a test feeds the same invalid values to both messages' rule names to catch drift. After a failed save the first field with a message is focused.
+
 ## Risks and trade-offs
 
 - **Frameworks print values below INFO.** The log test found that Spring MVC logs the response object at DEBUG (`org.springframework.web`), and Spring JDBC (`org.springframework.jdbc.core`) and the PostgreSQL driver (`org.postgresql`) log every bound SQL parameter at TRACE, which includes the whole profile. The application runs at INFO, so none of this is on; the test captures everything else at TRACE and leaves these three out. Rule, written into `backend/README.md`: never enable those loggers below INFO outside a throwaway local run.
