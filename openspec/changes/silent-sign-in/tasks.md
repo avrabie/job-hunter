@@ -20,7 +20,7 @@
 ## 4. Deploy and verify
 
 - [x] 4.1 With the user's go-ahead: build and push `moldovean/job-hunter-auth:0.2.0` and `moldovean/job-hunter-ui:0.3.0` (amd64), set the prod tags, apply to `s4v3`, wait for the rollouts, and verify an authorization request with `prompt=none` and no session returns `login_required` at `https://s4v3.net/auth`. Note in `k8s/README.md` that everyone signs in once more after the `auth` restart.
-- [ ] 4.2 The user checks `https://s4v3.net` in a browser (landing page first after a lapsed session; `/profile` signed out shows the landing page) and the result is recorded.
+- [x] 4.2 The user checks `https://s4v3.net` in a browser (landing page first after a lapsed session; `/profile` signed out shows the landing page) and the result is recorded.
 
 ## 5. Wrap-up
 
