@@ -1,26 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { Landing } from '../pages/Landing.tsx'
 import { ProfileForm } from './ProfileForm.tsx'
 import { loadProfile, saveProfile } from './profileApi.ts'
 import { emptyProfile, toRequestProfile, type Profile } from './types.ts'
 
-/** The profile page. A visitor without a session is sent to sign in and comes back here. */
+/** The profile page. A visitor without a session sees the landing page and comes back here after signing in. */
 export function ProfilePage() {
-  const { state, signIn } = useAuth()
-  const started = useRef(false)
-
-  useEffect(() => {
-    if (state.status !== 'signedOut' || started.current) return
-    started.current = true
-    void signIn('/profile')
-  }, [state.status, signIn])
+  const { state } = useAuth()
 
   switch (state.status) {
     case 'loading':
       return <p>Loading…</p>
     case 'signedOut':
-      return <p>Taking you to sign in…</p>
+      return <Landing returnTo="/profile" />
     case 'error':
       return (
         <main>

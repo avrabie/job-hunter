@@ -16,7 +16,7 @@ export function fakeAuth(
     state,
     signIn: vi.fn(async () => {}),
     signOut: vi.fn(async () => {}),
-    completeSignIn: vi.fn(async () => '/'),
+    completeSignIn: vi.fn(async () => ({ signedIn: true, returnTo: '/' })),
     getAccessToken: () =>
       state.status === 'signedIn' ? state.user.access_token : null,
     renew: vi.fn(async () => null),

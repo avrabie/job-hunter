@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { ErrorResponse } from 'oidc-client-ts'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { fakeManager, fakeUser } from '../test/fakeManager.ts'
@@ -56,6 +57,35 @@ describe('CallbackPage', () => {
       ...fakeUser(),
       state: { returnTo: 'https://evil.example/' },
     } as never)
+    mount(manager)
+    await waitFor(() => expect(screen.getByText('home')).toBeInTheDocument())
+  })
+
+  it('treats login_required as signed out: clears the hint, goes to the page, starts no sign-in', async () => {
+    setSignedInHint()
+    const { manager, spies } = fakeManager()
+    spies.signinCallback.mockRejectedValue(
+      new ErrorResponse({
+        error: 'login_required',
+        userState: { returnTo: '/profile' },
+      }),
+    )
+    mount(manager)
+    await waitFor(() =>
+      expect(screen.getByText('profile page')).toBeInTheDocument(),
+    )
+    expect(hasSignedInHint()).toBe(false)
+    expect(spies.signinRedirect).not.toHaveBeenCalled()
+  })
+
+  it('sends a foreign return value home after login_required', async () => {
+    const { manager, spies } = fakeManager()
+    spies.signinCallback.mockRejectedValue(
+      new ErrorResponse({
+        error: 'login_required',
+        userState: { returnTo: 'https://evil.example/' },
+      }),
+    )
     mount(manager)
     await waitFor(() => expect(screen.getByText('home')).toBeInTheDocument())
   })

@@ -64,6 +64,9 @@ class SecurityConfig {
             // Unauthenticated browser requests go to the login page. The path is relative on purpose: the redirect
             // strategy prepends the context path (/auth) itself.
             .exceptionHandling {
+                // First match wins: a validated prompt=none request is answered, everything else goes to the form.
+                val promptNone = PromptNoneMatcher(clients)
+                it.defaultAuthenticationEntryPointFor(PromptNoneEntryPoint(promptNone), promptNone)
                 it.defaultAuthenticationEntryPointFor(
                     LoginUrlAuthenticationEntryPoint("/login"),
                     MediaTypeRequestMatcher(MediaType.TEXT_HTML),

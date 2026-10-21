@@ -18,7 +18,7 @@ export function CallbackPage() {
     started.current = true
     completeSignIn(window.location.href).then(
       // Replacing the entry also removes the code and state from the address bar and history.
-      (returnTo) => navigate(returnTo, { replace: true }),
+      ({ returnTo }) => navigate(returnTo, { replace: true }),
       () => setFailed(true),
     )
   }, [completeSignIn, navigate])

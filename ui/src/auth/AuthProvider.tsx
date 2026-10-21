@@ -1,4 +1,4 @@
-import type { User, UserManager } from 'oidc-client-ts'
+import { ErrorResponse, type User, type UserManager } from 'oidc-client-ts'
 import {
   useCallback,
   useEffect,
@@ -44,8 +44,9 @@ export function AuthProvider({ manager, children }: Props) {
       if (redirected.current) return
       redirected.current = true
       try {
-        // Come back to the page that was open before the reload.
+        // Ask quietly (no sign-in form) and come back to the page that was open before the reload.
         await manager.signinRedirect({
+          prompt: 'none',
           state: { returnTo: safeReturnTo(window.location.pathname) },
         })
       } catch {
@@ -88,11 +89,24 @@ export function AuthProvider({ manager, children }: Props) {
         if (!user) throw new Error('Sign-in returned no user')
         setSignedInHint()
         setUser(user)
-        return safeReturnTo(
-          (user.state as { returnTo?: unknown } | undefined)?.returnTo,
-        )
+        return {
+          signedIn: true,
+          returnTo: safeReturnTo(
+            (user.state as { returnTo?: unknown } | undefined)?.returnTo,
+          ),
+        }
       } catch (e) {
         clearSignedInHint()
+        // The quiet check found no session: that is "signed out", not a failure.
+        if (e instanceof ErrorResponse && e.error === 'login_required') {
+          setUser(null)
+          return {
+            signedIn: false,
+            returnTo: safeReturnTo(
+              (e.state as { returnTo?: unknown } | undefined)?.returnTo,
+            ),
+          }
+        }
         throw e
       }
     },

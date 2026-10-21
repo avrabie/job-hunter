@@ -55,6 +55,7 @@ describe('start-up restore', () => {
     mount(manager)
     await waitFor(() => expect(spies.signinRedirect).toHaveBeenCalledTimes(1))
     expect(spies.signinRedirect).toHaveBeenCalledWith({
+      prompt: 'none',
       state: { returnTo: '/profile' },
     })
   })
@@ -66,6 +67,7 @@ describe('start-up restore', () => {
     mount(manager)
     await waitFor(() => expect(spies.signinRedirect).toHaveBeenCalledTimes(1))
     expect(spies.signinRedirect).toHaveBeenCalledWith({
+      prompt: 'none',
       state: { returnTo: '/' },
     })
   })

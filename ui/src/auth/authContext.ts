@@ -17,10 +17,12 @@ export interface AuthApi {
   /** Ends the session at the auth service and returns to the landing page. */
   signOut: () => Promise<void>
   /**
-   * Completes a sign-in from the `/callback` address and resolves to the path to open next.
-   * Rejects when the response is not valid.
+   * Completes a sign-in from the `/callback` address and resolves to the path to open next. `signedIn` is false when
+   * the quiet check found no session at the auth service (`login_required`). Rejects when the response is not valid.
    */
-  completeSignIn: (url: string) => Promise<string>
+  completeSignIn: (
+    url: string,
+  ) => Promise<{ signedIn: boolean; returnTo: string }>
   /** The current access token, or null when signed out. */
   getAccessToken: () => string | null
   /** Renews the tokens with the refresh token. Returns the new access token, or null when renewal failed. */

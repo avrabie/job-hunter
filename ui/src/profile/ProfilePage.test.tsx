@@ -97,11 +97,14 @@ describe('loading', () => {
 })
 
 describe('signed-out visitor', () => {
-  it('starts the sign-in and asks to return to /profile', async () => {
+  it('shows the landing page, signs in only on request, and returns to /profile', async () => {
     const calls = stubApi(() => json(200, {}))
     const { auth } = mount(fakeAuth({ status: 'signedOut' }))
-    await waitFor(() => expect(auth.signIn).toHaveBeenCalledWith('/profile'))
-    expect(auth.signIn).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('button', { name: 'Sign in' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Register' })).toBeVisible()
+    expect(auth.signIn).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(auth.signIn).toHaveBeenCalledWith('/profile')
     expect(calls).toHaveLength(0)
   })
 })

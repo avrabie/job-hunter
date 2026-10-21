@@ -1,8 +1,8 @@
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 
-/** What a signed-out visitor sees. It shows no user data and makes no call to the API. */
-export function Landing() {
+/** What a signed-out visitor sees; `returnTo` is the page to open after signing in. It shows no user data and makes no call to the API. */
+export function Landing({ returnTo }: { returnTo?: string }) {
   const { signIn } = useAuth()
   return (
     <main>
@@ -12,7 +12,7 @@ export function Landing() {
         application. You review everything.
       </p>
       <div className="actions">
-        <button type="button" onClick={() => void signIn()}>
+        <button type="button" onClick={() => void signIn(returnTo)}>
           Sign in
         </button>
         <Link className="button secondary" to="/register">
