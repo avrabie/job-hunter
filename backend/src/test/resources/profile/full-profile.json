@@ -1,0 +1,42 @@
+{
+  "location": { "city": "Zurich", "canton": "ZH" },
+  "workAuthorisation": "PERMIT_B",
+  "languages": [
+    { "code": "en", "level": "C1" },
+    { "code": "de", "level": "B2" }
+  ],
+  "summary": "Invented engineer used only in tests.",
+  "experience": [
+    {
+      "employer": "Example AG",
+      "title": "Senior Engineer",
+      "start": "2021-03",
+      "end": null,
+      "location": "Zurich",
+      "achievements": ["Cut build time by half", "Mentored two juniors"]
+    },
+    {
+      "employer": "Beispiel GmbH",
+      "title": "Engineer",
+      "start": "2017-09",
+      "end": "2021-02",
+      "location": null,
+      "achievements": []
+    }
+  ],
+  "education": [
+    { "institution": "Example University", "degree": "MSc", "field": "Computer Science", "start": "2013-09", "end": "2016-06" }
+  ],
+  "skills": [
+    { "name": "Kotlin", "level": "EXPERT" },
+    { "name": "PostgreSQL", "level": null }
+  ],
+  "preferences": {
+    "targetRoles": ["Backend Engineer", "Tech Lead"],
+    "workloadMin": 80,
+    "workloadMax": 100,
+    "remoteModes": ["HYBRID", "REMOTE"],
+    "cantons": ["ZH", "ZG"],
+    "minSalaryChf": 130000
+  }
+}

@@ -71,6 +71,13 @@ Nine modules, one top-level package each under `net.s4v3.backend`: `sources`, `p
 - Database changes are Liquibase changesets under `src/main/resources/db/changelog/`.
 - Module events are specified as contracts in `openspec/`; `accounts` publishes `UserRegistered(userId, registeredAt)`.
 
+## Logging and personal data
+
+The profile is personal data and nothing in the application logs it. The frameworks do, though, below INFO: Spring MVC
+prints the response object at `DEBUG` (`org.springframework.web`), and Spring JDBC (`org.springframework.jdbc.core`) and the
+PostgreSQL driver (`org.postgresql`) print every bound SQL parameter at `TRACE`. Never enable those loggers below INFO
+outside a throwaway local run, and never in the cluster.
+
 ## Health
 
 `/actuator/health/liveness` and `/actuator/health/readiness` need no token. Readiness includes the database;
