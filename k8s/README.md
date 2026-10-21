@@ -303,6 +303,8 @@ discovery document names `https://s4v3.net/auth`, and a PKCE login through `http
 and 401 with a malformed one. The login created the `app_user` row. The check used the account
 `deploy-check@example.com`.
 
+**Profile release, 2026-10-21:** `moldovean/job-hunter-backend:0.2.0` and `moldovean/job-hunter-ui:0.2.0` (amd64, anonymous pull checked) applied with `kubectl --context s4v3 apply -k k8s/overlays/prod`. `backend` ran Liquibase changeset `004-profile` on start (table `profile` exists), both rollouts completed, `postgres` was not restarted, and anonymous `GET` and `PUT /api/profile` answer 401.
+
 ## 7. Environment variables
 
 The names below are the ones each application documents in its own README; the Deployments set exactly these.
@@ -365,7 +367,7 @@ Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the s
 - **Edge**: local has one HTTP listener for `localhost`; prod has an HTTP listener (redirect and ACME challenge only) and an
   HTTPS listener for `s4v3.net` with certificate secret `edge-tls`, the issuer annotation, an extra `http-to-https` route
   (301), and application routes attached to the HTTPS listener.
-- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:0.1.0` (the four, `ui` included).
+- **Images**: `job-hunter-<service>:local` vs `moldovean/job-hunter-<service>:<tag>` (the four, `ui` included; prod pins `backend` and `ui` at `0.2.0`, `auth` and `gateway` at `0.1.0`).
 - **Resources**: local is smaller (backend 256Mi/768Mi, auth 256Mi/640Mi, gateway 192Mi/384Mi, postgres 128Mi/512Mi);
   prod uses the base values (backend 512Mi/1Gi, auth 384Mi/768Mi, gateway 256Mi/512Mi, postgres 512Mi/1Gi).
 - **Issuer settings**: `backend` locally gets the signing-key URL of the in-cluster `auth` service, because a pod cannot
