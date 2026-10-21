@@ -61,7 +61,7 @@ Sources -> Fetch -> Normalize -> Dedupe -> Store (shared)
 | `sources` | `JobSource` adapters (one per site/API), fetching, rate limiting, robots.txt |
 | `postings` | Normalized `JobPosting` model, dedupe, persistence, raw payload storage. Shared across users |
 | `accounts` | JWT resource-server config, current-user context (`sub`), roles, user records, account deletion/export |
-| `profile` | Per-user master profile (experience, skills, preferences). Single source of facts for that user |
+| `profile` | Per-user master profile (experience, skills, preferences). Single source of facts for that user. **Built:** one JSON document per user, `GET`/`PUT /api/profile` with a version check, server validation, and the UI page at `/profile` with live field checks. CV import is not built yet |
 | `matching` | Per-user prefilter + Claude scoring of postings against the profile; structured JSON output |
 | `applications` | Per-user CV and motivation-letter generation, fact validation, PDF/DOCX export |
 | `llm` | Koog-based LLM services (scoring, drafting), prompt templates, caching, per-user usage and quotas, BYO key handling |

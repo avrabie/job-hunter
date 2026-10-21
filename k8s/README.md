@@ -311,6 +311,8 @@ The user checked `https://s4v3.net` in a browser on 2026-10-21 and reported it w
 
 **Profile field checks release, 2026-10-21:** `moldovean/job-hunter-ui:0.4.0` (amd64, anonymous pull checked) applied the same way; the `ui` rollout completed, no other workload restarted, and anonymous `GET /api/profile` still answers 401.
 
+The user checked the profile page on `https://s4v3.net` (sign in, save, reload, field messages, focus after a failed save, console) on 2026-10-21 and reported it fine.
+
 ## 7. Environment variables
 
 The names below are the ones each application documents in its own README; the Deployments set exactly these.

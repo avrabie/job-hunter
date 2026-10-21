@@ -34,8 +34,8 @@
 ## 6. Deploy and verify
 
 - [x] 6.1 Build the amd64 images `moldovean/job-hunter-backend:0.2.0` and `moldovean/job-hunter-ui:0.2.0`; with the user's go-ahead, push them, set the prod overlay tags, apply to context `s4v3`, and wait for both rollouts.
-- [ ] 6.2 Verify on `https://s4v3.net`: `GET /api/profile` is 401 anonymously; the user signs in, fills and saves the profile, reloads and sees it, and the console is clean. Update `k8s/README.md` (image tags) and record the result.
+- [x] 6.2 Verify on `https://s4v3.net`: `GET /api/profile` is 401 anonymously; the user signs in, fills and saves the profile, reloads and sees it, and the console is clean. Update `k8s/README.md` (image tags) and record the result.
 
 ## 7. Wrap-up
 
-- [ ] 7.1 Update `PLAN.md` (the profile section of the module table notes what is built) and archive with `/opsx:archive bootstrap-profile` after 6.2.
+- [x] 7.1 Update `PLAN.md` (the profile section of the module table notes what is built) and archive with `/opsx:archive bootstrap-profile` after 6.2.
