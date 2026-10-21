@@ -166,3 +166,7 @@ pgvector is used from phase 3 for semantic matching (posting embeddings vs. prof
 - Quota numbers per user (calls/tokens per month) for my key.
 - Seniority, stack, and canton/remote preferences defaults for scoring.
 - Photo on the CV: yes/no, and CV layout template preference.
+
+## 12. To do later
+
+- **Registration abuse protection.** `POST /auth/api/register` is public and open: no rate limit per address, no CAPTCHA or other bot check, no email verification, so anyone can create accounts with any address. Before real users arrive, decide and build: rate limiting at the gateway or edge (`X-Forwarded-For` already reaches the services), a bot check on the registration form, and email verification once SMTP exists in `auth`. Needs its own OpenSpec change.
