@@ -6,7 +6,7 @@ resources:
   - redirect.yaml
 images:
   - name: moldovean/job-hunter-backend
-    newTag: 0.4.0
+    newTag: 0.5.0
   - name: moldovean/job-hunter-auth
     newTag: 0.2.0
   - name: moldovean/job-hunter-gateway
@@ -49,3 +49,9 @@ patches:
     patch: |-
       - {op: add, path: /spec/hostnames, value: [s4v3.net]}
       - {op: replace, path: /spec/parentRefs/0/sectionName, value: https}
+  # Initial crawl schedule: hourly (the application default). A schedule stored through the admin API wins over this.
+  - target: {kind: Deployment, name: backend}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: JOBHUNTER_SOURCES_SCHEDULE_ENABLED, value: "true"}
