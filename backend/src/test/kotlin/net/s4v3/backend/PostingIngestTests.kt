@@ -258,9 +258,10 @@ class PostingIngestTests(
 
         await().atMost(Duration.ofSeconds(10)).until { eventsFor(id).isNotEmpty() }
         assertEquals(1, eventsFor(id).size)
-        assertEquals(1, jdbc.queryForObject<Int>("select count(*) from event_publication where serialized_event like ?", "%$id%"))
+        // The registry keeps one row per listener (this test's and matching's), but only one distinct event.
+        assertEquals(1, jdbc.queryForObject<Int>("select count(distinct serialized_event) from event_publication where serialized_event like ?", "%$id%"))
         await().atMost(Duration.ofSeconds(10)).until {
-            jdbc.queryForObject<Int>("select count(*) from event_publication where serialized_event like ? and completion_date is not null", "%$id%") == 1
+            jdbc.queryForObject<Int>("select count(*) from event_publication where serialized_event like ? and completion_date is null", "%$id%") == 0
         }
         assertEquals(1, eventsFor(id).size)
     }

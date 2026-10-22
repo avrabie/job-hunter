@@ -1,10 +1,14 @@
 package net.s4v3.backend.profile.internal
 
+import net.s4v3.backend.profile.OwnedProfile
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileConflictException
+import net.s4v3.backend.profile.ProfileDirectory
+import net.s4v3.backend.profile.ProfileSaved
 import net.s4v3.backend.profile.ProfileService
 import net.s4v3.backend.profile.ProfileUpdate
 import net.s4v3.backend.profile.StoredProfile
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,7 +18,10 @@ import org.springframework.transaction.annotation.Transactional
  * of the statement itself, so two concurrent saves cannot both succeed.
  */
 @Service
-internal class JdbcProfileService(private val jdbc: JdbcClient) : ProfileService {
+internal class JdbcProfileService(
+    private val jdbc: JdbcClient,
+    private val events: ApplicationEventPublisher,
+) : ProfileService, ProfileDirectory {
 
     @Transactional(readOnly = true)
     override fun get(sub: String): StoredProfile =
@@ -55,6 +62,23 @@ internal class JdbcProfileService(private val jdbc: JdbcClient) : ProfileService
                     .update()
             }
         if (changed == 0) throw ProfileConflictException()
+        // Delivered to transactional listeners after this transaction commits; the payload holds no profile content.
+        events.publishEvent(ProfileSaved(sub, update.version + 1))
         return StoredProfile(update.version + 1, update.profile)
     }
+
+    @Transactional(readOnly = true)
+    override fun page(afterSub: String?, size: Int): List<OwnedProfile> =
+        jdbc.sql(
+            """
+            SELECT owner_sub, version, document::text AS document FROM profile
+            WHERE (:after IS NULL OR owner_sub > :after) ORDER BY owner_sub LIMIT :limit
+            """.trimIndent(),
+        )
+            .param("after", afterSub, java.sql.Types.VARCHAR)
+            .param("limit", size.coerceIn(1, ProfileDirectory.MAX_PAGE_SIZE))
+            .query { rs, _ ->
+                OwnedProfile(rs.getString("owner_sub"), StoredProfile(rs.getLong("version"), ProfileJson.read(rs.getString("document"))))
+            }
+            .list()
 }

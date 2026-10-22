@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/004-sources.sql
   - include:
       file: db/changelog/005-crawl-schedule.sql
+  - include:
+      file: db/changelog/006-matching.sql

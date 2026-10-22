@@ -164,6 +164,29 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   "Solutions Architect" pass); jobs that leave a board are not closed.
 - Logs hold board tokens, outcomes, counts and HTTP statuses only, never job text or response bodies.
 
+## Matching (prefilter)
+
+For every user with a saved profile the backend decides which shared postings are worth a closer look. It is a
+deterministic prefilter: no Claude call, no embeddings. Results are stored per user and posting in `posting_match`
+(passed, score 0-100, reason codes, the profile version used) and are deleted with the account.
+
+- **Hard rules** (a failed rule rejects the posting): out of scope language, a known canton not among the preferred
+  cantons, a known workload range that does not overlap the user's, a known remote mode the user does not accept, a known
+  top salary below the user's minimum. A value the posting does not state never rejects it; it is recorded as
+  `UNKNOWN_CANTON`, `UNKNOWN_WORKLOAD`, `UNKNOWN_REMOTE` or `UNKNOWN_SALARY`. Work authorisation is not used.
+- **Score:** up to 50 for the title against the target roles (or past job titles when none are set), up to 40 for the
+  user's skills found as whole words in the title or description (five or more give 40), 10 for a posting language the
+  user speaks at B2 or above. A posting passes when no hard rule failed and the score reaches
+  `jobhunter.matching.threshold` (default 30; env `JOBHUNTER_MATCHING_THRESHOLD`).
+- **When it runs:** a new posting (`JobIngested`) is evaluated for every user with a profile; a saved profile
+  (`ProfileSaved`) re-evaluates all postings for that user. Both are idempotent and retried by the event registry.
+  Profiles saved before this feature existed are only evaluated when their owner saves again.
+- **Reasons** are fixed codes (`ROLE_MATCH`, `SKILL_MATCH_<n>`, `LANGUAGE_MATCH`, `CANTON_MISMATCH`, `BELOW_THRESHOLD`, ...);
+  no profile or posting text is stored or logged, and logs never put a user id next to a score.
+- **API:** `GET /api/matches?page=0&size=20` (size at most 100) returns the caller's passing matches, best score first:
+  `[{postingId, title, company, city, canton, url, score, reasons}]`. It needs an access token and returns only the
+  token owner's results.
+
 ## API description (OpenAPI)
 
 The backend describes its REST API itself: `GET /api/openapi.json` is the OpenAPI 3 document and `GET /api/docs` is a

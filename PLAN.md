@@ -62,7 +62,7 @@ Sources -> Fetch -> Normalize -> Dedupe -> Store (shared)
 | `postings` | Normalized `JobPosting` model, dedupe, persistence, raw payload storage. Shared across users. **Built:** shared storage, idempotent ingest (`PostingIngest`) with cross-source dedupe, language detection (EN/DE/FR/IT), `JobIngested` event, read API (`PostingQuery`). No source adapters or scheduling yet |
 | `accounts` | JWT resource-server config, current-user context (`sub`), roles, user records, account deletion/export |
 | `profile` | Per-user master profile (experience, skills, preferences). Single source of facts for that user. **Built:** one JSON document per user, `GET`/`PUT /api/profile` with a version check, server validation, and the UI page at `/profile` with live field checks. CV import is not built yet |
-| `matching` | Per-user prefilter + Claude scoring of postings against the profile; structured JSON output |
+| `matching` | Per-user prefilter + Claude scoring of postings against the profile; structured JSON output. **Built:** the deterministic prefilter (hard rules and a 0-100 score), stored per user and posting, evaluated on `JobIngested` and `ProfileSaved`, and `GET /api/matches`. No Claude scoring or embeddings yet |
 | `applications` | Per-user CV and motivation-letter generation, fact validation, PDF/DOCX export |
 | `llm` | Koog-based LLM services (scoring, drafting), prompt templates, caching, per-user usage and quotas, BYO key handling |
 | `web` | REST API (OpenAPI) for the React UI. **Built:** generated OpenAPI document at `/api/openapi.json` and a Swagger UI page at `/api/docs`, with a guard test that every endpoint is documented; the profile endpoints |

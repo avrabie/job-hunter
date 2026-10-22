@@ -51,7 +51,9 @@ class SecurityConfig {
         http
             .oauth2AuthorizationServer { server ->
                 http.securityMatcher(server.endpointsMatcher)
-                server.oidc(Customizer.withDefaults())
+                server.oidc { oidc ->
+                    oidc.logoutEndpoint { it.errorResponseHandler(LogoutFallbackHandler(clients, AuthorizationServerConfig.SPA_CLIENT_ID)) }
+                }
                 // The SPA is a public client; let it present its refresh token with only its client_id.
                 server.clientAuthentication {
                     it.authenticationConverter(PublicClientRefreshConverter())
