@@ -45,6 +45,12 @@ class ApiDocsTests(@Autowired private val mvc: MockMvc) {
 
         assertTrue("\"/api/openapi.json\"" in initializer, initializer.take(400))
         assertTrue("petstore" !in initializer)
+        // The page also asks for its configuration, without a token; that was missed once and showed up only in a browser.
+        val configUrl = Regex(""""configUrl"\s*:\s*"([^"]+)"""").find(initializer)!!.groupValues[1]
+        assertTrue(configUrl.startsWith("/api/"), configUrl)
+        val config = mvc.perform(get(configUrl)).andReturn().response
+        assertEquals(200, config.status, configUrl)
+        assertTrue("/api/openapi.json" in config.contentAsString, config.contentAsString.take(300))
     }
 
     @Test
