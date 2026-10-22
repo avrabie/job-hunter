@@ -65,7 +65,7 @@ Sources -> Fetch -> Normalize -> Dedupe -> Store (shared)
 | `matching` | Per-user prefilter + Claude scoring of postings against the profile; structured JSON output |
 | `applications` | Per-user CV and motivation-letter generation, fact validation, PDF/DOCX export |
 | `llm` | Koog-based LLM services (scoring, drafting), prompt templates, caching, per-user usage and quotas, BYO key handling |
-| `web` | REST API (OpenAPI) for the React UI |
+| `web` | REST API (OpenAPI) for the React UI. **Built:** generated OpenAPI document at `/api/openapi.json` and a Swagger UI page at `/api/docs`, with a guard test that every endpoint is documented; the profile endpoints |
 | `notifications` | Daily digest (email) |
 
 Modules communicate through events (`JobIngested`, `JobScored`, `ApplicationDrafted`) using the Modulith event publication registry. `ApplicationModules.verify()` runs in the test suite.

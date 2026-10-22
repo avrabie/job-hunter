@@ -30,3 +30,18 @@ management:
           include: livenessState
         readiness:
           include: readinessState,db
+
+jobhunter:
+  api-docs:
+    # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
+    enabled: true
+
+springdoc:
+  api-docs:
+    enabled: ${jobhunter.api-docs.enabled}
+    path: /api/openapi.json
+  swagger-ui:
+    enabled: ${jobhunter.api-docs.enabled}
+    path: /api/docs
+    # The page's own files are served under /api/swagger-ui; the gateway and edge forward only /api and /auth.
+    url: /api/openapi.json

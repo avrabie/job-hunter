@@ -164,6 +164,22 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   "Solutions Architect" pass); jobs that leave a board are not closed.
 - Logs hold board tokens, outcomes, counts and HTTP statuses only, never job text or response bodies.
 
+## API description (OpenAPI)
+
+The backend describes its REST API itself: `GET /api/openapi.json` is the OpenAPI 3 document and `GET /api/docs` is a
+browsable page (Swagger UI; it redirects to `/api/swagger-ui/index.html`). Both are generated from the controllers, are
+readable without a token (they hold shapes, never data) and sit under `/api`, so the gateway and edge forward them as
+they are. To try a call from the page, sign in, copy an access token, press **Authorize** and paste it.
+
+- **Switch:** `jobhunter.api-docs.enabled` (default `true`; env `JOBHUNTER_API_DOCS_ENABLED`). When `false` neither path
+  exists: an authenticated request gets 404, an anonymous one 401 like any other protected path.
+- **New endpoints must be documented:** give every controller method `@Operation(summary = ...)` and its `@ApiResponse`s
+  (and a `@Tag` on the controller). `ApiDocsContentTests` compares every request mapping under `/api` with the document and
+  fails the build, naming the endpoint, if one is missing or has no summary. Examples in the annotations stay synthetic.
+- **Content security policy:** the gateway currently has the policy header switched off (the auth login page needs it). If
+  it is switched on later, Swagger UI's inline script needs an exception for `/api/swagger-ui/`.
+- Only the application's own endpoints are described; the health endpoints and the auth service are not part of it.
+
 ## Logging and personal data
 
 The profile is personal data and nothing in the application logs it; posting text and raw payloads are not logged either. The frameworks do, though, below INFO: Spring MVC

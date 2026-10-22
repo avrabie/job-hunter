@@ -29,12 +29,17 @@ internal class SecurityConfig {
         http: HttpSecurity,
         jwtAuthenticationConverter: JwtAuthenticationConverter,
         provisioner: UserProvisioner,
+        @Value($$"${jobhunter.api-docs.enabled:true}") apiDocsEnabled: Boolean,
     ): SecurityFilterChain =
         http
             .csrf(AbstractHttpConfigurer<*, *>::disable)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
+                // The API description holds shapes only, no data, so it is readable without a token (reads only).
+                if (apiDocsEnabled) {
+                    it.requestMatchers(HttpMethod.GET, "/api/openapi.json", "/api/docs", "/api/docs/**", "/api/swagger-ui/**").permitAll()
+                }
                 // Every path under /api/admin needs the ADMIN role, so a new admin endpoint is protected by default.
                 it.requestMatchers("/api/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
