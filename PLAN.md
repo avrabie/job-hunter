@@ -13,7 +13,7 @@ Users: open registration (email/password or Google), each with their own account
 | Structure | Spring Modulith (modular monolith) |
 | Build | Gradle, Kotlin DSL |
 | DB | PostgreSQL with pgvector (Liquibase migrations) |
-| UI | React + TypeScript (Vite), OIDC login (`oidc-client-ts`, authorization code + PKCE), OpenAPI-generated client |
+| UI | React + TypeScript (Vite), OIDC login (`oidc-client-ts`, authorization code + PKCE), OpenAPI-generated client. **Built:** sign-in, profile page, postings list and detail |
 | Auth | Own Spring Authorization Server (`auth` Gradle module in this repo, ported and adapted from the one in Granite-Security/sample-shop); the backend is an OAuth2 resource server validating its JWTs |
 | Gateway | Spring Cloud Gateway (WebFlux, Kotlin) in `gateway/`: stateless path router for `/api` and `/auth`; holds no session or token (modelled on the gateway in Granite-Security/sample-shop) |
 | Repo layout | One repo, three independent Gradle builds, each with its own wrapper: `backend/` (the modulith), `auth/` and `gateway/`, plus the `ui/` build (pnpm, Vite); built, tested and deployed separately, no shared code. `k8s/` holds the cluster setup instructions and manifests (Gateway API resources, Kustomize base and overlays) |
@@ -65,7 +65,7 @@ Sources -> Fetch -> Normalize -> Dedupe -> Store (shared)
 | `matching` | Per-user prefilter + Claude scoring of postings against the profile; structured JSON output. **Built:** the deterministic prefilter (hard rules and a 0-100 score), stored per user and posting, evaluated on `JobIngested` and `ProfileSaved`, and `GET /api/matches`. No Claude scoring or embeddings yet |
 | `applications` | Per-user CV and motivation-letter generation, fact validation, PDF/DOCX export |
 | `llm` | Koog-based LLM services (scoring, drafting), prompt templates, caching, per-user usage and quotas, BYO key handling |
-| `web` | REST API (OpenAPI) for the React UI. **Built:** generated OpenAPI document at `/api/openapi.json` and a Swagger UI page at `/api/docs`, with a guard test that every endpoint is documented; the profile endpoints |
+| `web` | REST API (OpenAPI) for the React UI. **Built:** generated OpenAPI document at `/api/openapi.json` and a Swagger UI page at `/api/docs`, with a guard test that every endpoint is documented; the profile, postings (`/api/postings`), matches and admin schedule endpoints |
 | `notifications` | Daily digest (email) |
 
 Modules communicate through events (`JobIngested`, `JobScored`, `ApplicationDrafted`) using the Modulith event publication registry. `ApplicationModules.verify()` runs in the test suite.

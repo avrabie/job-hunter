@@ -42,6 +42,9 @@ export function Shell({ identity }: { identity: string }) {
         {status.state === 'checking' ? 'Checking the backend…' : status.text}
       </p>
       <div className="actions">
+        <Link className="button" to="/postings">
+          Postings
+        </Link>
         <Link className="button" to="/profile">
           Your profile
         </Link>

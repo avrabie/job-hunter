@@ -5,6 +5,8 @@ import net.s4v3.backend.postings.IngestResult
 import net.s4v3.backend.postings.JobIngested
 import net.s4v3.backend.postings.Posting
 import net.s4v3.backend.postings.PostingCandidate
+import net.s4v3.backend.postings.PostingLink
+import net.s4v3.backend.postings.PostingSearch
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.postings.PostingQuery
 import net.s4v3.backend.postings.PostingRejectedException
@@ -172,13 +174,56 @@ internal class JdbcPostings(
     @Transactional(readOnly = true)
     override fun find(id: UUID): Posting? =
         jdbc.sql("$SELECT_POSTING WHERE p.id = :id").param("id", id).query { rs, _ -> map(rs) }.optional().orElse(null)
+            ?.let { withLinks(listOf(it)).single() }
 
     @Transactional(readOnly = true)
     override fun list(page: Int, size: Int): List<Posting> {
         val limit = size.coerceIn(1, PostingQuery.MAX_PAGE_SIZE)
-        return jdbc.sql("$SELECT_POSTING ORDER BY p.first_seen DESC, p.id LIMIT :limit OFFSET :offset")
-            .param("limit", limit).param("offset", page.coerceAtLeast(0).toLong() * limit)
-            .query { rs, _ -> map(rs) }.list()
+        return withLinks(
+            jdbc.sql("$SELECT_POSTING ORDER BY p.first_seen DESC, p.id LIMIT :limit OFFSET :offset")
+                .param("limit", limit).param("offset", page.coerceAtLeast(0).toLong() * limit)
+                .query { rs, _ -> map(rs) }.list(),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun search(search: PostingSearch): List<Posting> {
+        val limit = search.size.coerceIn(1, PostingQuery.MAX_PAGE_SIZE)
+        val where = mutableListOf<String>()
+        val params = mutableMapOf<String, Any>()
+        search.text?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            where += "(p.title ILIKE :pattern ESCAPE '\\' OR p.company ILIKE :pattern ESCAPE '\\')"
+            params["pattern"] = "%" + it.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        }
+        search.canton?.takeIf { it.isNotBlank() }?.let {
+            where += "p.canton = :canton"
+            params["canton"] = it
+        }
+        search.sourceId?.takeIf { it.isNotBlank() }?.let {
+            where += "EXISTS (SELECT 1 FROM posting_source f WHERE f.posting_id = p.id AND f.source_id = :source)"
+            params["source"] = it
+        }
+        val clause = if (where.isEmpty()) "" else " WHERE " + where.joinToString(" AND ")
+        var statement = jdbc.sql("$SELECT_POSTING$clause ORDER BY p.first_seen DESC, p.id LIMIT :limit OFFSET :offset")
+        params.forEach { (name, value) -> statement = statement.param(name, value) }
+        return withLinks(
+            statement.param("limit", limit).param("offset", search.page.coerceAtLeast(0).toLong() * limit)
+                .query { rs, _ -> map(rs) }.list(),
+        )
+    }
+
+    /** Fills the links of a page of postings with one query: the primary source first, then by source id. */
+    private fun withLinks(postings: List<Posting>): List<Posting> {
+        if (postings.isEmpty()) return postings
+        val links = jdbc.sql(
+            "SELECT posting_id, source_id, url, is_primary FROM posting_source WHERE posting_id IN (:ids) " +
+                "ORDER BY is_primary DESC, source_id",
+        )
+            .param("ids", postings.map { it.id })
+            .query { rs, _ -> rs.getObject("posting_id", UUID::class.java) to PostingLink(rs.getString("source_id"), rs.getString("url"), rs.getBoolean("is_primary")) }
+            .list()
+            .groupBy({ it.first }, { it.second })
+        return postings.map { it.copy(links = links[it.id].orEmpty()) }
     }
 
     private fun map(rs: ResultSet) = Posting(

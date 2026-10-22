@@ -164,6 +164,16 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   "Solutions Architect" pass); jobs that leave a board are not closed.
 - Logs hold board tokens, outcomes, counts and HTTP statuses only, never job text or response bodies.
 
+## Postings API
+
+`GET /api/postings?page=&size=&q=&canton=&source=` lists the crawled postings, newest first-seen first (any signed-in user;
+postings are shared): `[{id, title, company, city, canton, language, firstSeen, lastSeen, links:[{sourceId, url, primary}]}]`.
+`q` is a case-insensitive part of the title or company (`%` and `_` are literal), `canton` a two-letter code, `source` a
+source id; `size` defaults to 20 and is capped at 100; a negative page, a bad canton or a bad source id give 400.
+`GET /api/postings/{id}` adds `description` (plain text) and answers 404 for an unknown id. `links` holds one entry per
+source that delivered the ad, the primary source first. Neither endpoint returns the raw payload, and the search text is
+not logged by the application.
+
 ## Matching (prefilter)
 
 For every user with a saved profile the backend decides which shared postings are worth a closer look. It is a
@@ -208,7 +218,8 @@ they are. To try a call from the page, sign in, copy an access token, press **Au
 The profile is personal data and nothing in the application logs it; posting text and raw payloads are not logged either. The frameworks do, though, below INFO: Spring MVC
 prints the response object at `DEBUG` (`org.springframework.web`), and Spring JDBC (`org.springframework.jdbc.core`) and the
 PostgreSQL driver (`org.postgresql`) print every bound SQL parameter at `TRACE`. Never enable those loggers below INFO
-outside a throwaway local run, and never in the cluster.
+outside a throwaway local run, and never in the cluster. The same holds for Spring Security's `DEBUG` and `TRACE` output, which
+prints request URLs including the query string (for example a posting search text).
 
 ## Health
 

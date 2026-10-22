@@ -134,3 +134,31 @@ form label.inline input {
 section {
   margin-bottom: 2rem;
 }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.postings {
+  list-style: none;
+  padding: 0;
+}
+
+.postings li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid currentColor;
+}
+
+.original-links {
+  list-style: none;
+  padding: 0;
+}
+
+.description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}

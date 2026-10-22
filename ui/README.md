@@ -58,6 +58,15 @@ Checked by hand in a browser at `https://s4v3.net` on 2026-10-21, with the conso
 - The only console entry is the browser's own log line for the expected `404` of `GET /api/`; no other errors and no
   Content-Security-Policy violations.
 
+## Postings page
+
+`/postings` lists the postings the backend crawled (newest first, 20 per page) with a title that opens `/postings/:id`
+(the full description as plain text), the company, city, language, the first-seen date and one **Open original** link
+per source. Search (title or company), canton and source filters and the page live in the URL query
+(`?q=&canton=&source=&page=`), so a view can be bookmarked. Links are rendered only for `http` and `https` addresses and
+open in a new tab with `rel="noopener noreferrer"`. A signed-out visitor sees the landing page and returns here after
+signing in. The "next" button is enabled while a page is full, so the last page can be empty when the total is a multiple of 20.
+
 ## Profile page check (local)
 
 Checked by hand in a browser on 2026-10-21 against the real local stack (`auth`, `backend`, `gateway`, `pnpm dev`):
