@@ -69,11 +69,42 @@ Nine modules, one top-level package each under `net.s4v3.backend`: `sources`, `p
 - Every query on per-user data is scoped by the current user's id (the token's `sub`). `PerUserIsolationTests`
   shows the pattern: a record of another user answers 404, exactly like one that does not exist.
 - Database changes are Liquibase changesets under `src/main/resources/db/changelog/`.
-- Module events are specified as contracts in `openspec/`; `accounts` publishes `UserRegistered(userId, registeredAt)`.
+- Module events are specified as contracts in `openspec/`; `accounts` publishes `UserRegistered(userId, registeredAt)` and
+  `postings` publishes `JobIngested(postingId, ingestedAt)`.
+
+## Postings (for source adapters)
+
+A source adapter maps what a site delivers to a `PostingCandidate` and calls `PostingIngest.ingest`. The shape below is
+the one `PostingIngestTests` uses.
+
+```kotlin
+val result = postingIngest.ingest(
+    PostingCandidate(
+        sourceId = "example-board",          // stable id of the source
+        sourcePostingId = "12345",           // the source's own id for the ad
+        url = "https://example.org/jobs/12345",
+        title = "Senior Kotlin Developer (m/w/d)",
+        company = "Acme AG",
+        description = text,
+        rawPayload = body,                   // stored unchanged, for re-parsing
+        city = "Zurich",                     // null if unknown; without a city only same-source dedupe applies
+        workloadText = "80-100%",            // free text, parsed to a range; null if absent
+    ),
+)
+// result.outcome is CREATED, UPDATED or UNCHANGED; result.postingId is the canonical posting
+```
+
+- Calls are idempotent per (`sourceId`, `sourcePostingId`) and safe to repeat. A blank required field throws
+  `PostingRejectedException` and stores nothing. Run sources one after another: the lock covers one source posting, not the
+  cross-source dedupe key.
+- The same ad on another source is linked to the existing canonical posting (outcome `CREATED`, no `JobIngested`).
+  Only the source that created a posting may change its fields.
+- The language is detected on ingest. French, Italian and undetected postings are stored and flagged `outOfScope`.
+- Other modules read through `PostingQuery`; it never returns the raw payload.
 
 ## Logging and personal data
 
-The profile is personal data and nothing in the application logs it. The frameworks do, though, below INFO: Spring MVC
+The profile is personal data and nothing in the application logs it; posting text and raw payloads are not logged either. The frameworks do, though, below INFO: Spring MVC
 prints the response object at `DEBUG` (`org.springframework.web`), and Spring JDBC (`org.springframework.jdbc.core`) and the
 PostgreSQL driver (`org.postgresql`) print every bound SQL parameter at `TRACE`. Never enable those loggers below INFO
 outside a throwaway local run, and never in the cluster.
