@@ -26,7 +26,8 @@ class DatabaseBaselineTests(
         assertTrue("app_user" in tables, tables.toString())
         assertEquals(1, count("select count(*) from pg_extension where extname = 'vector'"))
         assertTrue("posting" in tables && "posting_source" in tables, tables.toString())
-        assertEquals(6, count("select count(*) from databasechangelog"))
+        assertTrue("source_fetch_state" in tables, tables.toString())
+        assertEquals(7, count("select count(*) from databasechangelog"))
     }
 
     @Test

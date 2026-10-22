@@ -309,6 +309,8 @@ and 401 with a malformed one. The login created the `app_user` row. The check us
 
 **Postings release, 2026-10-22:** `moldovean/job-hunter-backend:0.3.0` (amd64, digest `sha256:34c22242912f479e9041f03302d78210c6c4d44d6e51ef11a911067f3830653d`) applied with `kubectl --context s4v3 apply -k k8s/overlays/prod`. `backend` ran Liquibase changesets `005-posting` and `006-posting-source` on start (tables `posting` and `posting_source` exist), the rollout completed, and `postgres`, `auth`, `gateway` and `ui` were not restarted. The change adds no endpoint, so there is nothing to call from outside yet.
 
+**Sources release, 2026-10-22:** `moldovean/job-hunter-backend:0.4.0` (amd64, digest `sha256:36730e058a1428c3c07a309592c4aa2cf81b5d15591fd58d52cf5ec5ab6b5ee5`) applied with `kubectl --context s4v3 apply -k k8s/overlays/prod` after a `kubectl diff` that showed only the image tag. It adds the Greenhouse source adapter and the table `source_fetch_state` (changeset `007`); the rollout completed and no other workload restarted. The first real crawl was run once by setting `JOBHUNTER_SOURCES_GREENHOUSE_RUN_ON_STARTUP=true` for one rollout, then removing it again: 10 boards completed, 40 postings created, none skipped, and the next pod made no crawl.
+
 The user checked `https://s4v3.net` in a browser on 2026-10-21 and reported it worked.
 
 **Profile field checks release, 2026-10-21:** `moldovean/job-hunter-ui:0.4.0` (amd64, anonymous pull checked) applied the same way; the `ui` rollout completed, no other workload restarted, and anonymous `GET /api/profile` still answers 401.

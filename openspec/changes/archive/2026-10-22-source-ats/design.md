@@ -76,6 +76,12 @@ Tests use a local `com.sun.net.httpserver.HttpServer` serving synthetic boards w
 ### Module boundaries and database
 New table only; `source_fetch_state` is owned by `sources`. `ApplicationModules.verify()` must pass with the new `sources -> postings` dependency.
 
+## Terms check (2026-10-22)
+
+- Job Board API docs (`docs.greenhouse.io/job-board.html`): all GET endpoints need no authentication and the docs say board data is publicly available. Only the application POST needs a key, which we never use. No rate limits, licence, or reuse restrictions are stated.
+- Greenhouse's legal hub (`greenhouse.com/legal`) lists no website terms of use that address automated access or reuse of board data. Its master subscription agreement is a contract with customers, not with readers of public boards.
+- Result: nothing found that forbids this use. The employers' own terms were not reviewed one by one; ad text remains the employer's copyright, which is why postings link back to the original ad.
+
 ## Risks / Trade-offs
 
 - [An employer's ad text is copyrighted and Greenhouse's docs are silent on third-party reuse] → we read only what the employer publishes through the documented public API, store it for matching, and link every posting to the original ad; the boards list is small and hand-picked, and any employer can be dropped by removing its token. Noted in the terms check (task 1.1).
@@ -83,6 +89,7 @@ New table only; `source_fetch_state` is owned by `sources`. `ApplicationModules.
 - [The IT title filter drops real IT roles or keeps others] → the counts per run show filtered-out jobs; both keyword lists are settings.
 - [Location text is free form] → unknown text means the job is filtered out (a missed Swiss job is cheaper than a wrong one); the place list can grow.
 - [The lock transaction holds a connection for a whole board crawl, up to about a minute] → at most one connection per board crawl, run rarely; the pool is not under pressure from this job.
+- [Cluster reachability, checked 2026-10-22 from a one-off pod in `job-hunter`] → `HEAD /v1/boards/proton/jobs` answered 200 with `content-type: application/json` and a weak `etag` (`W/"..."`), no challenge; the stored validator is sent back verbatim.
 - [Boards removed or renamed by the employer] → a 404 is reported as that board failing; the list is edited by hand.
 
 ## Migration Plan

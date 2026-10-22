@@ -102,6 +102,37 @@ val result = postingIngest.ingest(
 - The language is detected on ingest. French, Italian and undetected postings are stored and flagged `outOfScope`.
 - Other modules read through `PostingQuery`; it never returns the raw payload.
 
+## Sources (Greenhouse boards)
+
+`AtsCrawl.run()` crawls the configured Greenhouse boards one after the other: it reads each board's light job list, keeps
+Swiss IT jobs, fetches their details and ingests them through `PostingIngest`. It returns one `BoardResult` per board
+(`COMPLETED` with counts, `NOT_MODIFIED`, `TOO_SOON`, `BLOCKED_BY_ROBOTS`, `FAILED`, `ALREADY_RUNNING`). Nothing triggers
+it yet except the stopgap below; the scheduler comes with `ingestion-scheduler`.
+
+| Setting (`jobhunter.sources.*`) | Default |
+|---|---|
+| `user-agent` | `JobHunter/0.1 (+https://s4v3.net)` |
+| `pause` | `PT1S` between requests to one host |
+| `min-interval` | `PT15M` between two runs of one board |
+| `connect-timeout`, `read-timeout` | `PT5S`, `PT30S` |
+| `max-list-bytes`, `max-job-bytes` | 8 MB, 1 MB |
+| `greenhouse.base-url` | `https://boards-api.greenhouse.io` |
+| `greenhouse.boards` | `proton, getyourguide, scandit, databricks, elastic, mongodb, gitlab, datadog, grafanalabs, ripple` |
+| `greenhouse.it-keywords`, `greenhouse.excluded-keywords` | whole words matched against the job title; the excluded ones win |
+| `greenhouse.run-on-startup` | `false` |
+
+- **Boards:** the seed boards answered and had Swiss roles on 2026-10-22. To add one, check
+  `GET https://boards-api.greenhouse.io/v1/boards/<token>/jobs` first, then add the token to `greenhouse.boards`
+  (environment variable `JOBHUNTER_SOURCES_GREENHOUSE_BOARDS`, comma separated). Lever and other systems are not supported.
+- **Politeness:** robots.txt is read once per host per crawl, the list is fetched with `If-None-Match` (the validator lives
+  in `source_fetch_state`), and a board is not run again within `min-interval`. A board where a job detail failed keeps no
+  validator, so the next run reads it in full.
+- **Stopgap run:** `JOBHUNTER_SOURCES_GREENHOUSE_RUN_ON_STARTUP=true` starts one crawl after startup, on its own thread. Turn it off
+  again after checking the logged per-board counts.
+- **Limits:** salary, workload and remote mode are left unknown; the IT filter is a title heuristic (pre-sales titles such as
+  "Solutions Architect" pass); jobs that leave a board are not closed.
+- Logs hold board tokens, outcomes, counts and HTTP statuses only, never job text or response bodies.
+
 ## Logging and personal data
 
 The profile is personal data and nothing in the application logs it; posting text and raw payloads are not logged either. The frameworks do, though, below INFO: Spring MVC

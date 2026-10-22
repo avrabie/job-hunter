@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/002-profile.sql
   - include:
       file: db/changelog/003-postings.sql
+  - include:
+      file: db/changelog/004-sources.sql
