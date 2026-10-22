@@ -94,7 +94,7 @@ The system SHALL detect the language of each posting from its title and descript
 - **THEN** the stored language reflects the new text
 
 ### Requirement: JobIngested event
-The system SHALL publish a `JobIngested` event when a canonical posting is created. The publisher is `postings`. The payload is `postingId` and `ingestedAt` (UTC timestamp). It carries no posting text. There are no consumers yet; `matching` is expected to subscribe later. The event SHALL NOT be published for `updated` or `unchanged` results, or when a posting is linked to an existing canonical posting.
+The system SHALL publish a `JobIngested` event when a canonical posting is created. The publisher is `postings`. The payload is `postingId` and `ingestedAt` (UTC timestamp). It carries no posting text. The consumer is `matching`, which evaluates the new posting for every user with a stored profile. The event SHALL NOT be published for `updated` or `unchanged` results, or when a posting is linked to an existing canonical posting.
 
 #### Scenario: Event on creation
 - **WHEN** a posting creates a new canonical row
