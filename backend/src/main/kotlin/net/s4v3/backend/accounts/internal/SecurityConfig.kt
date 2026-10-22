@@ -35,6 +35,8 @@ internal class SecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
+                // Every path under /api/admin needs the ADMIN role, so a new admin endpoint is protected by default.
+                it.requestMatchers("/api/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }

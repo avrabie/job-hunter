@@ -334,6 +334,8 @@ The names below are the ones each application documents in its own README; the D
 | auth | `app.ui-base-url` | `APP_UI_BASE_URL` | ConfigMap `UI_BASE_URL` |
 | auth | `app.spa.redirect-uris` | `APP_SPA_REDIRECT_URIS` | ConfigMap `SPA_REDIRECT_URIS` |
 | auth | `app.spa.post-logout-redirect-uris` | `APP_SPA_POST_LOGOUT_REDIRECT_URIS` | ConfigMap `SPA_POST_LOGOUT_URIS` |
+| auth | `app.admin-emails` | `APP_ADMIN_EMAILS` | Secret `ADMIN_EMAILS` (the real address is never committed) |
+| backend | `jobhunter.sources.schedule.enabled` | `JOBHUNTER_SOURCES_SCHEDULE_ENABLED` | prod overlay literal `true` (initial value; a schedule stored through the API wins) |
 | gateway | `microservices.backend.uri` | `MICROSERVICES_BACKEND_URI` | ConfigMap `BACKEND_URI` (`http://backend:8081`) |
 | gateway | `microservices.auth.uri` | `MICROSERVICES_AUTH_URI` | ConfigMap `AUTH_URI` (`http://auth:9090`) |
 | all three | JVM options | `JAVA_TOOL_OPTIONS` | `-XX:ReservedCodeCacheSize=64M` (see below) |

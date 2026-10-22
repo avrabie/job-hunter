@@ -21,6 +21,10 @@ class TestEndpoints(private val currentUser: CurrentUser) {
     @GetMapping("/api/test/thread")
     fun thread() = Thread.currentThread().isVirtual.toString()
 
+    /** Carries no annotation of its own: only the rule for everything under /api/admin protects it. */
+    @GetMapping("/api/admin/test/unlisted")
+    fun unlistedAdminPath() = "reached"
+
     @GetMapping("/api/test/admin")
     @PreAuthorize("hasRole('ADMIN')")
     fun admin() = "admin"

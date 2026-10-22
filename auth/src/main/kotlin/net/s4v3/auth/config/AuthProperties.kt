@@ -16,6 +16,11 @@ data class AuthProperties(
     @field:NotBlank val uiBaseUrl: String? = null,
     @field:Valid val spa: Spa = Spa(),
     val google: Google = Google(),
+    /**
+     * Emails whose Google sign-in also gets the ADMIN role (compared ignoring case). Empty grants nothing. Local-password
+     * accounts never get ADMIN from this list, because their email is not verified.
+     */
+    val adminEmails: List<String> = emptyList(),
 ) {
     data class Spa(
         @field:NotEmpty val redirectUris: List<String> = emptyList(),

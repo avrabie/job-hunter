@@ -20,7 +20,15 @@ internal data class SourcesSettings(
     val maxListBytes: Int = 8 * 1024 * 1024,
     val maxJobBytes: Int = 1024 * 1024,
     val greenhouse: Greenhouse = Greenhouse(),
+    val schedule: Schedule = Schedule(),
 ) {
+    /** The initial crawl schedule; a schedule stored through the API replaces it. */
+    data class Schedule(
+        val enabled: Boolean = false,
+        val cron: String = "0 0 * * * *",
+        val zone: String = "Europe/Zurich",
+    )
+
     data class Greenhouse(
         val baseUrl: String = "https://boards-api.greenhouse.io",
         val boards: List<String> = listOf(

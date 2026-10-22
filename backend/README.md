@@ -127,6 +127,37 @@ it yet except the stopgap below; the scheduler comes with `ingestion-scheduler`.
 - **Politeness:** robots.txt is read once per host per crawl, the list is fetched with `If-None-Match` (the validator lives
   in `source_fetch_state`), and a board is not run again within `min-interval`. A board where a job detail failed keeps no
   validator, so the next run reads it in full.
+### Crawl schedule
+
+A scheduler starts the crawl by itself. The schedule is global, off by default, and stored in the database once an
+administrator sets it (table `crawl_schedule`, one row); until then the settings give it.
+
+| Setting (`jobhunter.sources.schedule.*`) | Default |
+|---|---|
+| `enabled` | `false` (the prod overlay sets `JOBHUNTER_SOURCES_SCHEDULE_ENABLED=true`) |
+| `cron` | `0 0 * * * *`: every hour on the hour (Spring cron, six fields) |
+| `zone` | `Europe/Zurich` |
+| `tick` | `PT30S`: how often the stored schedule is read; a change applies within one tick |
+
+- **Why hourly:** a run where nothing changed costs about ten `304` list requests; a changed board costs about a minute.
+  Each board still waits `min-interval` (15 minutes) between runs, and the API refuses a cron that fires faster.
+- **Behaviour:** a run that is still going when the next is due is skipped, not queued; a failed run is logged by exception
+  type and the schedule keeps firing; a time missed while the pod was down, or before a schedule change, is not made up.
+  Each run logs a start line and an end line with board counts per outcome and job totals, never job text.
+- **API** (needs an access token with the `ADMIN` role, otherwise 401 or 403; see the auth README for how a user becomes
+  admin):
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" https://s4v3.net/api/admin/crawl-schedule
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"enabled":true,"cron":"0 0 * * * *","zone":"Europe/Zurich"}' https://s4v3.net/api/admin/crawl-schedule
+```
+
+  The answer holds `enabled`, `cron`, `zone`, `nextFire` (absent when disabled) and `updatedAt`. An invalid cron or zone, a
+  missing field, or a cron that fires more often than every 15 minutes gets a 400 `{"error":"validation_failed","field":...}`
+  and changes nothing. The row keeps the administrator's token `sub`; the log line for a change holds `enabled` and `cron` only.
+- Several replicas would each fire; the per-board locks and the minimum interval keep the crawl from running twice.
+
 - **Stopgap run:** `JOBHUNTER_SOURCES_GREENHOUSE_RUN_ON_STARTUP=true` starts one crawl after startup, on its own thread. Turn it off
   again after checking the logged per-board counts.
 - **Limits:** salary, workload and remote mode are left unknown; the IT filter is a title heuristic (pre-sales titles such as

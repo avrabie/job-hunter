@@ -59,7 +59,14 @@ setting. The `dev` profile reads `.env` (see `.env.example`).
 | `app.spa.redirect-uris` (comma separated) | `APP_SPA_REDIRECT_URIS` (dev: `SPA_REDIRECT_URIS`) | `http://localhost:5173/callback` |
 | `app.spa.post-logout-redirect-uris` | `APP_SPA_POST_LOGOUT_REDIRECT_URIS` (dev: `SPA_POST_LOGOUT_URIS`) | `http://localhost:5173/` |
 | `app.google.client-id` / `client-secret` | `APP_GOOGLE_CLIENT_ID` / `APP_GOOGLE_CLIENT_SECRET` (dev: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`) | unset: Google login is off |
+| `app.admin-emails` (comma separated) | `APP_ADMIN_EMAILS` (dev: none) | empty: nobody gets `ADMIN` from this list |
 | database | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (dev: automatic from `compose.yaml`) | `localhost:5433/authdb`, user `authuser` |
+
+Administrators: a user who signs in with Google (email verified by Google) and whose email is in `app.admin-emails`
+(compared ignoring case) gets the `ADMIN` role next to `USER` in the access token's `roles` claim. The grant is computed at
+each sign-in and not stored, so removing an email takes effect with the next token (tokens already issued keep their roles
+until they expire). Local-password accounts never get `ADMIN` this way, because their email is not verified. The dev seed
+admin (`admin@example.com`) is separate and exists in the `dev` profile only.
 
 Google login: create an OAuth client in the Google console and register
 `<issuer>/login/oauth2/code/google` (for example `https://s4v3.net/auth/login/oauth2/code/google`) as its redirect URI.
