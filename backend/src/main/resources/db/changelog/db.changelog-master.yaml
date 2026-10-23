@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/006-matching.sql
   - include:
       file: db/changelog/007-cv.sql
+  - include:
+      file: db/changelog/008-files.sql
