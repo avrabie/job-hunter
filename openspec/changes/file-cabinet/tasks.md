@@ -42,7 +42,7 @@ Rules for every task (see `handoff/haiku-rules.md`): edit only the files named, 
 
 ## 8. Cluster and docs (lead)
 
-- [ ] 8.1 Add a `backend-files` PVC and the mount at `/data/files` to `k8s/base/backend.yaml`, `JOBHUNTER_FILES_DIR` if needed, and check `readOnlyRootFilesystem`/security context allow writing there. Verify with `kubectl kustomize k8s/overlays/prod` and `k8s/validate.sh`.
+- [x] 8.1 Add a `backend-files` PVC and the mount at `/data/files` to `k8s/base/backend.yaml`, `JOBHUNTER_FILES_DIR` if needed, and check `readOnlyRootFilesystem`/security context allow writing there. Verify with `kubectl kustomize k8s/overlays/prod` and `k8s/validate.sh`.
 - [ ] 8.2 Measure the real upload limits on the cluster: upload a 200 MB, then a 2 GB file through https://s4v3.net, and find which of Traefik, the gateway or Tomcat times out or limits first. Record the numbers in `k8s/README.md` and raise the settings that block (keep the changes in manifests). Verify with the measured upload succeeding.
 - [ ] 8.3 Document the cabinet (limits, volume, no backup, ticket downloads, master) in `backend/README.md`, `ui/README.md`, `k8s/README.md` and `PLAN.md`. Verify: names and paths match the code.
 
