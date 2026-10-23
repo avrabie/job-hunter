@@ -226,6 +226,14 @@ prints request URLs including the query string (for example a posting search tex
 `/actuator/health/liveness` and `/actuator/health/readiness` need no token. Readiness includes the database;
 liveness does not, so a database outage does not restart the pod. No other actuator endpoint is exposed.
 
+## Profile content
+
+The profile document holds `location`, `workAuthorisation`, `languages`, `summary`, `experience`, `education`, `publications`,
+`skills` and `preferences`. A publication has a required `title` and optional `venue`, `year` (1900 to next year), `authors`
+(free text) and `url` (absolute `http` or `https` only); at most 100 per profile. Profiles saved before publications existed
+read with an empty list, so no migration was needed. The CV draft (`llm` module) can return publications too, dropping an
+invalid year or link and leaving out an entry without a title.
+
 ## CV (cv module)
 
 One CV per user (PDF, Markdown `.md` or plain text `.txt`, at most 5 MB) in the table `cv_document` (changeset 010), kept until

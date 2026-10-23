@@ -69,6 +69,13 @@ signing in. The "next" button is enabled while a page is full, so the last page 
 
 `/admin` shows the crawl schedule (enabled, cron, time zone, next run, last change) from `GET /api/admin/crawl-schedule` and saves changes with `POST` to the same path, using the signed-in user's own token. The "Admin" button in the shell appears only when the access token's `roles` claim contains `ADMIN`; the token's signature is not checked in the browser, so this decides what to show and nothing else. The backend enforces the role, and the page shows "This page is for administrators." when the API answers 403. The result of the last crawl run is not shown, because the API does not offer it.
 
+## Publications (profile page)
+
+The profile page has a **Publications** section after Education with the same add, remove and move controls: Title (required),
+Venue, Year, Authors and Link. The browser checks the cheap rules when a field is left (title not blank, year 1900 to next
+year, link an absolute `http` or `https` address); the server stays the authority and its message is shown at the field if
+the profile is saved anyway.
+
 ## CV section (profile page)
 
 The top of `/profile` has a **Your CV** section: upload (`.pdf`, `.md`, `.txt`, up to 5 MB) or replace, download, delete (after a

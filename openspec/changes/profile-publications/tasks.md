@@ -19,7 +19,7 @@ Rules for every task (see `handoff/haiku-rules.md`): edit only the files named, 
 
 ## 4. Docs
 
-- [ ] 4.1 Mention publications in `backend/README.md` (profile content), `ui/README.md` (profile page) and `PLAN.md` (profile row). Verify: `grep -n -i publication` shows each file.
+- [x] 4.1 Mention publications in `backend/README.md` (profile content), `ui/README.md` (profile page) and `PLAN.md` (profile row). Verify: `grep -n -i publication` shows each file.
 
 ## Contract (do not change)
 
