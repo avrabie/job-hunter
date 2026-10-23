@@ -1,11 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  applyDraft,
-  deleteCv,
-  extractProfile,
-  loadCv,
-  uploadCv,
-} from './cvApi.ts'
+import { applyDraft, extractProfile } from './cvApi.ts'
 import { emptyProfile } from '../profile/types.ts'
 
 const auth = {
@@ -20,56 +14,6 @@ const answer = (status: number, body: unknown = {}) =>
   )
 
 afterEach(() => vi.unstubAllGlobals())
-
-describe('loadCv', () => {
-  it('maps 200 to the details and 404 to none', async () => {
-    const cv = {
-      fileName: 'cv.pdf',
-      contentType: 'application/pdf',
-      sizeBytes: 5,
-      uploadedAt: '2026-10-23T10:00:00Z',
-    }
-    answer(200, cv)
-    expect(await loadCv(auth)).toEqual({ kind: 'loaded', cv })
-    answer(404)
-    expect(await loadCv(auth)).toEqual({ kind: 'none' })
-  })
-  it('uses a fixed message for a server error', async () => {
-    answer(500, { secret: 'SECRET-BODY' })
-    expect(await loadCv(auth)).toEqual({
-      kind: 'failed',
-      message: 'The request failed (status 500).',
-    })
-  })
-})
-
-describe('uploadCv', () => {
-  it('sends the file as multipart with the token, to the CV path only', async () => {
-    answer(200, { fileName: 'cv.txt' })
-    await uploadCv(auth, new File(['hello'], 'cv.txt'))
-    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [
-      string,
-      RequestInit,
-    ]
-    expect(url).toBe('/api/cv')
-    expect(init.method).toBe('POST')
-    expect(init.body).toBeInstanceOf(FormData)
-    expect(new Headers(init.headers).get('Authorization')).toBe(
-      'Bearer token-1',
-    )
-  })
-  it.each([
-    [400, 'The file must be a PDF, a Markdown file or a plain text file.'],
-    [413, 'The file is larger than 5 MB.'],
-    [500, 'The request failed (status 500).'],
-  ])('maps %i to a fixed message', async (status, message) => {
-    answer(status, { error: 'x', message: 'SERVER-TEXT' })
-    expect(await uploadCv(auth, new File(['x'], 'cv.txt'))).toEqual({
-      kind: 'failed',
-      message,
-    })
-  })
-})
 
 describe('extractProfile', () => {
   it('returns the draft with every field present', async () => {
@@ -96,16 +40,6 @@ describe('extractProfile', () => {
   ])('maps %i to a fixed message', async (status, message) => {
     answer(status)
     expect(await extractProfile(auth)).toEqual({ kind: 'failed', message })
-  })
-})
-
-describe('deleteCv', () => {
-  it('maps 204 to deleted', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(null, { status: 204 })),
-    )
-    expect(await deleteCv(auth)).toEqual({ kind: 'deleted' })
   })
 })
 

@@ -78,11 +78,9 @@ async function guarded<T extends { kind: string }>(
   }
 }
 
-/** A 404 means the deployment has no file endpoint yet: the cabinet is empty, as the single-CV endpoint was. */
 export function listFiles(auth: TokenSource): Promise<ListResult> {
   return guarded<ListResult>(async () => {
     const res = await apiFetch(auth, PATH)
-    if (res.status === 404) return { kind: 'loaded', files: [] }
     if (!res.ok)
       return { kind: 'failed', message: messageForStatus(res.status) }
     return { kind: 'loaded', files: (await res.json()) as FileInfo[] }
