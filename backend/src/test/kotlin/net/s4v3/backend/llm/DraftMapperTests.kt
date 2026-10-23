@@ -6,11 +6,14 @@ import net.s4v3.backend.llm.internal.EducationDraft
 import net.s4v3.backend.llm.internal.ExperienceDraft
 import net.s4v3.backend.llm.internal.LanguageDraft
 import net.s4v3.backend.llm.internal.LocationDraft
+import net.s4v3.backend.llm.internal.PublicationDraft
 import net.s4v3.backend.llm.internal.SkillDraft
 import net.s4v3.backend.profile.LanguageLevel
 import net.s4v3.backend.profile.Profile
+import net.s4v3.backend.profile.Publication
 import net.s4v3.backend.profile.SkillLevel
 import net.s4v3.backend.profile.WorkAuthorisation
+import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -104,6 +107,50 @@ class DraftMapperTests {
         assertEquals(listOf("fr"), profile.languages.map { it.code })
         assertEquals(listOf("Beta"), profile.experience.map { it.employer })
         assertEquals(emptyList(), profile.skills)
+    }
+
+    @Test
+    fun `publications read in order with the stated fields`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                publications = listOf(
+                    PublicationDraft("Fast Joins", "VLDB", "2021", "J. Doe", "https://example.org/a"),
+                    PublicationDraft("  Notes on Indexing  "),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("Fast Joins", "Notes on Indexing"), profile.publications.map { it.title })
+        assertEquals(Publication("Fast Joins", "VLDB", 2021, "J. Doe", "https://example.org/a"), profile.publications[0])
+        assertEquals(Publication("Notes on Indexing", null, null, null, null), profile.publications[1])
+    }
+
+    @Test
+    fun `bad publication values become null and the rest is kept`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                publications = listOf(
+                    PublicationDraft("Future", year = "3020", url = "ftp://example.org/x"),
+                    PublicationDraft("Old", year = "n.d.", url = "HTTPS://example.org/old"),
+                    PublicationDraft("Ahead", year = (LocalDate.now().year + 1).toString()),
+                    PublicationDraft("Too early", year = "1899"),
+                ),
+            ),
+        )
+
+        assertEquals(Publication("Future", null, null, null, null), profile.publications[0])
+        assertEquals(Publication("Old", null, null, null, "HTTPS://example.org/old"), profile.publications[1])
+        assertEquals(LocalDate.now().year + 1, profile.publications[2].year)
+        assertNull(profile.publications[3].year)
+    }
+
+    @Test
+    fun `a publication without a title is left out`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(publications = listOf(PublicationDraft(" "), PublicationDraft("Kept"))),
+        )
+
+        assertEquals(listOf("Kept"), profile.publications.map { it.title })
     }
 
     @Test

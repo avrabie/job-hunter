@@ -13,6 +13,7 @@ data class Profile(
     val summary: String? = null,
     val experience: List<Experience> = emptyList(),
     val education: List<Education> = emptyList(),
+    val publications: List<Publication> = emptyList(),
     val skills: List<Skill> = emptyList(),
     val preferences: Preferences = Preferences(),
 )
@@ -41,6 +42,15 @@ data class Education(
     val field: String? = null,
     val start: YearMonth? = null,
     val end: YearMonth? = null,
+)
+
+/** A paper, talk or other publication. [venue] is the journal, conference or publisher; [authors] is free text. */
+data class Publication(
+    val title: String,
+    val venue: String? = null,
+    val year: Int? = null,
+    val authors: String? = null,
+    val url: String? = null,
 )
 
 enum class SkillLevel { BEGINNER, INTERMEDIATE, ADVANCED, EXPERT }

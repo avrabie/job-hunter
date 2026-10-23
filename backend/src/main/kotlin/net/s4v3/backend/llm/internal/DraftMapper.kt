@@ -6,9 +6,11 @@ import net.s4v3.backend.profile.LanguageLevel
 import net.s4v3.backend.profile.LanguageSkill
 import net.s4v3.backend.profile.Location
 import net.s4v3.backend.profile.Profile
+import net.s4v3.backend.profile.Publication
 import net.s4v3.backend.profile.Skill
 import net.s4v3.backend.profile.SkillLevel
 import net.s4v3.backend.profile.WorkAuthorisation
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeParseException
 
@@ -28,6 +30,7 @@ internal object DraftMapper {
             summary = text(draft.summary),
             experience = draft.experience.mapNotNull(::experience),
             education = draft.education.mapNotNull(::education),
+            publications = draft.publications.mapNotNull(::publication),
             skills = draft.skills.mapNotNull(::skill),
         )
 
@@ -62,6 +65,17 @@ internal object DraftMapper {
         val degree = text(draft.degree) ?: return null
         return Education(institution, degree, text(draft.field), month(draft.start), month(draft.end))
     }
+
+    private fun publication(draft: PublicationDraft): Publication? {
+        val title = text(draft.title) ?: return null
+        return Publication(title, text(draft.venue), year(draft.year), text(draft.authors), link(draft.url))
+    }
+
+    private fun year(value: String?): Int? =
+        text(value)?.toIntOrNull()?.takeIf { it in 1900..LocalDate.now().year + 1 }
+
+    private fun link(value: String?): String? =
+        text(value)?.takeIf { it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true) }
 
     private fun skill(draft: SkillDraft): Skill? {
         val name = text(draft.name) ?: return null

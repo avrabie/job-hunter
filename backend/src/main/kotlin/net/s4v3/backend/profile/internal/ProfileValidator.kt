@@ -3,6 +3,9 @@ package net.s4v3.backend.profile.internal
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
+import java.net.URI
+import java.net.URISyntaxException
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
@@ -21,6 +24,9 @@ internal object ProfileValidator {
     const val LANGUAGES_MAX = 10
     const val TARGET_ROLES_MAX = 10
     const val CANTONS_MAX = 30
+    const val PUBLICATIONS_MAX = 100
+    const val URL_MAX = 500
+    const val AUTHORS_MAX = 500
 
     private val languageCode = Regex("[a-z]{2}")
     private val cantonCode = Regex("[A-Z]{2}")
@@ -64,6 +70,16 @@ internal object ProfileValidator {
             order("$at.end", entry.start, entry.end, problems)
         }
 
+        limit("publications", profile.publications.size, PUBLICATIONS_MAX, problems)
+        profile.publications.forEachIndexed { i, publication ->
+            val at = "publications[$i]"
+            requiredText("$at.title", publication.title, NAME_MAX, problems)
+            optionalText("$at.venue", publication.venue, NAME_MAX, problems)
+            publication.year?.let { if (it !in 1900..LocalDate.now().year + 1) problems["$at.year"] = "must be between 1900 and next year" }
+            optionalText("$at.authors", publication.authors, AUTHORS_MAX, problems)
+            publication.url?.let { httpUrl("$at.url", it, problems) }
+        }
+
         limit("skills", profile.skills.size, SKILLS_MAX, problems)
         profile.skills.forEachIndexed { i, skill -> requiredText("skills[$i].name", skill.name, NAME_MAX, problems) }
 
@@ -96,6 +112,21 @@ internal object ProfileValidator {
             value.length > max -> problems[path] = "must be at most $max characters"
         }
     }
+
+    private fun httpUrl(path: String, value: String, problems: MutableMap<String, String>) {
+        when {
+            value.length > URL_MAX -> problems[path] = "must be at most $URL_MAX characters"
+            !isHttpUrl(value) -> problems[path] = "must be an absolute http or https address"
+        }
+    }
+
+    private fun isHttpUrl(value: String): Boolean =
+        try {
+            val uri = URI(value)
+            uri.isAbsolute && uri.scheme.lowercase() in setOf("http", "https") && !uri.host.isNullOrEmpty()
+        } catch (_: URISyntaxException) {
+            false
+        }
 
     private fun limit(path: String, size: Int, max: Int, problems: MutableMap<String, String>) {
         if (size > max) problems[path] = "must have at most $max entries"

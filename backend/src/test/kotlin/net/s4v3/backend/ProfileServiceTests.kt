@@ -68,6 +68,23 @@ class ProfileServiceTests(
         assertEquals(original, back)
         assertEquals(listOf("Example AG", "Beispiel GmbH"), back.experience.map { it.employer })
         assertNull(back.experience[0].end)
+        assertEquals("Fast Joins on Skewed Data", back.publications.single().title)
+    }
+
+    @Test
+    fun `a profile stored before publications existed reads with an empty list`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 3)",
+            sub,
+            """{"summary":"Stored before publications"}""",
+        )
+
+        val stored = profiles.get(sub)
+
+        assertEquals(3, stored.version)
+        assertEquals("Stored before publications", stored.profile.summary)
+        assertEquals(emptyList(), stored.profile.publications)
     }
 
     @Test
