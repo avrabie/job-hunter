@@ -67,6 +67,8 @@ per source. Search (title or company), canton and source filters and the page li
 open in a new tab with `rel="noopener noreferrer"`. A signed-out visitor sees the landing page and returns here after
 signing in. The "next" button is enabled while a page is full, so the last page can be empty when the total is a multiple of 20.
 
+`/admin` shows the crawl schedule (enabled, cron, time zone, next run, last change) from `GET /api/admin/crawl-schedule` and saves changes with `POST` to the same path, using the signed-in user's own token. The "Admin" button in the shell appears only when the access token's `roles` claim contains `ADMIN`; the token's signature is not checked in the browser, so this decides what to show and nothing else. The backend enforces the role, and the page shows "This page is for administrators." when the API answers 403. The result of the last crawl run is not shown, because the API does not offer it.
+
 ## Profile page check (local)
 
 Checked by hand in a browser on 2026-10-21 against the real local stack (`auth`, `backend`, `gateway`, `pnpm dev`):

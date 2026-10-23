@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch, ApiError } from '../api/apiFetch.ts'
 import { messageForError, messageForStatus } from '../api/messages.ts'
+import { hasRole } from '../admin/roles.ts'
 import { useAuth } from '../auth/authContext.ts'
 
 type ApiStatus = { state: 'checking' } | { state: 'done'; text: string }
@@ -45,6 +46,11 @@ export function Shell({ identity }: { identity: string }) {
         <Link className="button" to="/postings">
           Postings
         </Link>
+        {hasRole(auth.getAccessToken(), 'ADMIN') && (
+          <Link className="button" to="/admin">
+            Admin
+          </Link>
+        )}
         <Link className="button" to="/profile">
           Your profile
         </Link>
