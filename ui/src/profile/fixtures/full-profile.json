@@ -33,6 +33,15 @@
       "end": "2016-06"
     }
   ],
+  "publications": [
+    {
+      "title": "Fast Joins on Skewed Data",
+      "venue": "VLDB",
+      "year": 2021,
+      "authors": "J. Doe, A. Smith",
+      "url": "https://example.org/papers/fast-joins"
+    }
+  ],
   "skills": [
     { "name": "Kotlin", "level": "EXPERT" },
     { "name": "PostgreSQL", "level": null }
