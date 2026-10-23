@@ -21,6 +21,7 @@ function stubApi(handler: Handler) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/files') return new Response('[]', { status: 200 })
       if (url.startsWith('/api/files')) return new Response('', { status: 404 })
       const method = init?.method ?? 'GET'
       const body = init?.body ? JSON.parse(init.body as string) : undefined

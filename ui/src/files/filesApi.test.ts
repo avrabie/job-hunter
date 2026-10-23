@@ -49,9 +49,12 @@ describe('listFiles', () => {
     answer(200, [file])
     expect(await listFiles(auth)).toEqual({ kind: 'loaded', files: [file] })
   })
-  it('treats 404 as an empty cabinet', async () => {
+  it('treats 404 as a failure', async () => {
     answer(404)
-    expect(await listFiles(auth)).toEqual({ kind: 'loaded', files: [] })
+    expect(await listFiles(auth)).toEqual({
+      kind: 'failed',
+      message: 'The backend has no endpoints yet.',
+    })
   })
   it('uses a fixed message for a server error', async () => {
     answer(500, { secret: 'SECRET-BODY' })
