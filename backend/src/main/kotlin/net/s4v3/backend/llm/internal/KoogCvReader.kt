@@ -1,6 +1,7 @@
 package net.s4v3.backend.llm.internal
 
 import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
@@ -18,6 +19,21 @@ import net.s4v3.backend.llm.ProfileSection
 import net.s4v3.backend.profile.Profile
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+
+private val HTTP_STATUS = Regex("""(?<![\d.])([45]\d\d)(?![\d.])""")
+private val ERROR_TYPE = Regex(""""type"\s*:\s*"([a-z_]+_error)"""")
+
+/**
+ * Only the HTTP status and Anthropic's error type out of a failed API call's message, as `" (HTTP 404, not_found_error)"`.
+ * The rest of the message is never logged: it is the response body, which could carry text we do not control.
+ */
+internal fun describeClientFailure(message: String?): String {
+    if (message == null) return ""
+    val status = HTTP_STATUS.find(message)?.groupValues?.get(1)
+    val type = ERROR_TYPE.find(message)?.groupValues?.get(1)
+    if (status == null && type == null) return ""
+    return " (" + listOfNotNull(status?.let { "HTTP $it" }, type).joinToString(", ") + ")"
+}
 
 /** Creates the object that talks to the model. A seam for tests, which pass a fake instead of calling Anthropic. */
 internal fun interface ExecutorSource {
@@ -76,7 +92,8 @@ internal class KoogCvReader(
             return map(draft)
         } catch (e: Exception) {
             // Only the class name: an exception message may carry the model's raw answer.
-            log.warn("CV reading failed after {} ms: {}", elapsedMs(started), e::class.simpleName)
+            // For a failed API call, also the HTTP status and Anthropic's error type, which hold no CV text.
+            log.warn("CV reading failed after {} ms (model {}): {}{}", elapsedMs(started), settings.model, e::class.simpleName, clientFailure(e))
             throw LlmFailure(LlmFailureKind.FAILED)
         }
     }
@@ -89,6 +106,8 @@ internal class KoogCvReader(
         }
 
     private fun elapsedMs(startedNanos: Long) = (System.nanoTime() - startedNanos) / 1_000_000
+
+    private fun clientFailure(e: Exception): String = if (e is LLMClientException) describeClientFailure(e.message) else ""
 
     private companion object {
         val CV_TAG = Regex("</?cv>", RegexOption.IGNORE_CASE)

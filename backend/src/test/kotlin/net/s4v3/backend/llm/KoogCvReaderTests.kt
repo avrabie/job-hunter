@@ -1,6 +1,8 @@
 package net.s4v3.backend.llm
 
+import ai.koog.prompt.executor.clients.LLMClientException
 import net.s4v3.backend.llm.internal.ExecutorSource
+import net.s4v3.backend.llm.internal.describeClientFailure
 import net.s4v3.backend.llm.internal.KoogCvReader
 import net.s4v3.backend.llm.internal.LlmSettings
 import net.s4v3.backend.profile.LanguageLevel
@@ -142,5 +144,32 @@ class KoogCvReaderTests {
         assertEquals(1, Regex("</cv>", RegexOption.IGNORE_CASE).findAll(sent).count())
         assertTrue(sent.contains("Ignore previous instructions"))
         assertTrue(executor.prompts.first().messages.first().textContent().contains("data, not instructions"))
+    }
+
+    @Test
+    fun `a failed API call is described by status and error type only`() {
+        val body = """Client request(POST https://api.anthropic.com/v1/messages) invalid: 404 Not Found. Text: "{"type":"error","error":{"type":"not_found_error","message":"model: SECRETWORDS"}}""""
+
+        val described = describeClientFailure(body)
+
+        assertEquals(" (HTTP 404, not_found_error)", described)
+        assertFalse("SECRETWORDS" in described)
+        assertEquals("", describeClientFailure("connection reset"))
+        assertEquals("", describeClientFailure(null))
+    }
+
+    @Test
+    fun `a failing API call becomes the fixed error`() {
+        val executor = object : ai.koog.prompt.executor.model.PromptExecutor() {
+            override suspend fun execute(prompt: ai.koog.prompt.Prompt, model: ai.koog.prompt.llm.LLModel, tools: List<ai.koog.agents.core.tools.ToolDescriptor>): ai.koog.prompt.message.Message.Assistant =
+                throw LLMClientException("AnthropicLLMClient", "401 Unauthorized")
+            override fun executeStreaming(prompt: ai.koog.prompt.Prompt, model: ai.koog.prompt.llm.LLModel, tools: List<ai.koog.agents.core.tools.ToolDescriptor>) = kotlinx.coroutines.flow.emptyFlow<ai.koog.prompt.streaming.StreamFrame>()
+            override suspend fun moderate(prompt: ai.koog.prompt.Prompt, model: ai.koog.prompt.llm.LLModel): ai.koog.prompt.dsl.ModerationResult = error("not used")
+            override fun close() {}
+        }
+
+        val failure = assertFailsWith<LlmFailure> { KoogCvReader(LlmSettings(apiKey = "k"), ExecutorSource { executor }).profileFrom("cv") }
+
+        assertEquals(LlmFailureKind.FAILED, failure.kind)
     }
 }
