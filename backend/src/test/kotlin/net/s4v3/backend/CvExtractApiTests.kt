@@ -8,6 +8,8 @@ import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.llm.CvReader
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
+import net.s4v3.backend.llm.ProfileSection
+import net.s4v3.backend.profile.Education
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.Skill
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -57,9 +59,18 @@ internal class CvExtractApiTests(
         val received = mutableListOf<String>()
         var answer: (String) -> Profile = { Profile(skills = listOf(Skill("Kotlin"))) }
 
+        val sections = mutableListOf<ProfileSection>()
+        var sectionAnswer: (String, ProfileSection) -> Profile = { _, _ -> Profile() }
+
         override fun profileFrom(text: String): Profile {
             received += text
             return answer(text)
+        }
+
+        override fun sectionFrom(text: String, section: ProfileSection): Profile {
+            received += text
+            sections += section
+            return sectionAnswer(text, section)
         }
     }
 
@@ -80,7 +91,9 @@ internal class CvExtractApiTests(
     @BeforeEach
     fun reset() {
         reader.received.clear()
+        reader.sections.clear()
         reader.answer = { Profile(skills = listOf(Skill("Kotlin"))) }
+        reader.sectionAnswer = { _, _ -> Profile() }
     }
 
     /** Uploads a file of kind CV through the cabinet and, unless told otherwise, makes it the master. Returns its id. */
@@ -105,6 +118,9 @@ internal class CvExtractApiTests(
         )
 
     private fun extract(sub: String) = mvc.perform(post("/api/cv/extract").header("Authorization", bearer(sub)))
+
+    private fun extractSection(sub: String, section: String) =
+        mvc.perform(post("/api/cv/extract").param("section", section).header("Authorization", bearer(sub)))
 
     private fun pdfWithText(text: String?): ByteArray {
         PDDocument().use { doc ->
@@ -237,6 +253,65 @@ internal class CvExtractApiTests(
         extract(b).andExpect(status().isOk)
 
         assertEquals(listOf("ONLY-A", "ONLY-B"), reader.received)
+    }
+
+    @Test
+    fun `a section request returns only that section and the profile is untouched`() {
+        val sub = newSub()
+        upload(sub, "cv.txt", "Jane Doe, MSc ETH Zurich".toByteArray())
+        reader.sectionAnswer = { _, _ -> Profile(education = listOf(Education("ETH Zurich", "MSc"))) }
+
+        extractSection(sub, "education").andExpect(status().isOk)
+            .andExpect(jsonPath("$.education[0].institution").value("ETH Zurich"))
+            .andExpect(jsonPath("$.experience.length()").value(0))
+            .andExpect(jsonPath("$.skills.length()").value(0))
+
+        assertEquals(listOf(ProfileSection.EDUCATION), reader.sections)
+        mvc.perform(get("/api/profile").header("Authorization", bearer(sub)))
+            .andExpect(status().isOk).andExpect(jsonPath("$.version").value(0))
+    }
+
+    @Test
+    fun `section names are matched without regard to letter case`() {
+        val sub = newSub()
+        upload(sub, "cv.txt", "Jane Doe".toByteArray())
+
+        extractSection(sub, "Publications").andExpect(status().isOk)
+
+        assertEquals(listOf(ProfileSection.PUBLICATIONS), reader.sections)
+    }
+
+    @Test
+    fun `an unknown section is 400 before the master and the model are looked at`() {
+        extractSection(newSub(), "hobbies").andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("invalid_cv"))
+            .andExpect(jsonPath("$.message").value("That section cannot be read."))
+
+        val sub = newSub()
+        upload(sub, "cv.txt", "Jane Doe".toByteArray())
+        extractSection(sub, "hobbies").andExpect(status().isBadRequest)
+        assertTrue(reader.received.isEmpty())
+    }
+
+    @Test
+    fun `a section request without a master gives 409 and the model is not called`() {
+        extractSection(newSub(), "experience").andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Choose a master CV in your files first."))
+
+        assertTrue(reader.received.isEmpty())
+    }
+
+    @Test
+    fun `section requests count against the same hourly limit as the whole profile`() {
+        val sub = newSub()
+        upload(sub, "cv.txt", "text".toByteArray())
+
+        extract(sub).andExpect(status().isOk)
+        extractSection(sub, "experience").andExpect(status().isOk)
+        extractSection(sub, "education").andExpect(status().isTooManyRequests)
+
+        assertEquals(2, reader.received.size)
+        assertEquals(listOf(ProfileSection.EXPERIENCE), reader.sections)
     }
 
     @Test

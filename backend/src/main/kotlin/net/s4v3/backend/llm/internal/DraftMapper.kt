@@ -34,6 +34,12 @@ internal object DraftMapper {
             skills = draft.skills.mapNotNull(::skill),
         )
 
+    fun toProfile(section: ExperienceSection): Profile = Profile(experience = section.experience.mapNotNull(::experience))
+
+    fun toProfile(section: EducationSection): Profile = Profile(education = section.education.mapNotNull(::education))
+
+    fun toProfile(section: PublicationsSection): Profile = Profile(publications = section.publications.mapNotNull(::publication))
+
     private fun location(draft: LocationDraft?): Location? {
         val city = text(draft?.city)
         val canton = draft?.canton?.trim()?.uppercase()?.takeIf { CANTON.matches(it) }
