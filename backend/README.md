@@ -260,7 +260,6 @@ Uploads are streamed: Tomcat spools the part to `<dir>/tmp` (same volume) and th
 (`MultipartFile.transferTo(File)`; the `Path` overload would copy the bytes again). The multipart limits are 10 GB. Before the
 body is read, a filter answers 507 when the declared size would leave less than `jobhunter.files.min-free-bytes` (2 GiB) free,
 which keeps the database on the same disk alive. In the cluster an upload must also finish within the proxy's 60-second read
-timeout (see `k8s/README.md`), which is the practical size limit for now. In the cluster an upload must also finish within the proxy's 60-second read
 timeout (see `k8s/README.md`), which is the practical size limit for now. Settings: `jobhunter.files.dir`, `min-free-bytes`, `max-cv-bytes`,
 `max-other-bytes`, `ticket-seconds`.
 
