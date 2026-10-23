@@ -147,13 +147,14 @@ class KoogCvReaderTests {
     }
 
     @Test
-    fun `a failed API call is described by status and error type only`() {
-        val body = """Client request(POST https://api.anthropic.com/v1/messages) invalid: 404 Not Found. Text: "{"type":"error","error":{"type":"not_found_error","message":"model: SECRETWORDS"}}""""
+    fun `a failed API call is described by status, error type and its short message`() {
+        val body = """Client request(POST https://api.anthropic.com/v1/messages) invalid: 404 Not Found. Text: "{"type":"error","error":{"type":"not_found_error","message":"model: SECRETWORDS"}}"""
 
         val described = describeClientFailure(body)
 
-        assertEquals(" (HTTP 404, not_found_error)", described)
-        assertFalse("SECRETWORDS" in described)
+        // The short explanation of the error is kept, nothing else of the response.
+        assertEquals(" (HTTP 404, not_found_error: model: SECRETWORDS)", described)
+        assertFalse("Client request" in described)
         assertEquals("", describeClientFailure("connection reset"))
         assertEquals("", describeClientFailure(null))
     }
