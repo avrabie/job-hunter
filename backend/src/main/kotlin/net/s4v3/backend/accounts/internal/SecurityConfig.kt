@@ -42,6 +42,9 @@ internal class SecurityConfig {
                 }
                 // Every path under /api/admin needs the ADMIN role, so a new admin endpoint is protected by default.
                 it.requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // A file's content also comes with a single-use download ticket (no token). FilesController accepts either
+                // and answers 401 otherwise; every other path, the other file endpoints included, still needs a token.
+                it.requestMatchers(HttpMethod.GET, "/api/files/*/content").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }
