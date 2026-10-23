@@ -28,7 +28,8 @@ class DatabaseBaselineTests(
         assertTrue("posting" in tables && "posting_source" in tables, tables.toString())
         assertTrue("source_fetch_state" in tables && "crawl_schedule" in tables && "posting_match" in tables, tables.toString())
         assertTrue("cv_document" in tables, tables.toString())
-        assertEquals(10, count("select count(*) from databasechangelog"))
+        assertTrue("user_file" in tables, tables.toString())
+        assertEquals(11, count("select count(*) from databasechangelog"))
     }
 
     @Test
