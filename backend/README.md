@@ -259,7 +259,9 @@ attachment, so the download streams to disk. Tickets live in memory (a restart d
 Uploads are streamed: Tomcat spools the part to `<dir>/tmp` (same volume) and the controller moves it into place with a rename
 (`MultipartFile.transferTo(File)`; the `Path` overload would copy the bytes again). The multipart limits are 10 GB. Before the
 body is read, a filter answers 507 when the declared size would leave less than `jobhunter.files.min-free-bytes` (2 GiB) free,
-which keeps the database on the same disk alive. Settings: `jobhunter.files.dir`, `min-free-bytes`, `max-cv-bytes`,
+which keeps the database on the same disk alive. In the cluster an upload must also finish within the proxy's 60-second read
+timeout (see `k8s/README.md`), which is the practical size limit for now. In the cluster an upload must also finish within the proxy's 60-second read
+timeout (see `k8s/README.md`), which is the practical size limit for now. Settings: `jobhunter.files.dir`, `min-free-bytes`, `max-cv-bytes`,
 `max-other-bytes`, `ticket-seconds`.
 
 Old single CVs (the `cv_document` table of the first CV feature) are moved into the cabinet at start and set as master; a daily

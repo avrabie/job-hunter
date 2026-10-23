@@ -293,12 +293,11 @@ limit**: the backend refuses an upload that would leave less than 2 GiB free (`j
 PostgreSQL on the same disk. Check the server's free space (`df -h /opt/local-path-provisioner` over SSH) before inviting people
 to upload large files. The volume has **no backup**, like the database; deleting the claim deletes every uploaded file.
 
-Large uploads and the proxy: Traefik v3 reads a whole request, body included, within 60 seconds by default, so an upload that
-takes longer is cut at the edge. `k8s/platform/traefik-values.yaml` sets `readTimeout: 0` for `websecure`; it takes effect with
-`helm upgrade` (step 4.3), which restarts Traefik for a few seconds. It has **not been applied yet**, and the real upload limits
-through the edge and the gateway have **not been measured**: until then, uploads that last longer than about a minute are not
-expected to work. (The gateway's `response-timeout` of 60 s starts after the request is sent, so it should not limit uploads, but
-that is untested.)
+Upload time limit: Traefik v3 reads a whole request, body included, within 60 seconds by default (`readTimeout`), and that
+default is **kept on purpose**. An upload must therefore finish within about a minute: roughly 60 s times the user's upload
+speed (for example about 150 MB at 20 Mbit/s), far below the 10 GB the backend accepts. The real limits through the edge and
+the gateway have not been measured. If larger files are needed later, set `ports.websecure.transport.respondingTimeouts.readTimeout: 0`
+in `k8s/platform/traefik-values.yaml` and run the `helm upgrade` of step 4.3 (it restarts Traefik for a few seconds).
 
 #### Anthropic key for CV extraction (optional)
 

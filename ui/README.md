@@ -80,7 +80,7 @@ the profile is saved anyway.
 
 The top of `/profile` has **Your files**: every file with its kind (CV or Other), size (KB, MB, GB), date and a **Master CV**
 label. Upload takes a file and a kind: **CV** accepts `.pdf`, `.md` and `.txt` up to 5 MB; **Other file** accepts anything up to
-10 GB. Uploads use `XMLHttpRequest` (not `fetch`) so there is a progress bar and a Cancel button, and the file is never read
+10 GB on paper; on s4v3.net an upload has to finish within about a minute (the proxy's read timeout). Uploads use `XMLHttpRequest` (not `fetch`) so there is a progress bar and a Cancel button, and the file is never read
 into page memory. **Download** asks for a one-time ticket with the user's token and then points the browser at the returned path,
 so a large file streams straight to disk. **Delete** asks first. A CV file has **Use as master CV** (the master has **Remove
 master**); nothing is chosen automatically except for a CV uploaded before the cabinet existed, which was moved in as master.
