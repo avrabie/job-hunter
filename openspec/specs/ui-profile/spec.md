@@ -18,7 +18,7 @@ The UI SHALL provide a page at `/profile`, reachable from the signed-in shell, t
 - **THEN** the landing page is shown, no sign-in starts by itself, and after the visitor chooses "Sign in" and signs in the UI opens `/profile`
 
 ### Requirement: Editing lists
-The page SHALL let the user add, remove and reorder experience, education, skills, languages and achievements, and SHALL send the whole profile on save.
+The page SHALL let the user add, remove and reorder experience, education, publications, skills, languages and achievements, and SHALL send the whole profile on save.
 
 #### Scenario: Add and remove
 - **WHEN** the user adds an experience entry, fills it and removes another
@@ -77,3 +77,18 @@ The page SHALL warn before the user leaves it or closes the tab while there are 
 #### Scenario: Unsaved edits
 - **WHEN** the user has changed a field and tries to close the tab
 - **THEN** the browser asks for confirmation; after a successful save it does not
+
+### Requirement: Publications section
+The page SHALL show a Publications section with, for each entry, fields for title, venue, year, authors and link, and SHALL check them with the same rules as the server (title required, year range, http or https link) when a field is left. Empty optional fields SHALL be sent as null.
+
+#### Scenario: Add a publication
+- **WHEN** the user adds a publication with a title and year and saves
+- **THEN** the request holds that publication with null venue, authors and link
+
+#### Scenario: Bad link
+- **WHEN** the user leaves the link field with `javascript:alert(1)`
+- **THEN** a message names the link field, and if the profile is saved anyway the server's 400 message is shown at that field (the server stays the authority)
+
+#### Scenario: Reorder and remove
+- **WHEN** the user moves the second publication up and removes the third
+- **THEN** the saved list reflects both changes
