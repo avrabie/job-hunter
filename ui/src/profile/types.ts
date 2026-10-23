@@ -52,6 +52,7 @@ export interface Experience {
   end: string | null
   location: string | null
   achievements: string[]
+  technologies: string[]
 }
 
 export interface Education {
@@ -68,6 +69,32 @@ export interface Publication {
   year: number | null
   authors: string | null
   url: string | null
+}
+
+export const PROJECT_TYPES = [
+  'ASSIGNMENT',
+  'PERSONAL',
+  'OPEN_SOURCE',
+  'WORK',
+] as const
+export type ProjectType = (typeof PROJECT_TYPES)[number]
+
+export interface ProjectLink {
+  label: string
+  url: string
+}
+
+export interface Project {
+  name: string
+  type: ProjectType
+  context: string | null
+  start: string | null
+  end: string | null
+  description: string | null
+  technologies: string[]
+  results: string[]
+  links: ProjectLink[]
+  highlight: boolean
 }
 
 export interface Skill {
@@ -92,6 +119,7 @@ export interface Profile {
   experience: Experience[]
   education: Education[]
   publications: Publication[]
+  projects: Project[]
   skills: Skill[]
   preferences: Preferences
 }
@@ -111,6 +139,7 @@ export function emptyProfile(): Profile {
     experience: [],
     education: [],
     publications: [],
+    projects: [],
     skills: [],
     preferences: {
       targetRoles: [],
@@ -130,6 +159,7 @@ export const blankExperience = (): Experience => ({
   end: null,
   location: null,
   achievements: [],
+  technologies: [],
 })
 
 export const blankEducation = (): Education => ({
@@ -148,9 +178,41 @@ export const blankPublication = (): Publication => ({
   url: null,
 })
 
+export const blankProject = (): Project => ({
+  name: '',
+  type: 'ASSIGNMENT',
+  context: null,
+  start: null,
+  end: null,
+  description: null,
+  technologies: [],
+  results: [],
+  links: [],
+  highlight: false,
+})
+
+export const blankProjectLink = (): ProjectLink => ({ label: '', url: '' })
+
 export const blankSkill = (): Skill => ({ name: '', level: null })
 
 export const blankLanguage = (): LanguageSkill => ({ code: '', level: 'B2' })
+
+/**
+ * Trims each tag, drops blank ones and drops a tag that differs from an earlier one only in case; the first spelling
+ * wins. The server keeps tags as they are sent, so the page and the CV reader tidy them first.
+ */
+export function tidyTags(tags: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of tags) {
+    const tag = raw.trim()
+    const key = tag.toLowerCase()
+    if (tag === '' || seen.has(key)) continue
+    seen.add(key)
+    out.push(tag)
+  }
+  return out
+}
 
 /**
  * What goes on the wire: empty optional text becomes null, text is trimmed, and a location with nothing in it is
@@ -176,6 +238,7 @@ export function toRequestProfile(p: Profile): Profile {
       end: e.end === '' ? null : e.end,
       location: text(e.location),
       achievements: e.achievements.map(required),
+      technologies: tidyTags(e.technologies),
     })),
     education: p.education.map((e) => ({
       institution: required(e.institution),
@@ -190,6 +253,21 @@ export function toRequestProfile(p: Profile): Profile {
       year: b.year,
       authors: text(b.authors),
       url: text(b.url),
+    })),
+    projects: p.projects.map((j) => ({
+      name: required(j.name),
+      type: j.type,
+      context: text(j.context),
+      start: j.start === '' ? null : j.start,
+      end: j.end === '' ? null : j.end,
+      description: text(j.description),
+      technologies: tidyTags(j.technologies),
+      results: j.results.map(required),
+      // A link with both fields empty is a row the user left blank; it is not sent.
+      links: j.links
+        .filter((l) => required(l.label) !== '' || required(l.url) !== '')
+        .map((l) => ({ label: required(l.label), url: required(l.url) })),
+      highlight: j.highlight,
     })),
     skills: p.skills.map((s) => ({ name: required(s.name), level: s.level })),
     preferences: {

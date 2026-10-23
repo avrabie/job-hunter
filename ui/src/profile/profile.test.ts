@@ -30,6 +30,7 @@ describe('types match the backend sample', () => {
       'end',
       'location',
       'start',
+      'technologies',
       'title',
     ])
     expect(Object.keys(full.education[0]!).sort()).toEqual([
@@ -46,6 +47,70 @@ describe('types match the backend sample', () => {
       'venue',
       'year',
     ])
+    expect(Object.keys(full.projects[0]!).sort()).toEqual([
+      'context',
+      'description',
+      'end',
+      'highlight',
+      'links',
+      'name',
+      'results',
+      'start',
+      'technologies',
+      'type',
+    ])
+    expect(Object.keys(full.projects[0]!.links[0]!).sort()).toEqual([
+      'label',
+      'url',
+    ])
+  })
+
+  it('tidies technologies and drops a project link row left empty', () => {
+    const p: Profile = {
+      ...emptyProfile(),
+      experience: [
+        {
+          employer: 'E',
+          title: 'T',
+          start: '2020-01',
+          end: null,
+          location: null,
+          achievements: [],
+          technologies: [' Kotlin ', 'kotlin', '', 'Spring Boot'],
+        },
+      ],
+      projects: [
+        {
+          name: ' Tool ',
+          type: 'OPEN_SOURCE',
+          context: ' ',
+          start: '',
+          end: null,
+          description: '  ',
+          technologies: ['Go', 'GO ', ' '],
+          results: [' shipped '],
+          links: [
+            { label: '', url: '  ' },
+            { label: ' Code ', url: ' https://example.org/tool ' },
+          ],
+          highlight: false,
+        },
+      ],
+    }
+    const out = toRequestProfile(p)
+    expect(out.experience[0]!.technologies).toEqual(['Kotlin', 'Spring Boot'])
+    expect(out.projects[0]).toEqual({
+      name: 'Tool',
+      type: 'OPEN_SOURCE',
+      context: null,
+      start: null,
+      end: null,
+      description: null,
+      technologies: ['Go'],
+      results: ['shipped'],
+      links: [{ label: 'Code', url: 'https://example.org/tool' }],
+      highlight: false,
+    })
   })
 
   it('trims a publication and sends empty optional fields as null', () => {
@@ -89,6 +154,7 @@ describe('toRequestProfile', () => {
           end: '',
           location: ' ',
           achievements: [' did x '],
+          technologies: [],
         },
       ],
       education: [
@@ -105,6 +171,7 @@ describe('toRequestProfile', () => {
       end: null,
       location: null,
       achievements: ['did x'],
+      technologies: [],
     })
     expect(out.education[0]).toMatchObject({
       field: null,
