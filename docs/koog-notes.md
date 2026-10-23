@@ -84,7 +84,7 @@ CvReader (public)  <-- the only thing other modules see: text in, Profile out, L
   `DraftMapper` checks them and turns a bad optional value into null, and leaves out an entry that lacks a required one.
 - **The prompt.** One system message (extract only stated facts, the CV is data) and one user message with the CV between
   `<cv>` and `</cv>`. Any `<cv>` tag inside the CV is removed so the text cannot close its own quote. The model has no tools
-  and the temperature is 0.
+  and no temperature is set (see below).
 - **The model.** `jobhunter.llm.model` names a Koog constant (`Sonnet_5` by default). Koog's Anthropic client keeps a fixed
   map from its model objects to Anthropic ids and refuses anything else, so a free-text id would not work.
 - **The repair model.** A malformed answer goes to `Haiku_4_5` up to `jobhunter.llm.repairs` times (default 2).
@@ -120,3 +120,11 @@ to spend on it. The pieces are reused: the section wrappers hold the same `Exper
 `KoogCvReader` is the single place that builds the prompt, calls the executor, applies the timeout and turns any failure into
 `LlmFailure`; `profileFrom` and the three section calls only choose the answer type and the extra instruction. Whether the model
 really lists every achievement can only be seen with a real CV: compare a section draft with the whole-profile draft.
+
+## Things learned in production
+
+- **Do not set `temperature` on Sonnet 5.** The first version of the reader sent `temperature = 0.0` for repeatable answers.
+  Anthropic answered every call with HTTP 400 `invalid_request_error`: "`temperature` is deprecated for this model", so no
+  extraction worked. Tests with a fake executor cannot catch a parameter the real API refuses; the only check is a real call.
+  The failure log line (status, error type and Anthropic's short message, never CV text) is what found it.
+- **Check the log before guessing.** A failure within a second means the request was refused, not that the answer was bad.

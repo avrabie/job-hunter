@@ -9,7 +9,6 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.model.StructureFixingParser
 import ai.koog.prompt.executor.model.executeStructured
 import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.params.LLMParams
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import net.s4v3.backend.llm.CvReader
@@ -105,7 +104,8 @@ internal class KoogCvReader(
     }
 
     private fun promptFor(cvText: String, instruction: String?) =
-        prompt("cv-to-profile", LLMParams(temperature = 0.0)) {
+        // No temperature: Sonnet 5 rejects the parameter with a 400 ("`temperature` is deprecated for this model").
+        prompt("cv-to-profile") {
             system(if (instruction == null) SYSTEM else "$SYSTEM\n\n$instruction")
             // The closing tag is removed from the text so the CV cannot end its own quote early.
             user("<cv>\n${cvText.replace(CV_TAG, "")}\n</cv>")
