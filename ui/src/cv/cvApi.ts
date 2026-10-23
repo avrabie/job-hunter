@@ -31,14 +31,46 @@ async function guarded<T extends { kind: string }>(
   }
 }
 
+export type ProfileSectionName = 'experience' | 'education' | 'publications'
+
+const SECTION_MESSAGES: Record<number, string> = {
+  400: 'That section cannot be read.',
+}
+
 /** Asks the backend to read the stored CV. The draft is not saved anywhere by this call. */
 export function extractProfile(auth: TokenSource): Promise<DraftResult> {
+  return runExtract(auth, `${PATH}/extract`, {})
+}
+
+/**
+ * Asks the backend to read one section of the stored CV. The answer is a profile with only that field filled; the
+ * caller copies that field. Nothing is saved by this call.
+ */
+export function extractSection(
+  auth: TokenSource,
+  section: ProfileSectionName,
+): Promise<DraftResult> {
+  return runExtract(
+    auth,
+    `${PATH}/extract?section=${section}`,
+    SECTION_MESSAGES,
+  )
+}
+
+function runExtract(
+  auth: TokenSource,
+  url: string,
+  extra: Record<number, string>,
+): Promise<DraftResult> {
   return guarded<DraftResult>(async () => {
-    const res = await apiFetch(auth, `${PATH}/extract`, { method: 'POST' })
+    const res = await apiFetch(auth, url, { method: 'POST' })
     if (!res.ok)
       return {
         kind: 'failed',
-        message: EXTRACT_MESSAGES[res.status] ?? messageForStatus(res.status),
+        message:
+          extra[res.status] ??
+          EXTRACT_MESSAGES[res.status] ??
+          messageForStatus(res.status),
       }
     return { kind: 'draft', profile: withDefaults(await res.json()) }
   })

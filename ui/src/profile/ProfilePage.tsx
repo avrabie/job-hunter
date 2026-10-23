@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
-import { applyDraft } from '../cv/cvApi.ts'
+import {
+  applyDraft,
+  extractSection,
+  type ProfileSectionName,
+} from '../cv/cvApi.ts'
 import { FileCabinet } from '../files/FileCabinet.tsx'
+import { loadMaster } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
-import { ProfileForm } from './ProfileForm.tsx'
+import { ProfileForm, type FillState } from './ProfileForm.tsx'
 import { loadProfile, saveProfile } from './profileApi.ts'
 import { checkProfile } from './rules.ts'
 import { emptyProfile, toRequestProfile, type Profile } from './types.ts'
@@ -35,6 +40,14 @@ type Load =
   | { state: 'failed'; message: string }
   | { state: 'ready' }
 
+const SECTION_TITLE: Record<ProfileSectionName, string> = {
+  experience: 'Experience',
+  education: 'Education',
+  publications: 'Publications',
+}
+
+const NO_FILL: FillState = { loading: false, error: null }
+
 type Save =
   | { state: 'idle' }
   | { state: 'saving' }
@@ -57,7 +70,23 @@ function ProfileEditor() {
   // Server messages from the last failed save, and the paths whose browser-side message is showing.
   const [serverErrors, setErrors] = useState<Record<string, string>>({})
   const [shown, setShown] = useState<ReadonlySet<string>>(new Set())
+  // Whether a master CV is chosen. Loaded once here; the cabinet reports the changes it makes.
+  const [hasMaster, setHasMaster] = useState(false)
+  const [fill, setFill] = useState<Record<ProfileSectionName, FillState>>({
+    experience: NO_FILL,
+    education: NO_FILL,
+    publications: NO_FILL,
+  })
+  const [notice, setNotice] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    void loadMaster(auth).then((result) => {
+      if (result.kind === 'loaded') setHasMaster(result.hasMaster)
+    })
+    // Loaded once with the page; `auth` changes with the sign-in state and the cabinet reports later changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchStored = useCallback(async () => {
     setLoad({ state: 'loading' })
@@ -123,6 +152,40 @@ function ProfileEditor() {
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  function setFillFor(section: ProfileSectionName, state: FillState) {
+    setFill((current) => ({ ...current, [section]: state }))
+  }
+
+  /**
+   * Replaces only this section's entries with the draft from the CV, as unsaved changes. A section with entries asks
+   * first; declining sends nothing.
+   */
+  async function onFillSection(section: ProfileSectionName) {
+    const title = SECTION_TITLE[section]
+    if (
+      draft[section].length > 0 &&
+      !window.confirm(
+        `Replace the ${title} entries in the form with the draft from your CV?`,
+      )
+    )
+      return
+    setFillFor(section, { loading: true, error: null })
+    setNotice(null)
+    const result = await extractSection(auth, section)
+    if (result.kind === 'draft') {
+      const entries = result.profile[section]
+      setDraft((current) => ({ ...current, [section]: entries }))
+      setFillFor(section, NO_FILL)
+      setNotice(
+        `The ${title} entries now hold a draft from your CV. Nothing is saved until you press Save. Check every entry first.`,
+      )
+    } else if (result.kind === 'failed') {
+      setFillFor(section, { loading: false, error: result.message })
+    } else {
+      setFillFor(section, NO_FILL)
+    }
+  }
+
   async function onSave() {
     setSave({ state: 'saving' })
     setErrors({})
@@ -182,6 +245,7 @@ function ProfileEditor() {
       <FileCabinet
         formHasContent={snapshot(draft) !== snapshot(emptyProfile())}
         onDraft={(d) => setDraft((current) => applyDraft(current, d))}
+        onMasterChange={setHasMaster}
       />
       <form
         ref={formRef}
@@ -191,11 +255,19 @@ function ProfileEditor() {
         }}
         noValidate
       >
+        {notice && (
+          <p className="notice" role="status">
+            {notice}
+          </p>
+        )}
         <ProfileForm
           profile={draft}
           onChange={setDraft}
           errors={errors}
           onLeave={leave}
+          canFillFromCv={hasMaster}
+          onFillSection={(section) => void onFillSection(section)}
+          fillState={fill}
         />
 
         {save.state === 'conflict' && (

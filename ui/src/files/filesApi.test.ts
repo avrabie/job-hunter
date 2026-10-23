@@ -3,6 +3,7 @@ import {
   clearMaster,
   deleteFile,
   listFiles,
+  loadMaster,
   requestDownload,
   setMaster,
   uploadFile,
@@ -85,6 +86,22 @@ describe('deleteFile', () => {
 })
 
 describe('master CV', () => {
+  it('reports a master when the master endpoint answers 200, none on 404', async () => {
+    answer(200, file)
+    expect(await loadMaster(auth)).toEqual({ kind: 'loaded', hasMaster: true })
+    answer(404)
+    expect(await loadMaster(auth)).toEqual({
+      kind: 'loaded',
+      hasMaster: false,
+    })
+  })
+  it('uses a fixed message for a server error', async () => {
+    answer(500, { secret: 'SECRET-BODY' })
+    expect(await loadMaster(auth)).toEqual({
+      kind: 'failed',
+      message: 'The request failed (status 500).',
+    })
+  })
   it('sends the chosen id in the body', async () => {
     answer(200, file)
     expect(await setMaster(auth, ID)).toEqual({ kind: 'done' })

@@ -28,14 +28,16 @@ type Busy = 'deleting' | 'master' | 'downloading' | null
  * The file cabinet on the profile page: the user's files, uploads with progress, download, delete and the choice of the
  * master CV. The master CV is what the profile is drafted from. `formHasContent` asks for a confirmation before a draft
  * replaces what is already in the form. The draft goes to the form as unsaved changes; saving stays the profile page's
- * own button.
+ * own button. `onMasterChange` is told when the user chooses, clears or deletes the master CV.
  */
 export function FileCabinet({
   formHasContent,
   onDraft,
+  onMasterChange,
 }: {
   formHasContent: boolean
   onDraft: (draft: Profile) => void
+  onMasterChange?: (hasMaster: boolean) => void
 }) {
   const auth = useAuth()
   const [listing, setListing] = useState<Listing>({ state: 'loading' })
@@ -112,9 +114,10 @@ export function FileCabinet({
     setBusy('deleting')
     setError(null)
     const result = await deleteFile(auth, id)
-    if (result.kind === 'done')
+    if (result.kind === 'done') {
       edit((files) => files.filter((f) => f.id !== id))
-    else if (result.kind === 'failed') setError(result.message)
+      if (master?.id === id) onMasterChange?.(false)
+    } else if (result.kind === 'failed') setError(result.message)
     setBusy(null)
   }
 
@@ -122,9 +125,10 @@ export function FileCabinet({
     setBusy('master')
     setError(null)
     const result = await setMaster(auth, id)
-    if (result.kind === 'done')
+    if (result.kind === 'done') {
       edit((files) => files.map((f) => ({ ...f, master: f.id === id })))
-    else if (result.kind === 'failed') setError(result.message)
+      onMasterChange?.(true)
+    } else if (result.kind === 'failed') setError(result.message)
     setBusy(null)
   }
 
@@ -132,9 +136,10 @@ export function FileCabinet({
     setBusy('master')
     setError(null)
     const result = await clearMaster(auth)
-    if (result.kind === 'done')
+    if (result.kind === 'done') {
       edit((files) => files.map((f) => ({ ...f, master: false })))
-    else if (result.kind === 'failed') setError(result.message)
+      onMasterChange?.(false)
+    } else if (result.kind === 'failed') setError(result.message)
     setBusy(null)
   }
 

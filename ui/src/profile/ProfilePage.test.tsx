@@ -509,3 +509,150 @@ describe('unsaved edits', () => {
     expect(screen.getByLabelText('City')).toBeVisible()
   })
 })
+
+describe('fill a section from the CV', () => {
+  const MASTER = {
+    id: 'file-1',
+    name: 'Synthetic CV.pdf',
+    kind: 'CV',
+    contentType: 'application/pdf',
+    sizeBytes: 2048,
+    uploadedAt: '2026-10-23T10:00:00Z',
+    master: true,
+  }
+
+  /**
+   * Like `stubApi`, with a master CV chosen or not, and the section endpoint answered by `extract`. `calls` records
+   * the URL and method of each request, the cabinet's own requests included.
+   */
+  function stubSections(master: boolean, extract: () => Response) {
+    const calls: { url: string; method: string }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET'
+        calls.push({ url, method })
+        if (url === '/api/files/master')
+          return master ? json(200, MASTER) : new Response('', { status: 404 })
+        if (url === '/api/files') return json(200, master ? [MASTER] : [])
+        if (url.startsWith('/api/files'))
+          return new Response('', { status: 404 })
+        if (url.startsWith('/api/cv/extract')) return extract()
+        if (method === 'GET') return json(200, { version: 1, profile: full })
+        const body = JSON.parse(init!.body as string) as { profile: Profile }
+        return json(200, { version: 2, profile: body.profile })
+      }),
+    )
+    return calls
+  }
+
+  const section = (name: string) => within(screen.getByRole('region', { name }))
+
+  it('fills only the education entries, unsaved, and sends no profile request', async () => {
+    const calls = stubSections(true, () =>
+      json(200, {
+        ...emptyProfile(),
+        education: [
+          {
+            institution: 'Synthetic College',
+            degree: 'BSc',
+            field: null,
+            start: null,
+            end: null,
+          },
+        ],
+      }),
+    )
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mount()
+    await screen.findByLabelText('City')
+    const button = section('Education').getByRole('button', {
+      name: 'Fill from CV',
+    })
+    await waitFor(() => expect(button).toBeEnabled())
+    await userEvent.click(button)
+
+    expect(
+      await screen.findByText(/Nothing is saved until you press Save/),
+    ).toBeVisible()
+    expect(section('Education').getByLabelText('Institution')).toHaveValue(
+      'Synthetic College',
+    )
+    expect(screen.getAllByLabelText('Employer')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Employer')[0]).toHaveValue('Example AG')
+    expect(calls).toContainEqual({
+      url: '/api/cv/extract?section=education',
+      method: 'POST',
+    })
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+  })
+
+  it('asks before replacing entries, and declining sends nothing', async () => {
+    const calls = stubSections(true, () =>
+      json(200, { ...emptyProfile(), education: [] }),
+    )
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true)
+    mount()
+    await screen.findByLabelText('City')
+    const button = section('Education').getByRole('button', {
+      name: 'Fill from CV',
+    })
+    await waitFor(() => expect(button).toBeEnabled())
+
+    await userEvent.click(button)
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(calls.some((c) => c.url.startsWith('/api/cv/extract'))).toBe(false)
+    expect(section('Education').getByLabelText('Institution')).toHaveValue(
+      'Example University',
+    )
+
+    await userEvent.click(button)
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(calls.some((c) => c.url.startsWith('/api/cv/extract'))).toBe(true)
+    expect(section('Education').queryByLabelText('Institution')).toBeNull()
+  })
+
+  it('disables the three buttons with a hint when there is no master CV', async () => {
+    stubSections(false, () => json(200, emptyProfile()))
+    mount()
+    await screen.findByLabelText('City')
+    for (const name of ['Experience', 'Education', 'Publications']) {
+      expect(
+        section(name).getByRole('button', { name: 'Fill from CV' }),
+      ).toBeDisabled()
+    }
+    expect(
+      screen.getAllByText('Choose a master CV in your files to use this.'),
+    ).toHaveLength(3)
+  })
+
+  it.each([
+    [
+      422,
+      'No text could be read from the CV. Use a text-based PDF, a Markdown file or a plain text file.',
+    ],
+    [429, 'Too many extractions. Please try again later.'],
+  ])(
+    'shows the fixed message for %i in the section and keeps its entries',
+    async (status, message) => {
+      stubSections(true, () => json(status, {}))
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      mount()
+      await screen.findByLabelText('City')
+      const button = section('Experience').getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      expect(await section('Experience').findByRole('alert')).toHaveTextContent(
+        message,
+      )
+      expect(screen.getAllByLabelText('Employer')).toHaveLength(2)
+      expect(screen.getAllByLabelText('Employer')[0]).toHaveValue('Example AG')
+    },
+  )
+})

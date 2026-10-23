@@ -87,6 +87,22 @@ export function listFiles(auth: TokenSource): Promise<ListResult> {
   })
 }
 
+export type MasterResult =
+  | { kind: 'loaded'; hasMaster: boolean }
+  | { kind: 'unauthorized' }
+  | { kind: 'failed'; message: string }
+
+/** Whether a master CV is chosen. 404 means none. */
+export function loadMaster(auth: TokenSource): Promise<MasterResult> {
+  return guarded<MasterResult>(async () => {
+    const res = await apiFetch(auth, `${PATH}/master`)
+    if (res.status === 404) return { kind: 'loaded', hasMaster: false }
+    if (!res.ok)
+      return { kind: 'failed', message: messageForStatus(res.status) }
+    return { kind: 'loaded', hasMaster: true }
+  })
+}
+
 export function deleteFile(
   auth: TokenSource,
   id: string,

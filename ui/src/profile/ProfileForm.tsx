@@ -1,3 +1,4 @@
+import type { ProfileSectionName } from '../cv/cvApi.ts'
 import {
   LANGUAGE_LEVELS,
   REMOTE_MODES,
@@ -27,16 +28,58 @@ interface Props {
   errors: Record<string, string>
   /** Called with the path of a field the user has just left. */
   onLeave?: (path: string) => void
+  /** Whether the user has a master CV; without one the section buttons are disabled. */
+  canFillFromCv: boolean
+  /** Asks for one section to be read from the CV. */
+  onFillSection: (section: ProfileSectionName) => void
+  /** Per section: whether its request is running and the last fixed message. */
+  fillState: Record<ProfileSectionName, FillState>
+}
+
+export interface FillState {
+  loading: boolean
+  error: string | null
 }
 
 /** All sections of the profile as editable fields. Holds no state of its own. */
-export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
+export function ProfileForm({
+  profile,
+  onChange,
+  errors,
+  onLeave,
+  canFillFromCv,
+  onFillSection,
+  fillState,
+}: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
   const location = profile.location ?? { city: null, canton: null }
   const prefs = profile.preferences
   const setPrefs = (patch: Partial<Profile['preferences']>) =>
     set('preferences', { ...prefs, ...patch })
+
+  /** A section heading with its "Fill from CV" button, status and hint. */
+  const heading = (section: ProfileSectionName, title: string) => {
+    const state = fillState[section]
+    return (
+      <div className="section-heading">
+        <h2 id={`${section}-heading`}>{title}</h2>
+        <button
+          type="button"
+          className="secondary"
+          disabled={!canFillFromCv || state.loading}
+          onClick={() => onFillSection(section)}
+        >
+          Fill from CV
+        </button>
+        {!canFillFromCv && (
+          <p className="hint">Choose a master CV in your files to use this.</p>
+        )}
+        {state.loading && <p role="status">Reading your CV…</p>}
+        {state.error && <p role="alert">{state.error}</p>}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -109,8 +152,8 @@ export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
         </Repeater>
       </section>
 
-      <section>
-        <h2>Experience</h2>
+      <section aria-labelledby="experience-heading">
+        {heading('experience', 'Experience')}
         <Repeater
           title="Position"
           items={profile.experience}
@@ -171,8 +214,8 @@ export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
         </Repeater>
       </section>
 
-      <section>
-        <h2>Education</h2>
+      <section aria-labelledby="education-heading">
+        {heading('education', 'Education')}
         <Repeater
           title="Education entry"
           items={profile.education}
@@ -228,8 +271,8 @@ export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
         </Repeater>
       </section>
 
-      <section>
-        <h2>Publications</h2>
+      <section aria-labelledby="publications-heading">
+        {heading('publications', 'Publications')}
         <Repeater
           title="Publication"
           items={profile.publications}
