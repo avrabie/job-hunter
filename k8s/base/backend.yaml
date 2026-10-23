@@ -60,6 +60,13 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ISSUER_URI
+            # Optional Secret `anthropic` (see k8s/anthropic.yaml.example): without it CV extraction fails with a clear message.
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: anthropic
+                  key: API_KEY
+                  optional: true
           startupProbe:
             httpGet:
               path: /actuator/health/liveness

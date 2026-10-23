@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.3.21"
     kotlin("plugin.spring") version "2.3.21"
+    kotlin("plugin.serialization") version "2.3.21"
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -36,6 +37,10 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
     implementation("com.github.pemistahl:lingua:1.2.2")
+    // Koog (JetBrains LLM framework). Only the llm module may import it; see docs/koog-notes.md.
+    implementation("ai.koog:koog-agents:1.3.0")
+    // Reads the text of an uploaded PDF CV (no OCR).
+    implementation("org.apache.pdfbox:pdfbox:3.0.8")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.springframework.modulith:spring-modulith-actuator")

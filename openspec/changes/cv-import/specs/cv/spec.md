@@ -81,6 +81,10 @@ The system SHALL accept only PDF, Markdown (`.md`) and plain text (`.txt`) files
 - **WHEN** a user calls the endpoint more often than the configured limit per hour
 - **THEN** the answer is 429 and the language model is not called
 
+#### Scenario: Model not set up
+- **WHEN** no model key is configured and a user requests an extraction
+- **THEN** the answer is 503 with a fixed message
+
 #### Scenario: Model failure
 - **WHEN** the language model call fails
 - **THEN** the answer is 502 with a fixed message that holds no CV text and no model output

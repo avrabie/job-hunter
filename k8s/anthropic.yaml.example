@@ -1,0 +1,12 @@
+# Template only. Copy to k8s/private/anthropic.yaml (git-ignored), put the real key in place of CHANGE_ME, then:
+#   kubectl --context s4v3 apply -f k8s/private/anthropic.yaml
+#   kubectl --context s4v3 -n job-hunter rollout restart deploy/backend
+# The backend reads it as ANTHROPIC_API_KEY. Without this Secret the CV extraction answers with a clear error.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: anthropic
+  namespace: job-hunter
+type: Opaque
+stringData:
+  API_KEY: CHANGE_ME

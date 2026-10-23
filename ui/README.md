@@ -69,6 +69,15 @@ signing in. The "next" button is enabled while a page is full, so the last page 
 
 `/admin` shows the crawl schedule (enabled, cron, time zone, next run, last change) from `GET /api/admin/crawl-schedule` and saves changes with `POST` to the same path, using the signed-in user's own token. The "Admin" button in the shell appears only when the access token's `roles` claim contains `ADMIN`; the token's signature is not checked in the browser, so this decides what to show and nothing else. The backend enforces the role, and the page shows "This page is for administrators." when the API answers 403. The result of the last crawl run is not shown, because the API does not offer it.
 
+## CV section (profile page)
+
+The top of `/profile` has a **Your CV** section: upload (`.pdf`, `.md`, `.txt`, up to 5 MB) or replace, download, delete (after a
+confirmation) and **Fill the profile from my CV**. The last button asks the backend to read the CV and puts the result in the
+form **as unsaved changes**, with a notice; only the page's own Save button sends anything to `PUT /api/profile`. When the form
+already has content a confirmation comes first, and the user's preferences (roles, workload, salary...) are always kept because
+a CV does not contain them. Errors show fixed texts per status (wrong type, too large, no text in the CV, too many
+extractions, model unavailable). Download fetches the file with the user's token and saves it under the stored name.
+
 ## Profile page check (local)
 
 Checked by hand in a browser on 2026-10-21 against the real local stack (`auth`, `backend`, `gateway`, `pnpm dev`):

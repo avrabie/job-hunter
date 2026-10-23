@@ -225,3 +225,29 @@ prints request URLs including the query string (for example a posting search tex
 
 `/actuator/health/liveness` and `/actuator/health/readiness` need no token. Readiness includes the database;
 liveness does not, so a database outage does not restart the pod. No other actuator endpoint is exposed.
+
+## CV (cv module)
+
+One CV per user (PDF, Markdown `.md` or plain text `.txt`, at most 5 MB) in the table `cv_document` (changeset 010), kept until
+the user deletes it. The type is decided from the content (`%PDF-`, or valid UTF-8 without NUL bytes); the file name is for
+display only. All endpoints need a token and act on the caller's own CV only.
+
+| Call | Meaning |
+|---|---|
+| `POST /api/cv` (multipart field `file`) | store or replace; 400 wrong type, 413 over 5 MB |
+| `GET /api/cv` | name, content type, size, upload time; 404 when none |
+| `GET /api/cv/file` | the bytes as an attachment (`nosniff`, no cache) |
+| `DELETE /api/cv` | remove; 204 also when there is none |
+| `POST /api/cv/extract` | reads the CV with the language model and returns a profile draft (same shape as the profile's content); nothing is saved. 404 no CV, 413 text over `jobhunter.cv.max-text-chars` (30000), 422 no text (scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (5) per user, 502 model failure, 503 no API key |
+
+PDF text comes from Apache PDFBox (no OCR). CV bytes, text, file names, prompts and model answers are never logged; log lines
+hold sizes, outcomes and durations (`CvExtractApiTests` checks this with markers).
+
+## Language model (llm module)
+
+`CvReader` turns CV text into a typed profile draft through Koog and Claude (`docs/koog-notes.md` explains the code).
+Configuration: `ANTHROPIC_API_KEY` (read into `jobhunter.llm.api-key`, never logged; without it a call fails with a fixed
+error) and `jobhunter.llm.model` (`Haiku_4_5`, `Sonnet_5` or `Opus_5`). Only the `llm` module imports `ai.koog`.
+
+Logging: `logging.level.ai.koog` is `OFF` because Koog prints the model's raw answer when it cannot parse it. Do not turn
+Koog or HTTP client DEBUG logging on in the cluster: prompts and answers hold CV text.

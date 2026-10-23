@@ -169,3 +169,7 @@ section {
   overflow-wrap: anywhere;
   font: inherit;
 }
+
+.cv-section {
+  margin-bottom: 2rem;
+}

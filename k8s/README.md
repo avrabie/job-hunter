@@ -285,6 +285,17 @@ kubectl --context s4v3 -n job-hunter rollout restart deploy/auth
 
 `ADMIN_EMAILS` is comma-separated. Restarting `auth` regenerates the signing key, so everyone signs in again.
 
+#### Anthropic key for CV extraction (optional)
+
+The `backend` Deployment reads `ANTHROPIC_API_KEY` from an optional Secret named `anthropic` (key `API_KEY`). Without it the
+CV extraction answers 503 and everything else works. Copy `k8s/anthropic.yaml.example` to `k8s/private/anthropic.yaml`
+(git-ignored), put the key in place of `CHANGE_ME`, then:
+
+```sh
+kubectl --context s4v3 apply -f k8s/private/anthropic.yaml
+kubectl --context s4v3 -n job-hunter rollout restart deploy/backend
+```
+
 ### 6.2 Production
 
 ```

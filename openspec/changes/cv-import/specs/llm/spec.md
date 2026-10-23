@@ -24,8 +24,12 @@ The module SHALL turn CV text into a `Profile` by asking Claude for a structured
 - **THEN** both are null in the result
 
 #### Scenario: Out-of-range values dropped
-- **WHEN** the model returns a language level or permit that is not in the allowed sets, or a month that is not a valid year-month
-- **THEN** that single value is dropped and everything else is kept
+- **WHEN** the model returns a permit, skill level, canton or optional month that is not allowed
+- **THEN** that single value becomes null and everything else is kept
+
+#### Scenario: Entry missing a required value
+- **WHEN** a language has no valid level, or an experience has no valid start month or a blank employer or title
+- **THEN** that entry is left out and the other entries are kept
 
 #### Scenario: Unparseable answer
 - **WHEN** the model's answer cannot be parsed after the repair attempts

@@ -12,12 +12,16 @@ const full = fixture as unknown as Profile
 
 type Handler = (method: string, body: unknown) => Response
 
-/** Stubs fetch for `/api/profile`; `calls` records the method and parsed body of each request. */
+/**
+ * Stubs fetch for `/api/profile`; `calls` records the method and parsed body of each request. The CV section of the page
+ * asks `/api/cv` too: that is answered "no CV" here and not recorded (its own tests are in `cv/CvSection.test.tsx`).
+ */
 function stubApi(handler: Handler) {
   const calls: { method: string; body: unknown }[] = []
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (_url: string, init?: RequestInit) => {
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/cv')) return new Response('', { status: 404 })
       const method = init?.method ?? 'GET'
       const body = init?.body ? JSON.parse(init.body as string) : undefined
       calls.push({ method, body })

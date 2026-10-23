@@ -4,6 +4,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  servlet:
+    multipart:
+      # A CV is at most 5 MB (the service checks it again); a little headroom for the multipart framing.
+      max-file-size: 5MB
+      max-request-size: 6MB
   datasource:
     hikari:
       # Virtual threads make request concurrency cheap; the pool is the real limit on database work.
@@ -32,6 +37,11 @@ management:
           include: readinessState,db
 
 jobhunter:
+  llm:
+    # The key is read from the environment and never logged; without it a CV extraction fails with a clear message.
+    api-key: ${ANTHROPIC_API_KEY:}
+    # Name of a Koog model constant: Haiku_4_5, Sonnet_5 or Opus_5.
+    model: Sonnet_5
   api-docs:
     # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
     enabled: true
@@ -45,3 +55,9 @@ springdoc:
     path: /api/docs
     # The page's own files are served under /api/swagger-ui; the gateway and edge forward only /api and /auth.
     url: /api/openapi.json
+
+logging:
+  level:
+    # Koog logs the raw text a model returned when a structured answer cannot be parsed (WARN) and each repair attempt
+    # (DEBUG). For a CV that text is personal data, so the whole library stays silent. Our own log lines report outcomes.
+    ai.koog: "OFF"
