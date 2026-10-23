@@ -7,13 +7,13 @@ import java.io.IOException
 /** Why a stored CV gave no text. */
 internal class NoCvText : RuntimeException("no text")
 
-/** Reads the plain text of a stored CV: PDFBox for PDFs (no OCR), UTF-8 for Markdown and plain text. */
+/** Reads the plain text of a CV from its bytes: PDFBox for PDFs (no OCR), UTF-8 for Markdown and plain text. */
 internal object CvText {
 
-    fun of(cv: StoredCv): String {
-        val raw = when (cv.info.contentType) {
-            "application/pdf" -> pdfText(cv.content)
-            else -> String(cv.content, Charsets.UTF_8)
+    fun of(bytes: ByteArray, contentType: String): String {
+        val raw = when (contentType) {
+            "application/pdf" -> pdfText(bytes)
+            else -> String(bytes, Charsets.UTF_8)
         }
         val text = raw.replace("\r\n", "\n").replace('\r', '\n').trim()
         if (text.isEmpty()) throw NoCvText()
