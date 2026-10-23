@@ -108,3 +108,15 @@ user presses Save.
 
 What comes next (not built): tailoring a CV to a job description is the first place where Koog agents, strategies or tools
 make sense (draft, critique, validate against the profile). Everything so far is one structured request on purpose.
+
+## Part 4: one section at a time (cv-sections)
+
+`CvReader.sectionFrom(text, section)` asks for one part of the profile with its own small answer type (`ExperienceSection`,
+`EducationSection`, `PublicationsSection` in `llm/internal/SectionDrafts.kt`). Why a separate request instead of reading the whole
+profile once and keeping one field: the whole-profile answer has to fit everything, and a model tends to shorten long careers.
+A request that only wants Experience can say "every position, every achievement, in the CV's wording" and has the whole answer
+to spend on it. The pieces are reused: the section wrappers hold the same `ExperienceDraft`, `EducationDraft` and
+`PublicationDraft` entries, so `DraftMapper` still checks every value in one place. The private `request<T>` function in
+`KoogCvReader` is the single place that builds the prompt, calls the executor, applies the timeout and turns any failure into
+`LlmFailure`; `profileFrom` and the three section calls only choose the answer type and the extra instruction. Whether the model
+really lists every achievement can only be seen with a real CV: compare a section draft with the whole-profile draft.

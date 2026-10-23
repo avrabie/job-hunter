@@ -14,7 +14,7 @@ Rules for every task (see `handoff/haiku-rules.md`): edit only the files named, 
 
 ## 3. Docs and check
 
-- [ ] 3.1 Document the `section` parameter in `backend/README.md` and the buttons in `ui/README.md`; add section notes to `docs/koog-notes.md` (why a separate request, how the wrappers reuse the entry types). Verify: `grep -n section` shows each file.
+- [x] 3.1 Document the `section` parameter in `backend/README.md` and the buttons in `ui/README.md`; add section notes to `docs/koog-notes.md` (why a separate request, how the wrappers reuse the entry types). Verify: `grep -n section` shows each file.
 
 ## Contract (do not change)
 

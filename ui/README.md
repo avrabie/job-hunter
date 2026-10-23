@@ -88,7 +88,9 @@ master**); nothing is chosen automatically except for a CV uploaded before the c
 **Fill the profile from my CV** works on the master CV: it is disabled with a hint until one is chosen. It asks the backend to
 read the CV and puts the result in the form **as unsaved changes**, with a notice; only the page's own Save button sends
 anything to `PUT /api/profile`. When the form already has content a confirmation comes first, and the user's preferences
-(roles, workload, salary...) are always kept because a CV does not contain them. Errors show fixed texts per status (no master,
+(roles, workload, salary...) are always kept because a CV does not contain them. Experience, Education and Publications each have a **Fill from CV** button that reads the master CV for that section only and
+replaces just that section's entries in the form (after a confirmation when it already has entries), as unsaved changes. The
+buttons are disabled with a hint until a master CV is chosen. Errors show fixed texts per status (no master,
 too large, no text in the CV, too many extractions, model unavailable, no room on the server).
 
 ## Profile page check (local)

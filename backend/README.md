@@ -272,6 +272,9 @@ the database today), and the node's free disk is the only real limit. File bytes
 `POST /api/cv/extract` reads the caller's **master CV** (chosen in the cabinet) with the language model and returns a profile draft
 (same shape as the profile's content); nothing is saved. 409 no master CV, 413 text over `jobhunter.cv.max-text-chars` (30000),
 422 no text (a scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (5) per user, 502 model failure, 503 no API key.
+With `?section=experience|education|publications` (any letter case) the model is asked only for that section, every entry of it
+(for experience every achievement, in the CV's wording), and the answer is a profile in which only that field is filled; an
+unknown section answers 400 before anything else. A section request counts as one extraction for the hourly limit.
 PDF text comes from Apache PDFBox (no OCR). CV text, prompts and model answers are never logged; log lines hold sizes, outcomes
 and durations (`CvExtractApiTests` and `FilesLoggingTests` check this with markers).
 
