@@ -48,6 +48,7 @@ const UPLOAD_MESSAGES: Record<number, string> = {
 
 const EXTRACT_MESSAGES: Record<number, string> = {
   404: 'Upload a CV first.',
+  409: 'Choose a master CV in your files first.',
   413: 'The CV text is too long to read.',
   422: 'No text could be read from the CV. Use a text-based PDF, a Markdown file or a plain text file.',
   429: 'Too many extractions. Please try again later.',

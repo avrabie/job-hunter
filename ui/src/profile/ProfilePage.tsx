@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { applyDraft } from '../cv/cvApi.ts'
-import { CvSection } from '../cv/CvSection.tsx'
+import { FileCabinet } from '../files/FileCabinet.tsx'
 import { Landing } from '../pages/Landing.tsx'
 import { ProfileForm } from './ProfileForm.tsx'
 import { loadProfile, saveProfile } from './profileApi.ts'
@@ -179,7 +179,7 @@ function ProfileEditor() {
       <p>
         These facts are the only source for the applications we draft for you.
       </p>
-      <CvSection
+      <FileCabinet
         formHasContent={snapshot(draft) !== snapshot(emptyProfile())}
         onDraft={(d) => setDraft((current) => applyDraft(current, d))}
       />

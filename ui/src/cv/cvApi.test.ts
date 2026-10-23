@@ -84,6 +84,7 @@ describe('extractProfile', () => {
   })
   it.each([
     [404, 'Upload a CV first.'],
+    [409, 'Choose a master CV in your files first.'],
     [413, 'The CV text is too long to read.'],
     [
       422,
