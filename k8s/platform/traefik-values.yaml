@@ -28,6 +28,12 @@ ports:
     hostPort: 443
     http3:
       enabled: false
+    transport:
+      respondingTimeouts:
+        # Traefik v3 reads a whole request, body included, within 60 s by default. The file cabinet accepts uploads of up
+        # to 10 GB, which take minutes, so the read timeout is off (0). Slow or stalled clients are still limited by the
+        # backend's own connection timeout; downloads already have no write timeout.
+        readTimeout: 0
 
 service:
   spec:

@@ -20,7 +20,7 @@ The page SHALL show a Publications section with, for each entry, fields for titl
 
 #### Scenario: Bad link
 - **WHEN** the user leaves the link field with `javascript:alert(1)`
-- **THEN** a message names the link field and the profile is not sent until it is fixed
+- **THEN** a message names the link field, and if the profile is saved anyway the server's 400 message is shown at that field (the server stays the authority)
 
 #### Scenario: Reorder and remove
 - **WHEN** the user moves the second publication up and removes the third

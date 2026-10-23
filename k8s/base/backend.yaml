@@ -11,6 +11,20 @@ spec:
       port: 8081
       targetPort: http
 ---
+# Uploaded files of the file cabinet (up to 10 GB each, no per-user quota). Bytes live here, metadata in Postgres. The
+# local-path class does not enforce the size; the node's free disk is the real limit, and the backend refuses uploads that
+# would leave less than jobhunter.files.min-free-bytes (2 GiB). No backup exists yet (see k8s/README.md).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-files
+  namespace: job-hunter
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 50Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,6 +81,9 @@ spec:
                   name: anthropic
                   key: API_KEY
                   optional: true
+          volumeMounts:
+            - name: files
+              mountPath: /data/files
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -97,3 +114,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+      volumes:
+        - name: files
+          persistentVolumeClaim:
+            claimName: backend-files
