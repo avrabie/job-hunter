@@ -13,7 +13,8 @@
       "start": "2021-03",
       "end": null,
       "location": "Zurich",
-      "achievements": ["Cut build time by half", "Mentored two juniors"]
+      "achievements": ["Cut build time by half", "Mentored two juniors"],
+      "technologies": ["Kotlin", "PostgreSQL"]
     },
     {
       "employer": "Beispiel GmbH",
@@ -21,7 +22,8 @@
       "start": "2017-09",
       "end": "2021-02",
       "location": null,
-      "achievements": []
+      "achievements": [],
+      "technologies": []
     }
   ],
   "education": [
@@ -40,6 +42,22 @@
       "year": 2021,
       "authors": "J. Doe, A. Smith",
       "url": "https://example.org/papers/fast-joins"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Distributed key-value store",
+      "type": "ASSIGNMENT",
+      "context": "ETH Zurich, Distributed Systems",
+      "start": "2023-02",
+      "end": "2023-06",
+      "description": "Raft-based store with snapshots.",
+      "technologies": ["Kotlin", "gRPC"],
+      "results": ["Grade 6.0", "Handled 20k writes/s in the benchmark"],
+      "links": [
+        { "label": "Repository", "url": "https://github.com/example/kv-store" }
+      ],
+      "highlight": true
     }
   ],
   "skills": [

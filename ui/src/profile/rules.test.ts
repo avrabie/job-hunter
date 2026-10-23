@@ -6,6 +6,7 @@ import {
   blankPublication,
   blankExperience,
   blankLanguage,
+  blankProject,
   blankSkill,
   emptyProfile,
   type Profile,
@@ -166,6 +167,60 @@ describe('checkProfile', () => {
     })
     expect(pub({ venue: 'v'.repeat(201) })).toEqual({
       'publications[0].venue': 'must be at most 200 characters',
+    })
+  })
+
+  it('checks a project name, its dates and its links', () => {
+    const project = (patch: Partial<Profile['projects'][number]>) =>
+      checkProfile({
+        ...emptyProfile(),
+        projects: [{ ...blankProject(), name: 'Tool', ...patch }],
+      })
+    expect(project({ name: ' ' })).toEqual({
+      'projects[0].name': 'must not be blank',
+    })
+    expect(project({ start: '2023-06', end: '2023-02' })).toEqual({
+      'projects[0].end': 'must not be before the start',
+    })
+    expect(project({ start: '2023-02', end: '2023-02' })).toEqual({})
+    expect(project({ start: '2023-02', end: null })).toEqual({})
+    expect(
+      project({ links: [{ label: 'Repo', url: 'javascript:alert(1)' }] }),
+    ).toEqual({
+      'projects[0].links[0].url': 'must be an http or https address',
+    })
+    expect(project({ links: [{ label: 'Repo', url: '' }] })).toEqual({
+      'projects[0].links[0].url': 'must be an http or https address',
+    })
+    expect(
+      project({ links: [{ label: ' ', url: 'https://example.org/x' }] }),
+    ).toEqual({ 'projects[0].links[0].label': 'must not be blank' })
+    expect(
+      project({
+        links: [
+          { label: 'Code', url: 'https://example.org/x' },
+          { label: '', url: '' },
+        ],
+      }),
+    ).toEqual({})
+  })
+
+  it('reports a bad link at the index the user sees, after a blank row', () => {
+    const p = checkProfile({
+      ...emptyProfile(),
+      projects: [
+        {
+          ...blankProject(),
+          name: 'Tool',
+          links: [
+            { label: '', url: '' },
+            { label: 'Site', url: 'ftp://example.org' },
+          ],
+        },
+      ],
+    })
+    expect(p).toEqual({
+      'projects[0].links[1].url': 'must be an http or https address',
     })
   })
 

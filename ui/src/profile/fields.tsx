@@ -84,6 +84,7 @@ export function Select<T extends string>({
   error,
   path,
   empty,
+  labels,
 }: {
   label: string
   value: T | null
@@ -93,6 +94,8 @@ export function Select<T extends string>({
   path?: string
   /** Text of the "nothing chosen" option; without it a value is required. */
   empty?: string
+  /** Text to show for an option instead of its value. */
+  labels?: Partial<Record<T, string>>
 }) {
   return (
     <Field label={label} error={error}>
@@ -106,7 +109,7 @@ export function Select<T extends string>({
         {empty !== undefined && <option value="">{empty}</option>}
         {options.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {labels?.[o] ?? o}
           </option>
         ))}
       </select>
@@ -128,12 +131,15 @@ export function Repeater<T>({
   items,
   onChange,
   blank,
+  max,
   children,
 }: {
   title: string
   items: T[]
   onChange: (items: T[]) => void
   blank: () => T
+  /** The most entries the user may add; without it there is no limit. */
+  max?: number
   children: (
     item: T,
     set: (patch: Partial<T>) => void,
@@ -184,6 +190,7 @@ export function Repeater<T>({
       <button
         type="button"
         className="secondary"
+        disabled={max !== undefined && items.length >= max}
         onClick={() => onChange([...items, blank()])}
       >
         {`Add ${title.toLowerCase()}`}

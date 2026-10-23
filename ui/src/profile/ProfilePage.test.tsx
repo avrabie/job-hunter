@@ -615,18 +615,66 @@ describe('fill a section from the CV', () => {
     expect(section('Education').queryByLabelText('Institution')).toBeNull()
   })
 
-  it('disables the three buttons with a hint when there is no master CV', async () => {
+  it('fills only the projects, unsaved, and sends no profile request', async () => {
+    const calls = stubSections(true, () =>
+      json(200, {
+        ...emptyProfile(),
+        projects: [
+          {
+            name: 'Synthetic tool',
+            type: 'PERSONAL',
+            context: null,
+            start: null,
+            end: null,
+            description: null,
+            technologies: ['Go'],
+            results: [],
+            links: [],
+            highlight: false,
+          },
+        ],
+      }),
+    )
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mount()
+    await screen.findByLabelText('City')
+    const button = section('Projects').getByRole('button', {
+      name: 'Fill from CV',
+    })
+    await waitFor(() => expect(button).toBeEnabled())
+    await userEvent.click(button)
+
+    expect(
+      await screen.findByText(/Nothing is saved until you press Save/),
+    ).toBeVisible()
+    expect(section('Projects').getByLabelText('Name')).toHaveValue(
+      'Synthetic tool',
+    )
+    expect(screen.getAllByLabelText('Employer')).toHaveLength(2)
+    expect(calls).toContainEqual({
+      url: '/api/cv/extract?section=projects',
+      method: 'POST',
+    })
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+  })
+
+  it('disables the four buttons with a hint when there is no master CV', async () => {
     stubSections(false, () => json(200, emptyProfile()))
     mount()
     await screen.findByLabelText('City')
-    for (const name of ['Experience', 'Education', 'Publications']) {
+    for (const name of [
+      'Experience',
+      'Education',
+      'Publications',
+      'Projects',
+    ]) {
       expect(
         section(name).getByRole('button', { name: 'Fill from CV' }),
       ).toBeDisabled()
     }
     expect(
       screen.getAllByText('Choose a master CV in your files to use this.'),
-    ).toHaveLength(3)
+    ).toHaveLength(4)
   })
 
   it.each([
@@ -655,4 +703,155 @@ describe('fill a section from the CV', () => {
       expect(screen.getAllByLabelText('Employer')[0]).toHaveValue('Example AG')
     },
   )
+})
+
+describe('Projects section', () => {
+  const projects = (calls: { method: string; body: unknown }[]) =>
+    (calls.find((c) => c.method === 'PUT')!.body as { profile: Profile })
+      .profile.projects
+
+  /** Echoes the saved profile back, or answers the save with a server message for the first link. */
+  function stubSaves(stored: Profile, status: 200 | 400 = 200) {
+    return stubApi((method, body) => {
+      if (method === 'GET') return json(200, { version: 1, profile: stored })
+      if (status === 400)
+        return json(400, {
+          error: 'validation_failed',
+          fields: {
+            'projects[0].links[0].url': 'must be an http or https address',
+          },
+        })
+      return json(200, {
+        version: 2,
+        profile: (body as { profile: Profile }).profile,
+      })
+    })
+  }
+
+  const projectsSection = () =>
+    within(screen.getByRole('region', { name: 'Projects' }))
+
+  it('adds a project with a name and type and sends empty lists', async () => {
+    const calls = stubSaves(emptyProfile())
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      projectsSection().getByRole('button', { name: 'Add project' }),
+    )
+    await userEvent.type(
+      projectsSection().getByLabelText('Name'),
+      'Key-value store',
+    )
+    await userEvent.selectOptions(
+      projectsSection().getByLabelText('Type'),
+      'Work',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 2).')).toBeVisible()
+    expect(projects(calls)).toEqual([
+      {
+        name: 'Key-value store',
+        type: 'WORK',
+        context: null,
+        start: null,
+        end: null,
+        description: null,
+        technologies: [],
+        results: [],
+        links: [],
+        highlight: false,
+      },
+    ])
+  })
+
+  it('shows a stored project with its type, link and highlight', async () => {
+    stubSaves(full)
+    mount()
+    await screen.findByLabelText('City')
+    expect(projectsSection().getByLabelText('Name')).toHaveValue(
+      'Distributed key-value store',
+    )
+    expect(projectsSection().getByLabelText('Type')).toHaveValue('ASSIGNMENT')
+    expect(projectsSection().getByLabelText('Address')).toHaveValue(
+      'https://github.com/example/kv-store',
+    )
+    expect(projectsSection().getByLabelText('Highlight')).toBeChecked()
+  })
+
+  it('names an unsafe link on leaving it, and shows the server message when saved anyway', async () => {
+    const calls = stubSaves(emptyProfile(), 400)
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      projectsSection().getByRole('button', { name: 'Add project' }),
+    )
+    await userEvent.type(projectsSection().getByLabelText('Name'), 'Tool')
+    await userEvent.click(
+      projectsSection().getByRole('button', { name: 'Add link' }),
+    )
+    await userEvent.type(projectsSection().getByLabelText('Label'), 'Code')
+    await userEvent.type(
+      projectsSection().getByLabelText('Address'),
+      'javascript:alert(1)',
+    )
+    await userEvent.tab()
+    expect(
+      screen.getByText('Address: must be an http or https address'),
+    ).toBeVisible()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(1)
+    const label = (
+      await screen.findAllByText('Address: must be an http or https address')
+    )[0]!.closest('label')!
+    expect(within(label).getByRole('textbox')).toHaveValue(
+      'javascript:alert(1)',
+    )
+  })
+
+  it('saves the highlight of a project', async () => {
+    const calls = stubSaves(emptyProfile())
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      projectsSection().getByRole('button', { name: 'Add project' }),
+    )
+    await userEvent.type(projectsSection().getByLabelText('Name'), 'Tool')
+    await userEvent.click(projectsSection().getByLabelText('Highlight'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 2).')).toBeVisible()
+    expect(projects(calls)[0]!.highlight).toBe(true)
+  })
+})
+
+describe('Technology tags', () => {
+  it('adds tags to a position, ignoring a repeat in another case', async () => {
+    const calls = stubApi((method, body) =>
+      method === 'GET'
+        ? json(200, { version: 1, profile: full })
+        : json(200, {
+            version: 2,
+            profile: (body as { profile: Profile }).profile,
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.type(
+      screen.getAllByLabelText('Technologies')[0]!,
+      'kotlin{Enter}Go{Enter}',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 2).')).toBeVisible()
+    const sent = calls.find((c) => c.method === 'PUT')!.body as {
+      profile: Profile
+    }
+    expect(sent.profile.experience[0]!.technologies).toEqual([
+      'Kotlin',
+      'PostgreSQL',
+      'Go',
+    ])
+  })
 })

@@ -44,6 +44,7 @@ const SECTION_TITLE: Record<ProfileSectionName, string> = {
   experience: 'Experience',
   education: 'Education',
   publications: 'Publications',
+  projects: 'Projects',
 }
 
 const NO_FILL: FillState = { loading: false, error: null }
@@ -76,6 +77,7 @@ function ProfileEditor() {
     experience: NO_FILL,
     education: NO_FILL,
     publications: NO_FILL,
+    projects: NO_FILL,
   })
   const [notice, setNotice] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)

@@ -68,6 +68,22 @@ export function checkProfile(profile: Profile): Record<string, string> {
       problems[`${at}.year`] = `must be between 1900 and ${thisYear + 1}`
   })
 
+  // Read from the profile as typed, not from the request copy: a blank link row is dropped there, and the indexes
+  // must still be the ones the user sees.
+  profile.projects.forEach((j, i) => {
+    const at = `projects[${i}]`
+    required(`${at}.name`, j.name.trim())
+    order(`${at}.end`, j.start || null, j.end || null)
+    j.links.forEach((l, k) => {
+      const label = l.label.trim()
+      const url = l.url.trim()
+      if (label === '' && url === '') return
+      if (!isHttpUrl(url))
+        problems[`${at}.links[${k}].url`] = 'must be an http or https address'
+      required(`${at}.links[${k}].label`, label)
+    })
+  })
+
   p.skills.forEach((s, i) => required(`skills[${i}].name`, s.name))
 
   const prefs = p.preferences
