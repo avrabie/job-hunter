@@ -15,6 +15,7 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
+import com.jayway.jsonpath.JsonPath
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
@@ -24,11 +25,15 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -40,6 +45,7 @@ import kotlin.test.assertTrue
 
 /** The model is a scripted fake: these tests are about the CV endpoints around it, never about Anthropic. */
 @ApiTest
+@ContextConfiguration(initializers = [MockIssuerInitializer::class, FilesVolumeInitializer::class])
 @Import(CvExtractApiTests.ScriptedReaderConfig::class)
 @TestPropertySource(properties = ["jobhunter.cv.extractions-per-hour=2", "jobhunter.cv.max-text-chars=2000"])
 internal class CvExtractApiTests(
@@ -77,9 +83,26 @@ internal class CvExtractApiTests(
         reader.answer = { Profile(skills = listOf(Skill("Kotlin"))) }
     }
 
-    private fun upload(sub: String, name: String, bytes: ByteArray) =
-        mvc.perform(multipart("/api/cv").file(MockMultipartFile("file", name, "application/octet-stream", bytes)).header("Authorization", bearer(sub)))
-            .andExpect(status().isOk)
+    /** Uploads a file of kind CV through the cabinet and, unless told otherwise, makes it the master. Returns its id. */
+    private fun upload(sub: String, name: String, bytes: ByteArray, master: Boolean = true): String {
+        val result = mvc.perform(
+            multipart("/api/files")
+                .file(MockMultipartFile("file", name, "application/octet-stream", bytes))
+                .param("kind", "CV")
+                .header("Authorization", bearer(sub)),
+        ).andExpect(status().isOk).andReturn()
+        val id: String = JsonPath.read(result.response.contentAsString, "$.id")
+        if (master) setMaster(sub, id).andExpect(status().isOk)
+        return id
+    }
+
+    private fun setMaster(sub: String, id: String): ResultActions =
+        mvc.perform(
+            put("/api/files/master")
+                .header("Authorization", bearer(sub))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"fileId":"$id"}"""),
+        )
 
     private fun extract(sub: String) = mvc.perform(post("/api/cv/extract").header("Authorization", bearer(sub)))
 
@@ -113,9 +136,21 @@ internal class CvExtractApiTests(
     }
 
     @Test
-    fun `no token gets 401 and no CV gets 404`() {
+    fun `no token gets 401 and no master CV gets 409 with the model not called`() {
         mvc.perform(post("/api/cv/extract")).andExpect(status().isUnauthorized)
-        extract(newSub()).andExpect(status().isNotFound)
+        extract(newSub()).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Choose a master CV in your files first."))
+        assertTrue(reader.received.isEmpty())
+    }
+
+    @Test
+    fun `CV files that are not the master give 409 and the model is not called`() {
+        val sub = newSub()
+        upload(sub, "cv.txt", "Jane Doe, Kotlin engineer".toByteArray(), master = false)
+        upload(sub, "other.md", "# Other".toByteArray(), master = false)
+
+        extract(sub).andExpect(status().isConflict)
+
         assertTrue(reader.received.isEmpty())
     }
 
@@ -179,6 +214,19 @@ internal class CvExtractApiTests(
     }
 
     @Test
+    fun `the extraction reads the master CV, not another CV of the user`() {
+        val sub = newSub()
+        upload(sub, "first.txt", "FIRST-CV".toByteArray())
+        val second = upload(sub, "second.txt", "SECOND-CV".toByteArray())
+        setMaster(sub, second).andExpect(status().isOk)
+        upload(sub, "third.txt", "THIRD-CV".toByteArray(), master = false)
+
+        extract(sub).andExpect(status().isOk)
+
+        assertEquals(listOf("SECOND-CV"), reader.received)
+    }
+
+    @Test
     fun `each user's extraction reads only their own CV`() {
         val a = newSub()
         val b = newSub()
@@ -207,7 +255,8 @@ internal class CvExtractApiTests(
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             upload(sub, "CVNAMEMARKER4417.txt", "CVTEXTMARKER4417 engineer".toByteArray())
             extract(sub).andExpect(status().isOk)
-            mvc.perform(delete("/api/cv").header("Authorization", bearer(sub))).andExpect(status().isNoContent)
+            val id = upload(sub, "CVNAMEMARKER4417.txt", "CVTEXTMARKER4417 again".toByteArray(), master = false)
+            mvc.perform(delete("/api/files/$id").header("Authorization", bearer(sub))).andExpect(status().isNoContent)
         } finally {
             root.detachAppender(appender)
             root.level = previous

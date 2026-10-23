@@ -31,8 +31,8 @@ Rules for every task (see `handoff/haiku-rules.md`): edit only the files named, 
 
 ## 6. Backend: extraction on the master, old endpoints removed
 
-- [ ] 6.1 Change `cv/internal/CvExtractController.kt` to use `FileCabinet.masterCv(sub)` (409 with a fixed message when null), read the bytes from `CabinetFile.path` (at most 5 MB), and keep every other behaviour. Change `CvText.of` to take bytes plus content type. Verify: update `CvExtractApiTests` for the `cv` spec scenarios (draft returned, reads the master not another CV, no master gives 409 and no model call, scanned PDF, rate limit, model failure) using the cabinet endpoints to upload and set the master; the log-capture test there keeps passing.
-- [ ] 6.2 Delete `cv/internal/CvController.kt`, `JdbcCvStore.kt`, `CvUploadErrors` and `CvApiTests.kt` (their behaviour now lives in `files`); keep `cvError`/`CvMessages` only if still used. Update `ModularityTests` (eleven modules, add `files`). Verify: `./gradlew build` passes with no failing test.
+- [x] 6.1 Change `cv/internal/CvExtractController.kt` to use `FileCabinet.masterCv(sub)` (409 with a fixed message when null), read the bytes from `CabinetFile.path` (at most 5 MB), and keep every other behaviour. Change `CvText.of` to take bytes plus content type. Verify: update `CvExtractApiTests` for the `cv` spec scenarios (draft returned, reads the master not another CV, no master gives 409 and no model call, scanned PDF, rate limit, model failure) using the cabinet endpoints to upload and set the master; the log-capture test there keeps passing.
+- [x] 6.2 Delete `cv/internal/CvController.kt`, `JdbcCvStore.kt`, `CvUploadErrors` and `CvApiTests.kt` (their behaviour now lives in `files`); keep `cvError`/`CvMessages` only if still used. Update `ModularityTests` (eleven modules, add `files`). Verify: `./gradlew build` passes with no failing test.
 
 ## 7. UI
 
