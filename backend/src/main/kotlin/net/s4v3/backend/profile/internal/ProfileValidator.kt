@@ -27,6 +27,14 @@ internal object ProfileValidator {
     const val PUBLICATIONS_MAX = 100
     const val URL_MAX = 500
     const val AUTHORS_MAX = 500
+    const val PROJECTS_MAX = 50
+    const val PROJECT_CONTEXT_MAX = 200
+    const val PROJECT_DESCRIPTION_MAX = 2000
+    const val PROJECT_RESULTS_MAX = 20
+    const val PROJECT_LINKS_MAX = 5
+    const val LINK_LABEL_MAX = 60
+    const val TAG_MAX = 60
+    const val TAGS_MAX = 30
 
     private val languageCode = Regex("[a-z]{2}")
     private val cantonCode = Regex("[A-Z]{2}")
@@ -59,6 +67,7 @@ internal object ProfileValidator {
             order("$at.end", entry.start, entry.end, problems)
             limit("$at.achievements", entry.achievements.size, ACHIEVEMENTS_PER_ENTRY_MAX, problems)
             entry.achievements.forEachIndexed { j, text -> requiredText("$at.achievements[$j]", text, ACHIEVEMENT_MAX, problems) }
+            tags("$at.technologies", entry.technologies, problems)
         }
 
         limit("education", profile.education.size, EDUCATION_MAX, problems)
@@ -78,6 +87,23 @@ internal object ProfileValidator {
             publication.year?.let { if (it !in 1900..LocalDate.now().year + 1) problems["$at.year"] = "must be between 1900 and next year" }
             optionalText("$at.authors", publication.authors, AUTHORS_MAX, problems)
             publication.url?.let { httpUrl("$at.url", it, problems) }
+        }
+
+        limit("projects", profile.projects.size, PROJECTS_MAX, problems)
+        profile.projects.forEachIndexed { i, project ->
+            val at = "projects[$i]"
+            requiredText("$at.name", project.name, NAME_MAX, problems)
+            optionalText("$at.context", project.context, PROJECT_CONTEXT_MAX, problems)
+            order("$at.end", project.start, project.end, problems)
+            optionalText("$at.description", project.description, PROJECT_DESCRIPTION_MAX, problems)
+            tags("$at.technologies", project.technologies, problems)
+            limit("$at.results", project.results.size, PROJECT_RESULTS_MAX, problems)
+            project.results.forEachIndexed { j, text -> requiredText("$at.results[$j]", text, ACHIEVEMENT_MAX, problems) }
+            limit("$at.links", project.links.size, PROJECT_LINKS_MAX, problems)
+            project.links.forEachIndexed { j, link ->
+                requiredText("$at.links[$j].label", link.label, LINK_LABEL_MAX, problems)
+                httpUrl("$at.links[$j].url", link.url, problems)
+            }
         }
 
         limit("skills", profile.skills.size, SKILLS_MAX, problems)
@@ -111,6 +137,11 @@ internal object ProfileValidator {
             value.isBlank() -> problems[path] = "must not be blank when given"
             value.length > max -> problems[path] = "must be at most $max characters"
         }
+    }
+
+    private fun tags(path: String, values: List<String>, problems: MutableMap<String, String>) {
+        limit(path, values.size, TAGS_MAX, problems)
+        values.forEachIndexed { i, tag -> requiredText("$path[$i]", tag, TAG_MAX, problems) }
     }
 
     private fun httpUrl(path: String, value: String, problems: MutableMap<String, String>) {

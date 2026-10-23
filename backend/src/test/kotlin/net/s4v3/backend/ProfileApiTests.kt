@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @ApiTest
 class ProfileApiTests(@Autowired private val mvc: MockMvc) {
@@ -109,9 +110,9 @@ class ProfileApiTests(@Autowired private val mvc: MockMvc) {
     }
 
     @Test
-    fun `a body over 128 KB is 413, before anything is parsed`() {
+    fun `a body over 256 KB is 413, before anything is parsed`() {
         val sub = user()
-        val huge = body(0, """{"summary":"${"x".repeat(200 * 1024)}"}""")
+        val huge = body(0, """{"summary":"${"x".repeat(300 * 1024)}"}""")
         save(sub, huge).andExpect(status().isContentTooLarge)
         // Same size without a declared length: the stream is cut off just the same.
         mvc.perform(
@@ -119,6 +120,19 @@ class ProfileApiTests(@Autowired private val mvc: MockMvc) {
                 .content(huge.toByteArray()).header("Content-Length", "-1"),
         ).andExpect(status().isContentTooLarge)
         read(sub).andExpect(jsonPath("$.version").value(0))
+    }
+
+    @Test
+    fun `Body between the old and the new limit`() {
+        val sub = user()
+        val achievements = List(20) { "\"" + "w".repeat(600) + "\"" }.joinToString(",")
+        val entry = """{"employer":"E","title":"T","start":"2020-01","achievements":[$achievements]}"""
+        val padded = body(0, """{"experience":[${List(17) { entry }.joinToString(",")}]}""")
+        assertTrue(padded.toByteArray().size in 190_000..210_000, padded.toByteArray().size.toString())
+
+        save(sub, padded).andExpect(status().isOk)
+        read(sub).andExpect(jsonPath("$.profile.experience.length()").value(17))
+            .andExpect(jsonPath("$.profile.experience[16].achievements.length()").value(20))
     }
 
     @Test

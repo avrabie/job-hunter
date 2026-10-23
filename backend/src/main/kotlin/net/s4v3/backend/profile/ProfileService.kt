@@ -26,7 +26,7 @@ interface ProfileService {
 
     companion object {
         /** Largest request body accepted, in bytes. */
-        const val MAX_BODY_BYTES = 128 * 1024
+        const val MAX_BODY_BYTES = 256 * 1024
     }
 }
 

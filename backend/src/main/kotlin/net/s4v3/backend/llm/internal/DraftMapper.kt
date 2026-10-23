@@ -6,6 +6,9 @@ import net.s4v3.backend.profile.LanguageLevel
 import net.s4v3.backend.profile.LanguageSkill
 import net.s4v3.backend.profile.Location
 import net.s4v3.backend.profile.Profile
+import net.s4v3.backend.profile.Project
+import net.s4v3.backend.profile.ProjectLink
+import net.s4v3.backend.profile.ProjectType
 import net.s4v3.backend.profile.Publication
 import net.s4v3.backend.profile.Skill
 import net.s4v3.backend.profile.SkillLevel
@@ -32,6 +35,7 @@ internal object DraftMapper {
             education = draft.education.mapNotNull(::education),
             publications = draft.publications.mapNotNull(::publication),
             skills = draft.skills.mapNotNull(::skill),
+            projects = draft.projects.mapNotNull(::project),
         )
 
     fun toProfile(section: ExperienceSection): Profile = Profile(experience = section.experience.mapNotNull(::experience))
@@ -39,6 +43,8 @@ internal object DraftMapper {
     fun toProfile(section: EducationSection): Profile = Profile(education = section.education.mapNotNull(::education))
 
     fun toProfile(section: PublicationsSection): Profile = Profile(publications = section.publications.mapNotNull(::publication))
+
+    fun toProfile(section: ProjectsSection): Profile = Profile(projects = section.projects.mapNotNull(::project))
 
     private fun location(draft: LocationDraft?): Location? {
         val city = text(draft?.city)
@@ -63,6 +69,7 @@ internal object DraftMapper {
             end = month(draft.end),
             location = text(draft.location),
             achievements = draft.achievements.mapNotNull(::text),
+            technologies = tags(draft.technologies),
         )
     }
 
@@ -75,6 +82,37 @@ internal object DraftMapper {
     private fun publication(draft: PublicationDraft): Publication? {
         val title = text(draft.title) ?: return null
         return Publication(title, text(draft.venue), year(draft.year), text(draft.authors), link(draft.url))
+    }
+
+    /** A project without a name is left out. An unknown type becomes PERSONAL, the least specific honest choice. */
+    private fun project(draft: ProjectDraft): Project? {
+        val name = text(draft.name) ?: return null
+        return Project(
+            name = name,
+            type = enumOrNull<ProjectType>(draft.type) ?: ProjectType.PERSONAL,
+            context = text(draft.context),
+            start = month(draft.start),
+            end = month(draft.end),
+            description = text(draft.description),
+            technologies = tags(draft.technologies),
+            results = draft.results.mapNotNull(::text),
+            links = draft.links.mapNotNull(::projectLink),
+            highlight = false,
+        )
+    }
+
+    private fun projectLink(draft: ProjectLinkDraft): ProjectLink? {
+        val label = text(draft.label) ?: return null
+        val url = link(draft.url) ?: return null
+        return ProjectLink(label, url)
+    }
+
+    /** Trims, drops blanks and case-insensitive duplicates (the first spelling wins), keeps at most 30. */
+    private fun tags(values: List<String>): List<String> {
+        val seen = HashSet<String>()
+        return values.mapNotNull(::text)
+            .filter { seen.add(it.lowercase()) }
+            .take(TAGS_MAX)
     }
 
     private fun year(value: String?): Int? =
@@ -102,6 +140,7 @@ internal object DraftMapper {
         return enumValues<E>().firstOrNull { it.name == wanted }
     }
 
+    private const val TAGS_MAX = 30
     private val CANTON = Regex("[A-Z]{2}")
     private val LANGUAGE_CODE = Regex("[a-z]{2}")
 }

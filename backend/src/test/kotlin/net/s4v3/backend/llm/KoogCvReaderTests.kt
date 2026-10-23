@@ -100,6 +100,26 @@ class KoogCvReaderTests {
     }
 
     @Test
+    fun `a projects answer gives only the projects, with technologies, results and links`() {
+        val answer = """{"projects":[{"name":"Key-value store","type":"ASSIGNMENT","start":"2023-02","end":"2023-06",
+            "technologies":["Kotlin","gRPC"],"results":["Grade 6.0"],
+            "links":[{"label":"Repository","url":"https://github.com/example/kv-store"}]}]}"""
+
+        val profile = reader(FakePromptExecutor(answer)).sectionFrom("cv", ProfileSection.PROJECTS)
+
+        val project = profile.projects.single()
+        assertEquals("Key-value store", project.name)
+        assertEquals(listOf("Kotlin", "gRPC"), project.technologies)
+        assertEquals(listOf("Grade 6.0"), project.results)
+        assertEquals("https://github.com/example/kv-store", project.links.single().url)
+        assertFalse(project.highlight)
+        assertTrue(profile.experience.isEmpty())
+        assertTrue(profile.education.isEmpty())
+        assertTrue(profile.publications.isEmpty())
+        assertTrue(profile.skills.isEmpty())
+    }
+
+    @Test
     fun `a section keeps every entry and every achievement in order`() {
         val achievements = (1..6).joinToString(",") { "\"Achievement $it\"" }
         val answer = """{"experience":[{"employer":"Acme","title":"Engineer","start":"2022-03","achievements":[$achievements]}]}"""

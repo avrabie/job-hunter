@@ -80,6 +80,8 @@ internal class KoogCvReader(
                 request<EducationSection>(text, EDUCATION_INSTRUCTION) { DraftMapper.toProfile(it) }
             ProfileSection.PUBLICATIONS ->
                 request<PublicationsSection>(text, PUBLICATIONS_INSTRUCTION) { DraftMapper.toProfile(it) }
+            ProfileSection.PROJECTS ->
+                request<ProjectsSection>(text, PROJECTS_INSTRUCTION) { DraftMapper.toProfile(it) }
         }
 
     /** One structured request for the draft type [T]; [map] turns the answer into a [Profile]. */
@@ -142,7 +144,8 @@ When a fact is missing or unclear, leave the field null or the list empty.
 Keep the wording of achievements close to the CV. Dates are YYYY-MM."""
 
         const val EXPERIENCE_INSTRUCTION = """Only the experience section is wanted. List every position the CV states, most recent first.
-For each position, list every achievement or responsibility the CV states, one entry each, in the CV's own wording.
+For each position, list every achievement or responsibility the CV states, one entry each, in the CV's own wording,
+and every technology the CV names for that position.
 Do not summarise, merge or drop any achievement, even when a position has many. Leave out everything else."""
 
         const val EDUCATION_INSTRUCTION = """Only the education section is wanted. List every education entry the CV states, as the CV
@@ -150,6 +153,10 @@ lists them, with every detail it states. Leave out everything else."""
 
         const val PUBLICATIONS_INSTRUCTION = """Only the publications section is wanted. List every publication the CV states, in the CV's
 order, with every detail it states. Leave out everything else."""
+
+        const val PROJECTS_INSTRUCTION = """Only the projects section is wanted. List every project the CV states: assignments, personal
+projects and open-source work, in the CV's order. For each, give every detail the CV states, including the technologies
+and the results it names. Leave out everything else."""
 
         fun modelFor(name: String): LLModel? =
             when (name) {

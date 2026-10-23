@@ -6,10 +6,15 @@ import net.s4v3.backend.llm.internal.EducationDraft
 import net.s4v3.backend.llm.internal.ExperienceDraft
 import net.s4v3.backend.llm.internal.LanguageDraft
 import net.s4v3.backend.llm.internal.LocationDraft
+import net.s4v3.backend.llm.internal.ProjectDraft
+import net.s4v3.backend.llm.internal.ProjectLinkDraft
 import net.s4v3.backend.llm.internal.PublicationDraft
 import net.s4v3.backend.llm.internal.SkillDraft
 import net.s4v3.backend.profile.LanguageLevel
 import net.s4v3.backend.profile.Profile
+import net.s4v3.backend.profile.Project
+import net.s4v3.backend.profile.ProjectLink
+import net.s4v3.backend.profile.ProjectType
 import net.s4v3.backend.profile.Publication
 import net.s4v3.backend.profile.SkillLevel
 import net.s4v3.backend.profile.WorkAuthorisation
@@ -151,6 +156,84 @@ class DraftMapperTests {
         )
 
         assertEquals(listOf("Kept"), profile.publications.map { it.title })
+    }
+
+    @Test
+    fun `technologies on a position are tidied`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                experience = listOf(ExperienceDraft("Acme", "Dev", "2020-01", technologies = listOf("Kotlin", "kotlin", " Spring Boot ", " "))),
+            ),
+        )
+
+        assertEquals(listOf("Kotlin", "Spring Boot"), profile.experience.single().technologies)
+    }
+
+    @Test
+    fun `a project is read with its values and highlight false`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                projects = listOf(
+                    ProjectDraft(
+                        name = "Key-value store",
+                        type = "OPEN_SOURCE",
+                        context = "Side project",
+                        start = "2023-02",
+                        end = "2023-06",
+                        description = "Raft-based store.",
+                        technologies = listOf("Kotlin", "gRPC"),
+                        results = listOf("Grade 6.0", "Handled 20k writes/s"),
+                        links = listOf(ProjectLinkDraft("Repository", "https://github.com/example/kv-store")),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(
+            Project(
+                name = "Key-value store",
+                type = ProjectType.OPEN_SOURCE,
+                context = "Side project",
+                start = YearMonth.of(2023, 2),
+                end = YearMonth.of(2023, 6),
+                description = "Raft-based store.",
+                technologies = listOf("Kotlin", "gRPC"),
+                results = listOf("Grade 6.0", "Handled 20k writes/s"),
+                links = listOf(ProjectLink("Repository", "https://github.com/example/kv-store")),
+                highlight = false,
+            ),
+            profile.projects.single(),
+        )
+    }
+
+    @Test
+    fun `an unknown project type becomes PERSONAL`() {
+        val profile = DraftMapper.toProfile(CvProfileDraft(projects = listOf(ProjectDraft("Garden app", type = "hobby"))))
+
+        assertEquals(ProjectType.PERSONAL, profile.projects.single().type)
+    }
+
+    @Test
+    fun `a bad link is dropped from its project and a nameless project is left out`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                projects = listOf(
+                    ProjectDraft(
+                        "Tool",
+                        type = "WORK",
+                        links = listOf(
+                            ProjectLinkDraft("Ftp", "ftp://example.org/x"),
+                            ProjectLinkDraft(null, "https://example.org/unlabelled"),
+                            ProjectLinkDraft("Site", "https://example.org/site"),
+                        ),
+                    ),
+                    ProjectDraft("  ", type = "WORK"),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("Tool"), profile.projects.map { it.name })
+        assertEquals(listOf(ProjectLink("Site", "https://example.org/site")), profile.projects.single().links)
     }
 
     @Test

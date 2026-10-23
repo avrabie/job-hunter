@@ -88,6 +88,22 @@ class ProfileServiceTests(
     }
 
     @Test
+    fun `a profile stored before projects and technologies existed reads with the defaults`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 4)",
+            sub,
+            """{"experience":[{"employer":"E","title":"T","start":"2020-01"}]}""",
+        )
+
+        val stored = profiles.get(sub)
+
+        assertEquals(4, stored.version)
+        assertEquals(emptyList(), stored.profile.projects)
+        assertEquals(emptyList(), stored.profile.experience.single().technologies)
+    }
+
+    @Test
     fun `a stale version is rejected and changes nothing`() {
         val sub = newUser()
         profiles.replace(sub, ProfileUpdate(0, fullProfile()))
@@ -189,6 +205,7 @@ class ProfileServiceTests(
 
         assertEquals(setOf("surprise"), fields("""{"version":0,"profile":{},"surprise":"SECRET-MARKER"}""").keys)
         assertEquals(setOf("workAuthorisation"), fields("""{"version":0,"profile":{"workAuthorisation":"CITIZEN"}}""").keys)
+        assertEquals(setOf("projects[0].type"), fields("""{"version":0,"profile":{"projects":[{"name":"P","type":"HOBBY"}]}}""").keys)
         assertEquals(setOf("experience[0].start"), fields("""{"version":0,"profile":{"experience":[{"employer":"E","title":"T","start":"May 2020"}]}}""").keys)
         assertEquals(setOf("version"), fields("""{"version":"SECRET-MARKER","profile":{}}""").keys)
         assertEquals(setOf("body"), fields("""{"version": SECRET-MARKER"""").keys)
