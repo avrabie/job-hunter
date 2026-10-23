@@ -269,6 +269,22 @@ Without this secret the `postgres` pod stays in `CreateContainerConfigError` and
 `secret "job-hunter-secrets" not found`. The database passwords are used only on first start (the init script creates
 the roles then); changing the Secret later does not change the passwords inside an existing database.
 
+#### Google login and administrators (optional)
+
+The `auth` Deployment reads `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET` and `APP_ADMIN_EMAILS` from an optional Secret
+named `auth-google`; without it Google login is off and nobody is an administrator. Create the OAuth client in the Google
+console (type "Web application") with the redirect URI `https://s4v3.net/auth/login/oauth2/code/google`, then:
+
+Keep the values in `k8s/private/auth-google.yaml` (the `private/` folder is git-ignored; copy `k8s/auth-google.yaml.example`
+there). It survives between deploys, so you edit and re-apply it whenever a value changes:
+
+```sh
+kubectl --context s4v3 apply -f k8s/private/auth-google.yaml
+kubectl --context s4v3 -n job-hunter rollout restart deploy/auth
+```
+
+`ADMIN_EMAILS` is comma-separated. Restarting `auth` regenerates the signing key, so everyone signs in again.
+
 ### 6.2 Production
 
 ```

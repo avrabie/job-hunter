@@ -73,6 +73,26 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: SPA_POST_LOGOUT_URIS
+            # Google login and the ADMIN grant. All optional: without the `auth-google` Secret (see k8s/README.md) Google
+            # login stays off and nobody gets ADMIN. The admin email is personal data, so it lives in the Secret, not in git.
+            - name: APP_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-google
+                  key: CLIENT_ID
+                  optional: true
+            - name: APP_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-google
+                  key: CLIENT_SECRET
+                  optional: true
+            - name: APP_ADMIN_EMAILS
+              valueFrom:
+                secretKeyRef:
+                  name: auth-google
+                  key: ADMIN_EMAILS
+                  optional: true
           # The context path is /auth, so the health endpoints are under it.
           startupProbe:
             httpGet:

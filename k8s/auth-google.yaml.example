@@ -1,0 +1,13 @@
+# Template only. Copy to k8s/private/auth-google.yaml (git-ignored), fill in the values, then apply it.
+# Deploy with:  kubectl --context s4v3 apply -f k8s/private/auth-google.yaml
+# then:         kubectl --context s4v3 -n job-hunter rollout restart deploy/auth   (signs everyone out once)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-google
+  namespace: job-hunter
+type: Opaque
+stringData:
+  CLIENT_ID: CHANGE_ME
+  CLIENT_SECRET: CHANGE_ME
+  ADMIN_EMAILS: you@example.com   # comma-separated
