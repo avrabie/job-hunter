@@ -125,11 +125,15 @@ A user SHALL have at most one master CV, chosen explicitly: `PUT /api/files/mast
 - **THEN** the master is unchanged
 
 ### Requirement: Move of the old single CVs
-On start, each CV stored by the earlier single-CV feature SHALL be moved into the cabinet as a file of kind `CV` and set as its owner's master, and the old row SHALL be removed only after the new file and row exist. Running the move again SHALL change nothing.
+On start, each CV stored by the earlier single-CV feature SHALL be moved into the cabinet as a file of kind `CV`, set as its owner's master unless the owner already has a master, and the old row SHALL be removed only after the new file and row exist. Running the move again SHALL change nothing.
 
 #### Scenario: Existing CV moved
 - **WHEN** the application starts with an old CV stored for a user
 - **THEN** the user's list holds that file as master with the same bytes, and the old store holds nothing for them
+
+#### Scenario: Master chosen before the move
+- **WHEN** the owner already has a master CV when an old CV is moved
+- **THEN** the old CV becomes a normal CV file and the chosen master is unchanged
 
 #### Scenario: Second start
 - **WHEN** the application starts again
