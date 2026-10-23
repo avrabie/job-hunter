@@ -3,6 +3,7 @@ import fixture from './fixtures/full-profile.json'
 import { checkProfile } from './rules.ts'
 import {
   blankEducation,
+  blankPublication,
   blankExperience,
   blankLanguage,
   blankSkill,
@@ -131,6 +132,41 @@ describe('checkProfile', () => {
       'preferences.minSalaryChf': 'must not be negative',
     })
     expect(checkProfile(withPrefs({ minSalaryChf: 0 }))).toEqual({})
+  })
+
+  it('checks a publication title, year and link', () => {
+    const year = new Date().getFullYear()
+    const pub = (patch: Partial<Profile['publications'][number]>) =>
+      checkProfile({
+        ...emptyProfile(),
+        publications: [{ ...blankPublication(), title: 'P', ...patch }],
+      })
+    expect(pub({ title: ' ' })).toEqual({
+      'publications[0].title': 'must not be blank',
+    })
+    expect(pub({ year: 1850 })).toEqual({
+      'publications[0].year': `must be between 1900 and ${year + 1}`,
+    })
+    expect(pub({ year: year + 2 })).toEqual({
+      'publications[0].year': `must be between 1900 and ${year + 1}`,
+    })
+    expect(pub({ year: year + 1 })).toEqual({})
+    expect(pub({ url: 'javascript:alert(1)' })).toEqual({
+      'publications[0].url': 'must be an http or https address',
+    })
+    expect(pub({ url: '/relative/path' })).toEqual({
+      'publications[0].url': 'must be an http or https address',
+    })
+    expect(pub({ url: 'http://example.org/p' })).toEqual({})
+    expect(pub({ title: 'x'.repeat(201) })).toEqual({
+      'publications[0].title': 'must be at most 200 characters',
+    })
+    expect(pub({ authors: 'a'.repeat(501) })).toEqual({
+      'publications[0].authors': 'must be at most 500 characters',
+    })
+    expect(pub({ venue: 'v'.repeat(201) })).toEqual({
+      'publications[0].venue': 'must be at most 200 characters',
+    })
   })
 
   it('checks preferred cantons like the location canton', () => {

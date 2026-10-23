@@ -1,5 +1,14 @@
 import { toRequestProfile, type Profile } from './types.ts'
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 /**
  * The cheap profile rules, checked in the browser while the user edits. They mirror `ProfileValidator` in the backend
  * (same paths, same messages); the server stays the authority and its messages win when both speak. Messages name the
@@ -10,6 +19,9 @@ export function checkProfile(profile: Profile): Record<string, string> {
   const problems: Record<string, string> = {}
   const required = (path: string, value: string) => {
     if (value === '') problems[path] = 'must not be blank'
+  }
+  const tooLong = (path: string, value: string, max: number) => {
+    if (value.length > max) problems[path] = `must be at most ${max} characters`
   }
   const order = (path: string, start: string | null, end: string | null) => {
     if (start && end && end < start)
@@ -38,6 +50,22 @@ export function checkProfile(profile: Profile): Record<string, string> {
     required(`${at}.institution`, e.institution)
     required(`${at}.degree`, e.degree)
     order(`${at}.end`, e.start, e.end)
+  })
+
+  const thisYear = new Date().getFullYear()
+  p.publications.forEach((b, i) => {
+    const at = `publications[${i}]`
+    required(`${at}.title`, b.title)
+    tooLong(`${at}.title`, b.title, 200)
+    if (b.venue !== null) tooLong(`${at}.venue`, b.venue, 200)
+    if (b.authors !== null) tooLong(`${at}.authors`, b.authors, 500)
+    if (b.url !== null) {
+      tooLong(`${at}.url`, b.url, 500)
+      if (!isHttpUrl(b.url))
+        problems[`${at}.url`] = 'must be an http or https address'
+    }
+    if (b.year !== null && (b.year < 1900 || b.year > thisYear + 1))
+      problems[`${at}.year`] = `must be between 1900 and ${thisYear + 1}`
   })
 
   p.skills.forEach((s, i) => required(`skills[${i}].name`, s.name))

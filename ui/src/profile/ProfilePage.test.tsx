@@ -163,6 +163,120 @@ describe('editing lists', () => {
   })
 })
 
+describe('publications', () => {
+  const pub = (title: string, year: number) => ({
+    title,
+    venue: null,
+    year,
+    authors: null,
+    url: null,
+  })
+
+  it('adds a publication with a title and year and sends empty fields as null', async () => {
+    const calls = stubApi((method, body) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(200, {
+            version: 1,
+            profile: (body as { profile: Profile }).profile,
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add publication' }),
+    )
+    await userEvent.type(screen.getByLabelText('Title'), 'Fast Joins')
+    await userEvent.type(screen.getByLabelText('Year'), '2021')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 1).')).toBeVisible()
+    const put = calls.find((c) => c.method === 'PUT')!
+    const sent = put.body as { profile: Profile }
+    expect(sent.profile.publications).toEqual([
+      {
+        title: 'Fast Joins',
+        venue: null,
+        year: 2021,
+        authors: null,
+        url: null,
+      },
+    ])
+  })
+
+  it('names an unsafe link on leaving it, and shows the server message when saved anyway', async () => {
+    const calls = stubApi((method) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(400, {
+            error: 'validation_failed',
+            fields: {
+              'publications[0].url': 'must be an http or https address',
+            },
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add publication' }),
+    )
+    await userEvent.type(screen.getByLabelText('Title'), 'Paper')
+    await userEvent.type(screen.getByLabelText('Link'), 'javascript:alert(1)')
+    await userEvent.tab()
+    expect(
+      screen.getByText('Link: must be an http or https address'),
+    ).toBeVisible()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(1)
+    const label = (
+      await screen.findAllByText('Link: must be an http or https address')
+    )[0]!.closest('label')!
+    expect(within(label).getByRole('textbox')).toHaveValue(
+      'javascript:alert(1)',
+    )
+  })
+
+  it('moves and removes publications', async () => {
+    const calls = stubApi((method, body) =>
+      method === 'GET'
+        ? json(200, {
+            version: 1,
+            profile: {
+              ...emptyProfile(),
+              publications: [
+                pub('First', 2019),
+                pub('Second', 2020),
+                pub('Third', 2021),
+              ],
+            },
+          })
+        : json(200, {
+            version: 2,
+            profile: (body as { profile: Profile }).profile,
+          }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Move Publication 2 up' }),
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove Publication 3' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 2).')).toBeVisible()
+    const sent = calls.find((c) => c.method === 'PUT')!.body as {
+      profile: Profile
+    }
+    expect(sent.profile.publications.map((p) => p.title)).toEqual([
+      'Second',
+      'First',
+    ])
+  })
+})
+
 describe('field checks while editing', () => {
   async function open() {
     const calls = stubApi(() =>

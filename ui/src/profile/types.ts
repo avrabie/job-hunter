@@ -62,6 +62,14 @@ export interface Education {
   end: string | null
 }
 
+export interface Publication {
+  title: string
+  venue: string | null
+  year: number | null
+  authors: string | null
+  url: string | null
+}
+
 export interface Skill {
   name: string
   level: SkillLevel | null
@@ -83,6 +91,7 @@ export interface Profile {
   summary: string | null
   experience: Experience[]
   education: Education[]
+  publications: Publication[]
   skills: Skill[]
   preferences: Preferences
 }
@@ -101,6 +110,7 @@ export function emptyProfile(): Profile {
     summary: null,
     experience: [],
     education: [],
+    publications: [],
     skills: [],
     preferences: {
       targetRoles: [],
@@ -128,6 +138,14 @@ export const blankEducation = (): Education => ({
   field: null,
   start: null,
   end: null,
+})
+
+export const blankPublication = (): Publication => ({
+  title: '',
+  venue: null,
+  year: null,
+  authors: null,
+  url: null,
 })
 
 export const blankSkill = (): Skill => ({ name: '', level: null })
@@ -165,6 +183,13 @@ export function toRequestProfile(p: Profile): Profile {
       field: text(e.field),
       start: e.start === '' ? null : e.start,
       end: e.end === '' ? null : e.end,
+    })),
+    publications: p.publications.map((b) => ({
+      title: required(b.title),
+      venue: text(b.venue),
+      year: b.year,
+      authors: text(b.authors),
+      url: text(b.url),
     })),
     skills: p.skills.map((s) => ({ name: required(s.name), level: s.level })),
     preferences: {

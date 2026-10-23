@@ -6,6 +6,7 @@ import {
   blankEducation,
   blankExperience,
   blankLanguage,
+  blankPublication,
   blankSkill,
   type Profile,
   type RemoteMode,
@@ -220,6 +221,59 @@ export function ProfileForm({ profile, onChange, errors, onLeave }: Props) {
                   error={errors[`${at}.end`]}
                   path={`${at}.end`}
                   onChange={(end) => patch({ end: end === '' ? null : end })}
+                />
+              </>
+            )
+          }}
+        </Repeater>
+      </section>
+
+      <section>
+        <h2>Publications</h2>
+        <Repeater
+          title="Publication"
+          items={profile.publications}
+          onChange={(v) => set('publications', v)}
+          blank={blankPublication}
+        >
+          {(item, patch, i) => {
+            const at = `publications[${i}]`
+            return (
+              <>
+                <TextInput
+                  label="Title"
+                  value={item.title}
+                  error={errors[`${at}.title`]}
+                  path={`${at}.title`}
+                  onChange={(title) => patch({ title })}
+                />
+                <TextInput
+                  label="Venue"
+                  value={item.venue}
+                  error={errors[`${at}.venue`]}
+                  path={`${at}.venue`}
+                  onChange={(venue) => patch({ venue })}
+                />
+                <NumberInput
+                  label="Year"
+                  value={item.year}
+                  error={errors[`${at}.year`]}
+                  path={`${at}.year`}
+                  onChange={(year) => patch({ year })}
+                />
+                <TextInput
+                  label="Authors"
+                  value={item.authors}
+                  error={errors[`${at}.authors`]}
+                  path={`${at}.authors`}
+                  onChange={(authors) => patch({ authors })}
+                />
+                <TextInput
+                  label="Link"
+                  value={item.url}
+                  error={errors[`${at}.url`]}
+                  path={`${at}.url`}
+                  onChange={(url) => patch({ url })}
                 />
               </>
             )

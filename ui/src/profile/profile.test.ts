@@ -39,6 +39,35 @@ describe('types match the backend sample', () => {
       'institution',
       'start',
     ])
+    expect(Object.keys(full.publications[0]!).sort()).toEqual([
+      'authors',
+      'title',
+      'url',
+      'venue',
+      'year',
+    ])
+  })
+
+  it('trims a publication and sends empty optional fields as null', () => {
+    const p: Profile = {
+      ...emptyProfile(),
+      publications: [
+        {
+          title: ' Paper ',
+          venue: '  ',
+          year: 2020,
+          authors: '',
+          url: ' https://example.org/p ',
+        },
+      ],
+    }
+    expect(toRequestProfile(p).publications[0]).toEqual({
+      title: 'Paper',
+      venue: null,
+      year: 2020,
+      authors: null,
+      url: 'https://example.org/p',
+    })
   })
 
   it('goes to the wire unchanged when it is already clean', () => {
