@@ -1,5 +1,6 @@
 package net.s4v3.backend.files.internal
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.IOException
 import java.nio.file.Files
@@ -20,6 +21,24 @@ internal data class Stored(val key: String, val sizeBytes: Long, val sha256: Str
 internal class FileStorage(settings: FilesSettings) {
 
     private val root: Path = Path.of(settings.dir)
+
+    private val log = LoggerFactory.getLogger(FileStorage::class.java)
+
+    init {
+        // Uploads are spooled into `tmp` by Tomcat, so it must exist before the first request. A missing volume is only
+        // a warning here: uploads then fail until the volume is there, and the rest of the backend still starts.
+        try {
+            Files.createDirectories(root.resolve(TMP))
+        } catch (_: IOException) {
+            log.warn("The files directory cannot be created; uploads fail until it can")
+        }
+    }
+
+    /** A new path in `tmp` for an upload to be written to before it is moved in. The name is generated, never the user's. */
+    fun newTempPath(): Path {
+        Files.createDirectories(root.resolve(TMP))
+        return root.resolve(TMP).resolve("upload-" + UUID.randomUUID())
+    }
 
     /** Reads `temp` once for its size and SHA-256, then moves it into place (a rename on the same volume). */
     fun moveIn(temp: Path, id: UUID): Stored {
@@ -91,6 +110,7 @@ internal class FileStorage(settings: FilesSettings) {
 
     private companion object {
         const val BUFFER_BYTES = 64 * 1024
+        const val TMP = "tmp"
         val KEY = Regex("[0-9a-f]{2}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
     }
 }

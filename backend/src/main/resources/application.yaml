@@ -6,9 +6,11 @@ spring:
       enabled: true
   servlet:
     multipart:
-      # A CV is at most 5 MB (the service checks it again); a little headroom for the multipart framing.
-      max-file-size: 5MB
-      max-request-size: 6MB
+      # Other files may be up to 10 GB and are checked again by the files service (a CV is at most 5 MB). Parts are spooled
+      # into the files volume, so the moved file is a rename on the same disk and not a second copy.
+      max-file-size: 10GB
+      max-request-size: 10GB
+      location: ${jobhunter.files.dir}/tmp
   datasource:
     hikari:
       # Virtual threads make request concurrency cheap; the pool is the real limit on database work.
@@ -45,6 +47,9 @@ jobhunter:
   api-docs:
     # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
     enabled: true
+  files:
+    # The files volume (the PersistentVolumeClaim in production). Set with JOBHUNTER_FILES_DIR where it differs.
+    dir: /data/files
 
 springdoc:
   api-docs:
