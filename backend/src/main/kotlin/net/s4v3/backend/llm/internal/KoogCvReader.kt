@@ -9,6 +9,9 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.model.StructureFixingParser
 import ai.koog.prompt.executor.model.executeStructured
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.structure.StructuredRequest
+import ai.koog.prompt.structure.StructuredRequestConfig
+import ai.koog.prompt.structure.json.JsonStructure
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import net.s4v3.backend.llm.CvReader
@@ -86,9 +89,13 @@ internal class KoogCvReader(
         try {
             val draft = runBlocking {
                 withTimeout(settings.timeout.toMillis()) {
-                    executor.executeStructured<T>(
+                    // Manual mode: the schema goes into the prompt and the model answers in plain JSON, which Koog parses (and
+                    // repairs). The native mode turns the schema into a grammar on Anthropic's side, and Anthropic refuses ours
+                    // with "The compiled grammar is too large".
+                    executor.executeStructured(
                         prompt = promptFor(text, instruction),
                         model = model,
+                        config = StructuredRequestConfig(default = StructuredRequest.Manual(JsonStructure.create<T>())),
                         fixingParser = StructureFixingParser(model = AnthropicModels.Haiku_4_5, retries = settings.repairs),
                     ).getOrThrow().data
                 }

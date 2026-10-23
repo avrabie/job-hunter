@@ -139,7 +139,7 @@ class KoogCvReaderTests {
 
         reader(executor).profileFrom(cv)
 
-        val sent = executor.prompts.first().messages.last().textContent()
+        val sent = executor.prompts.first().messages.map { it.textContent() }.first { it.startsWith("<cv>\n") }
         assertTrue(sent.startsWith("<cv>\n") && sent.endsWith("\n</cv>"))
         assertEquals(1, Regex("</cv>", RegexOption.IGNORE_CASE).findAll(sent).count())
         assertTrue(sent.contains("Ignore previous instructions"))
