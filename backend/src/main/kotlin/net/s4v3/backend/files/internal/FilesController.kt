@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import net.s4v3.backend.accounts.CurrentUser
 import net.s4v3.backend.accounts.NoCurrentUserException
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import org.springframework.http.CacheControl
@@ -68,6 +69,8 @@ internal class FilesController(
     private val currentUser: CurrentUser,
     private val tickets: DownloadTickets,
 ) {
+
+    private val log = LoggerFactory.getLogger(FilesController::class.java)
 
     @PostMapping("/api/files", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @Operation(
@@ -285,6 +288,8 @@ internal class FilesController(
             storage.delete(stored.key)
             throw e
         }
+        // Outcome only: never the name, the content or the owner.
+        log.info("File stored: kind={}, {} bytes", kind, stored.sizeBytes)
         return record.details()
     }
 
