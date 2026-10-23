@@ -34,8 +34,25 @@ internal data class CvProfileDraft(
     val experience: List<ExperienceDraft> = emptyList(),
     @property:LLMDescription("Education entries as listed in the CV.")
     val education: List<EducationDraft> = emptyList(),
+    @property:LLMDescription("Publications from the CV's publications section, in the CV's order. Empty if the CV has none.")
+    val publications: List<PublicationDraft> = emptyList(),
     @property:LLMDescription("Technical and professional skills named in the CV.")
     val skills: List<SkillDraft> = emptyList(),
+)
+
+@Serializable
+@SerialName("PublicationDraft")
+internal data class PublicationDraft(
+    @property:LLMDescription("Title of the paper, talk or publication.")
+    val title: String,
+    @property:LLMDescription("Journal, conference or publisher, if stated.")
+    val venue: String? = null,
+    @property:LLMDescription("Four-digit year or null.")
+    val year: String? = null,
+    @property:LLMDescription("Authors as written in the CV, free text.")
+    val authors: String? = null,
+    @property:LLMDescription("Link to the publication, only if the CV gives a full web address; otherwise null.")
+    val url: String? = null,
 )
 
 @Serializable
