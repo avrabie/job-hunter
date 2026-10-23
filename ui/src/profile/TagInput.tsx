@@ -75,6 +75,8 @@ export function TagInput({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={onKeyDown}
+        // Text typed but not confirmed would be lost when the user goes on to Save, so leaving the field adds it.
+        onBlur={add}
       />
       <datalist id={listId}>
         {offered.map((s) => (

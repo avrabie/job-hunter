@@ -240,4 +240,24 @@ class DraftMapperTests {
     fun `an empty draft maps to an empty profile`() {
         assertEquals(Profile(), DraftMapper.toProfile(CvProfileDraft()))
     }
+
+    @Test
+    fun `a tag that is a sentence is dropped, results are capped and a missing project name leaves the project out`() {
+        val profile = DraftMapper.toProfile(
+            CvProfileDraft(
+                projects = listOf(
+                    ProjectDraft(
+                        name = "Store",
+                        technologies = listOf("Kotlin", "x".repeat(61)),
+                        results = (1..25).map { "result $it" },
+                    ),
+                    ProjectDraft(name = null),
+                ),
+            ),
+        )
+
+        val project = profile.projects.single()
+        assertEquals(listOf("Kotlin"), project.technologies)
+        assertEquals(20, project.results.size)
+    }
 }

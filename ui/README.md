@@ -76,6 +76,19 @@ Venue, Year, Authors and Link. The browser checks the cheap rules when a field i
 year, link an absolute `http` or `https` address); the server stays the authority and its message is shown at the field if
 the profile is saved anyway.
 
+## Technologies and Projects (profile page)
+
+Each position has a **Technologies** field made of tags: type a name and press Enter or a comma, Backspace in the empty input
+removes the last tag, each tag has a remove button, and text still in the input when the field is left is added. Tags are
+trimmed and a tag that differs from an existing one only in case is ignored (the first spelling stays). Suggestions come from
+the skills and from tags already used in positions and projects.
+
+The **Projects** section sits after Publications: name, type (Assignment, Personal, Open source, Work), context, start and end
+month, description, technologies, results (short lines), links (a label and an `http` or `https` address, at most five) and a
+**Highlight** checkbox. The browser checks the cheap rules when a field is left (name required, end not before start, link
+addresses); the server stays the authority and its message is shown at the field. **Fill from CV** on Projects reads only the
+projects from the master CV, like the buttons on Experience, Education and Publications.
+
 ## File cabinet (profile page)
 
 The top of `/profile` has **Your files**: every file with its kind (CV or Other), size (KB, MB, GB), date and a **Master CV**

@@ -229,10 +229,22 @@ liveness does not, so a database outage does not restart the pod. No other actua
 ## Profile content
 
 The profile document holds `location`, `workAuthorisation`, `languages`, `summary`, `experience`, `education`, `publications`,
-`skills` and `preferences`. A publication has a required `title` and optional `venue`, `year` (1900 to next year), `authors`
-(free text) and `url` (absolute `http` or `https` only); at most 100 per profile. Profiles saved before publications existed
-read with an empty list, so no migration was needed. The CV draft (`llm` module) can return publications too, dropping an
-invalid year or link and leaving out an entry without a title.
+`projects`, `skills` and `preferences`. Everything is one JSONB document per user in `profile.document`, so new fields need no
+migration: a document without them reads with empty lists.
+
+- A **publication** has a required `title` and optional `venue`, `year` (1900 to next year), `authors` (free text) and `url`
+  (absolute `http` or `https` only); at most 100.
+- Each **experience** entry has `technologies`, a list of short tags (not blank, at most 60 characters, at most 30 per list).
+  The server never changes tags; the page and the CV reader tidy them (trim, drop duplicates that differ only in case).
+- A **project** has a required `name` and `type` (`ASSIGNMENT`, `PERSONAL`, `OPEN_SOURCE`, `WORK`) and optional `context`, `start`
+  and `end` (`YYYY-MM`), `description` (2000 characters), `technologies`, `results` (up to 20 lines, like achievements), `links`
+  (up to 5, each a label and an absolute `http` or `https` address) and `highlight` (set by the user only, for the CV tailoring
+  to prefer); at most 50 projects.
+- The request body limit is **256 KB** (413 before anything is parsed).
+
+The CV draft (`llm` module) can return technologies and projects too. A tag longer than 60 characters is dropped, an unknown
+project type becomes `PERSONAL`, a project without a name is left out, results are capped at 20, and a link without a label or
+without an `http(s)` address is dropped from its project.
 
 ## File cabinet (files module)
 

@@ -95,7 +95,7 @@ internal object DraftMapper {
             end = month(draft.end),
             description = text(draft.description),
             technologies = tags(draft.technologies),
-            results = draft.results.mapNotNull(::text),
+            results = draft.results.mapNotNull(::text).take(RESULTS_MAX),
             links = draft.links.mapNotNull(::projectLink),
             highlight = false,
         )
@@ -107,11 +107,14 @@ internal object DraftMapper {
         return ProjectLink(label, url)
     }
 
-    /** Trims, drops blanks and case-insensitive duplicates (the first spelling wins), keeps at most 30. */
+    /**
+     * Trims, drops blanks, tags longer than 60 characters (a sentence is not a tag) and case-insensitive duplicates (the
+     * first spelling wins), keeps at most 30. What the profile rules would reject on Save is not drafted in the first place.
+     */
     private fun tags(values: List<String>): List<String> {
         val seen = HashSet<String>()
         return values.mapNotNull(::text)
-            .filter { seen.add(it.lowercase()) }
+            .filter { it.length <= TAG_MAX && seen.add(it.lowercase()) }
             .take(TAGS_MAX)
     }
 
@@ -141,6 +144,8 @@ internal object DraftMapper {
     }
 
     private const val TAGS_MAX = 30
+    private const val TAG_MAX = 60
+    private const val RESULTS_MAX = 20
     private val CANTON = Regex("[A-Z]{2}")
     private val LANGUAGE_CODE = Regex("[a-z]{2}")
 }

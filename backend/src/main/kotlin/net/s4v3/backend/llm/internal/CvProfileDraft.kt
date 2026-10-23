@@ -103,7 +103,7 @@ internal data class ExperienceDraft(
 @SerialName("ProjectDraft")
 internal data class ProjectDraft(
     @property:LLMDescription("Name of the project or assignment as the CV gives it.")
-    val name: String,
+    val name: String? = null,
     @property:LLMDescription(
         "One of ASSIGNMENT (a client or contract assignment), PERSONAL (a private project), OPEN_SOURCE (open-source " +
             "work) or WORK (other project work). Null if unclear.",

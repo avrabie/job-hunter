@@ -128,3 +128,12 @@ really lists every achievement can only be seen with a real CV: compare a sectio
   extraction worked. Tests with a fake executor cannot catch a parameter the real API refuses; the only check is a real call.
   The failure log line (status, error type and Anthropic's short message, never CV text) is what found it.
 - **Check the log before guessing.** A failure within a second means the request was refused, not that the answer was bad.
+
+## Part 5: technologies and projects (experience-projects)
+
+`ExperienceDraft` gained `technologies` and there is a `ProjectDraft` (with `ProjectLinkDraft`), a `ProjectsSection` wrapper and
+`ProfileSection.PROJECTS`. As with the other drafts, every value the model could get slightly wrong is a plain string or an
+optional (the project type, months, link addresses), and `DraftMapper` decides. An unknown project type becomes `PERSONAL`
+rather than dropping the project: the project is real, only its label is unclear, and the user sees and edits it before saving.
+Tags are tidied in the mapper (a tag longer than 60 characters is a sentence, not a tag, and would be rejected on Save, so it
+is dropped), and results are capped at 20 for the same reason. The model never sets `highlight`.

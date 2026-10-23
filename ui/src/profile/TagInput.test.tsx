@@ -54,6 +54,14 @@ describe('Technology tags', () => {
     expect(input).toHaveValue('')
   })
 
+  it('adds the text that is still in the input when the field is left', async () => {
+    const { onChange, input } = renderTags([])
+    await userEvent.type(input, 'Kubernetes')
+    await userEvent.tab()
+    expect(onChange).toHaveBeenLastCalledWith(['Kubernetes'])
+    expect(input).toHaveValue('')
+  })
+
   it('removes a tag with its own remove control and keeps the others in order', async () => {
     const { onChange } = renderTags(['Kotlin', 'gRPC', 'Go'])
     await userEvent.click(screen.getByRole('button', { name: 'Remove gRPC' }))

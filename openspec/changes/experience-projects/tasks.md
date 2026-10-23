@@ -22,7 +22,7 @@ Rules for every task (see `handoff/haiku-rules.md`): edit only the files named, 
 
 ## 4. Docs
 
-- [ ] 4.1 Document technologies, projects, the highlight flag and the 256 KB body limit in `backend/README.md` (profile content), `ui/README.md` (profile page, tag input, Projects, Fill from CV), `docs/koog-notes.md` (one paragraph: the draft types and why the unknown type becomes PERSONAL) and `PLAN.md`. Verify: `grep -n -i "project" backend/README.md ui/README.md PLAN.md` shows each file.
+- [x] 4.1 Document technologies, projects, the highlight flag and the 256 KB body limit in `backend/README.md` (profile content), `ui/README.md` (profile page, tag input, Projects, Fill from CV), `docs/koog-notes.md` (one paragraph: the draft types and why the unknown type becomes PERSONAL) and `PLAN.md`. Verify: `grep -n -i "project" backend/README.md ui/README.md PLAN.md` shows each file.
 
 ## Contract (do not change)
 
