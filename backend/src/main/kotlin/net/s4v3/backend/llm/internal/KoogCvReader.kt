@@ -9,6 +9,7 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.model.StructureFixingParser
 import ai.koog.prompt.executor.model.executeStructured
 import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.structure.StructuredRequest
 import ai.koog.prompt.structure.StructuredRequestConfig
 import ai.koog.prompt.structure.json.JsonStructure
@@ -112,7 +113,9 @@ internal class KoogCvReader(
 
     private fun promptFor(cvText: String, instruction: String?) =
         // No temperature: Sonnet 5 rejects the parameter with a 400 ("`temperature` is deprecated for this model").
-        prompt("cv-to-profile") {
+        // The output limit is raised from Koog's default of 2048 tokens, which a full list of positions and achievements
+        // exceeds; the model stops when it is done, so a high limit costs nothing extra.
+        prompt("cv-to-profile", LLMParams(maxTokens = MAX_OUTPUT_TOKENS)) {
             system(if (instruction == null) SYSTEM else "$SYSTEM\n\n$instruction")
             // The closing tag is removed from the text so the CV cannot end its own quote early.
             user("<cv>\n${cvText.replace(CV_TAG, "")}\n</cv>")
@@ -120,9 +123,16 @@ internal class KoogCvReader(
 
     private fun elapsedMs(startedNanos: Long) = (System.nanoTime() - startedNanos) / 1_000_000
 
-    private fun clientFailure(e: Exception): String = if (e is LLMClientException) describeClientFailure(e.message) else ""
+    private fun clientFailure(e: Exception): String =
+        if (e is LLMClientException) describeClientFailure(e.message) else origin(e)
+
+    /** Where an unexpected exception was thrown (class and method only, never a message or data), to find the cause. */
+    private fun origin(e: Exception): String =
+        e.stackTrace.firstOrNull()?.let { " at ${it.className.substringAfterLast('.')}.${it.methodName}" }.orEmpty()
 
     private companion object {
+        const val MAX_OUTPUT_TOKENS = 16_000
+
         val CV_TAG = Regex("</?cv>", RegexOption.IGNORE_CASE)
 
         const val SYSTEM = """You extract facts from a curriculum vitae into a fixed structure.

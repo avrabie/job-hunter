@@ -6,7 +6,7 @@ resources:
   - redirect.yaml
 images:
   - name: moldovean/job-hunter-backend
-    newTag: 0.11.3
+    newTag: 0.11.5
   - name: moldovean/job-hunter-auth
     newTag: 0.3.1
   - name: moldovean/job-hunter-gateway
