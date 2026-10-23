@@ -46,6 +46,9 @@ export function Shell({ identity }: { identity: string }) {
         <Link className="button" to="/postings">
           Postings
         </Link>
+        <Link className="button" to="/matches">
+          Matches
+        </Link>
         {hasRole(auth.getAccessToken(), 'ADMIN') && (
           <Link className="button" to="/admin">
             Admin
