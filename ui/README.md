@@ -76,14 +76,20 @@ Venue, Year, Authors and Link. The browser checks the cheap rules when a field i
 year, link an absolute `http` or `https` address); the server stays the authority and its message is shown at the field if
 the profile is saved anyway.
 
-## CV section (profile page)
+## File cabinet (profile page)
 
-The top of `/profile` has a **Your CV** section: upload (`.pdf`, `.md`, `.txt`, up to 5 MB) or replace, download, delete (after a
-confirmation) and **Fill the profile from my CV**. The last button asks the backend to read the CV and puts the result in the
-form **as unsaved changes**, with a notice; only the page's own Save button sends anything to `PUT /api/profile`. When the form
-already has content a confirmation comes first, and the user's preferences (roles, workload, salary...) are always kept because
-a CV does not contain them. Errors show fixed texts per status (wrong type, too large, no text in the CV, too many
-extractions, model unavailable). Download fetches the file with the user's token and saves it under the stored name.
+The top of `/profile` has **Your files**: every file with its kind (CV or Other), size (KB, MB, GB), date and a **Master CV**
+label. Upload takes a file and a kind: **CV** accepts `.pdf`, `.md` and `.txt` up to 5 MB; **Other file** accepts anything up to
+10 GB. Uploads use `XMLHttpRequest` (not `fetch`) so there is a progress bar and a Cancel button, and the file is never read
+into page memory. **Download** asks for a one-time ticket with the user's token and then points the browser at the returned path,
+so a large file streams straight to disk. **Delete** asks first. A CV file has **Use as master CV** (the master has **Remove
+master**); nothing is chosen automatically except for a CV uploaded before the cabinet existed, which was moved in as master.
+
+**Fill the profile from my CV** works on the master CV: it is disabled with a hint until one is chosen. It asks the backend to
+read the CV and puts the result in the form **as unsaved changes**, with a notice; only the page's own Save button sends
+anything to `PUT /api/profile`. When the form already has content a confirmation comes first, and the user's preferences
+(roles, workload, salary...) are always kept because a CV does not contain them. Errors show fixed texts per status (no master,
+too large, no text in the CV, too many extractions, model unavailable, no room on the server).
 
 ## Profile page check (local)
 

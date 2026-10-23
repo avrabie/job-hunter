@@ -285,6 +285,21 @@ kubectl --context s4v3 -n job-hunter rollout restart deploy/auth
 
 `ADMIN_EMAILS` is comma-separated. Restarting `auth` regenerates the signing key, so everyone signs in again.
 
+#### Files volume (file cabinet)
+
+The `backend` Deployment mounts the claim `backend-files` (50 Gi, `local-path`) at `/data/files`; uploaded files of any kind live
+there, up to 10 GB each, with no per-user quota. `local-path` does not enforce the size, so **the node's free disk is the real
+limit**: the backend refuses an upload that would leave less than 2 GiB free (`jobhunter.files.min-free-bytes`), to protect
+PostgreSQL on the same disk. Check the server's free space (`df -h /opt/local-path-provisioner` over SSH) before inviting people
+to upload large files. The volume has **no backup**, like the database; deleting the claim deletes every uploaded file.
+
+Large uploads and the proxy: Traefik v3 reads a whole request, body included, within 60 seconds by default, so an upload that
+takes longer is cut at the edge. `k8s/platform/traefik-values.yaml` sets `readTimeout: 0` for `websecure`; it takes effect with
+`helm upgrade` (step 4.3), which restarts Traefik for a few seconds. It has **not been applied yet**, and the real upload limits
+through the edge and the gateway have **not been measured**: until then, uploads that last longer than about a minute are not
+expected to work. (The gateway's `response-timeout` of 60 s starts after the request is sent, so it should not limit uploads, but
+that is untested.)
+
 #### Anthropic key for CV extraction (optional)
 
 The `backend` Deployment reads `ANTHROPIC_API_KEY` from an optional Secret named `anthropic` (key `API_KEY`). Without it the

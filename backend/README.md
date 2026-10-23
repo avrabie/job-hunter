@@ -234,22 +234,45 @@ The profile document holds `location`, `workAuthorisation`, `languages`, `summar
 read with an empty list, so no migration was needed. The CV draft (`llm` module) can return publications too, dropping an
 invalid year or link and leaving out an entry without a title.
 
-## CV (cv module)
+## File cabinet (files module)
 
-One CV per user (PDF, Markdown `.md` or plain text `.txt`, at most 5 MB) in the table `cv_document` (changeset 010), kept until
-the user deletes it. The type is decided from the content (`%PDF-`, or valid UTF-8 without NUL bytes); the file name is for
-display only. All endpoints need a token and act on the caller's own CV only.
+Each user has any number of files, with no count limit and no quota. A file is of kind `CV` (PDF, Markdown `.md` or plain text
+`.txt`, at most 5 MB, type decided from the content: `%PDF-`, or valid UTF-8 without NUL bytes) or `OTHER` (any content and
+name, at most 10 GiB). The bytes live on a volume under `jobhunter.files.dir` (`/data/files`, the `backend-files` claim in the
+cluster) as `<first two hex>/<uuid>`; the display name is only a database column and is never used as a path. Metadata is in
+`user_file` (changeset 011). All endpoints need a token and act on the caller's own files only; another user's id answers 404.
 
 | Call | Meaning |
 |---|---|
-| `POST /api/cv` (multipart field `file`) | store or replace; 400 wrong type, 413 over 5 MB |
-| `GET /api/cv` | name, content type, size, upload time; 404 when none |
-| `GET /api/cv/file` | the bytes as an attachment (`nosniff`, no cache) |
-| `DELETE /api/cv` | remove; 204 also when there is none |
-| `POST /api/cv/extract` | reads the CV with the language model and returns a profile draft (same shape as the profile's content); nothing is saved. 404 no CV, 413 text over `jobhunter.cv.max-text-chars` (30000), 422 no text (scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (5) per user, 502 model failure, 503 no API key |
+| `POST /api/files` (multipart `file`, optional `kind` = `CV` or `OTHER`) | store; 400 wrong CV content or unknown kind, 413 over the limit of the kind, 507 no room |
+| `GET /api/files?kind=` | the caller's files, newest first (`id`, `name`, `kind`, `contentType`, `sizeBytes`, `uploadedAt`, `master`) |
+| `GET /api/files/{id}` | details of one file |
+| `POST /api/files/{id}/download-ticket` | `{"path": "/api/files/<id>/content?ticket=<hex>"}`: valid 60 s, one use, this file only |
+| `GET /api/files/{id}/content` | the bytes as an attachment, with `Range` support; token **or** a ticket |
+| `DELETE /api/files/{id}` | row first, then the bytes; 204 also for an unknown id |
+| `PUT /api/files/master` `{"fileId"}`, `GET`, `DELETE /api/files/master` | choose, read, clear the master CV (kind `CV` only; uploads never change it) |
 
-PDF text comes from Apache PDFBox (no OCR). CV bytes, text, file names, prompts and model answers are never logged; log lines
-hold sizes, outcomes and durations (`CvExtractApiTests` checks this with markers).
+Why tickets: a browser cannot send a bearer token on a plain navigation, and fetching a multi-gigabyte file into a Blob would
+exhaust the tab. The page asks for a ticket with its token, then points the browser at the returned path; the response is an
+attachment, so the download streams to disk. Tickets live in memory (a restart drops them) and are never logged.
+
+Uploads are streamed: Tomcat spools the part to `<dir>/tmp` (same volume) and the controller moves it into place with a rename
+(`MultipartFile.transferTo(File)`; the `Path` overload would copy the bytes again). The multipart limits are 10 GB. Before the
+body is read, a filter answers 507 when the declared size would leave less than `jobhunter.files.min-free-bytes` (2 GiB) free,
+which keeps the database on the same disk alive. Settings: `jobhunter.files.dir`, `min-free-bytes`, `max-cv-bytes`,
+`max-other-bytes`, `ticket-seconds`.
+
+Old single CVs (the `cv_document` table of the first CV feature) are moved into the cabinet at start and set as master; a daily
+sweep deletes stored files that no row refers to and that are older than 24 hours. There is **no backup** of the volume (same as
+the database today), and the node's free disk is the only real limit. File bytes, names, tickets and CV text are never logged.
+
+## CV extraction (cv module)
+
+`POST /api/cv/extract` reads the caller's **master CV** (chosen in the cabinet) with the language model and returns a profile draft
+(same shape as the profile's content); nothing is saved. 409 no master CV, 413 text over `jobhunter.cv.max-text-chars` (30000),
+422 no text (a scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (5) per user, 502 model failure, 503 no API key.
+PDF text comes from Apache PDFBox (no OCR). CV text, prompts and model answers are never logged; log lines hold sizes, outcomes
+and durations (`CvExtractApiTests` and `FilesLoggingTests` check this with markers).
 
 ## Language model (llm module)
 
