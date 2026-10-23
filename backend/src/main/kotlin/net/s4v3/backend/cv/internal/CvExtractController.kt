@@ -1,6 +1,7 @@
 package net.s4v3.backend.cv.internal
 
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import net.s4v3.backend.accounts.CurrentUser
@@ -9,10 +10,12 @@ import net.s4v3.backend.files.FileCabinet
 import net.s4v3.backend.llm.CvReader
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
+import net.s4v3.backend.llm.ProfileSection
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.nio.file.Files
 
@@ -39,9 +42,13 @@ internal class CvExtractController(
     @Operation(
         summary = "Draft a profile from the caller's master CV",
         description = "Reads the master CV with a language model and returns a profile in the shape of the profile's content. " +
-            "Nothing is saved: the client shows the draft, and the user saves it with PUT /api/profile. At most a few calls per hour.",
+            "With `section` (experience, education or publications) the model is asked only for that section, every entry of " +
+            "it, and the answer fills only that field; every other list is empty. " +
+            "Nothing is saved: the client shows the draft, and the user saves it with PUT /api/profile. " +
+            "At most a few calls per hour, and a section request counts the same as a whole-profile request.",
         responses = [
             ApiResponse(responseCode = "200", description = "The profile draft"),
+            ApiResponse(responseCode = "400", description = "The section is not experience, education or publications"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "409", description = "The caller has not chosen a master CV"),
             ApiResponse(responseCode = "413", description = "The CV text is longer than the configured limit"),
@@ -51,7 +58,12 @@ internal class CvExtractController(
             ApiResponse(responseCode = "503", description = "The language model is not set up"),
         ],
     )
-    fun extract(): ResponseEntity<*> {
+    fun extract(
+        @Parameter(description = "Only this section: experience, education or publications (any letter case). Omit for the whole profile.")
+        @RequestParam(name = "section", required = false) section: String?,
+    ): ResponseEntity<*> {
+        val wanted = if (section == null) null else ProfileSection.entries.firstOrNull { it.name.equals(section, ignoreCase = true) }
+        if (section != null && wanted == null) return error(HttpStatus.BAD_REQUEST, "That section cannot be read.")
         val sub = currentUser.id()
         val master = cabinet.masterCv(sub)
             ?: return cvError(HttpStatus.CONFLICT, "Choose a master CV in your files first.")
@@ -64,7 +76,7 @@ internal class CvExtractController(
         if (!limiter.tryAcquire(sub)) return error(HttpStatus.TOO_MANY_REQUESTS, "Too many extractions. Please try again later.")
         return try {
             log.info("CV extraction requested: {} characters", text.length)
-            ResponseEntity.ok(reader.profileFrom(text))
+            ResponseEntity.ok(if (wanted == null) reader.profileFrom(text) else reader.sectionFrom(text, wanted))
         } catch (e: LlmFailure) {
             when (e.kind) {
                 LlmFailureKind.NOT_CONFIGURED -> error(HttpStatus.SERVICE_UNAVAILABLE, "Reading CVs is not set up on this server yet.")
