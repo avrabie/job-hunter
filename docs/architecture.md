@@ -119,7 +119,7 @@ Event edges (dotted, see section 5): `postings` publishes `JobIngested`, `profil
 ### files
 
 - Purpose: the file cabinet. Any number of files per user, bytes on the volume, metadata in Postgres, one chosen master CV, ticket downloads.
-- Public API (`K/files/FileCabinet.kt`): `FileCabinet.masterCv(sub)` returning `CabinetFile` (details and the `Path` of the bytes).
+- Public API (`K/files/FileCabinet.kt`): `FileCabinet.masterCv(sub)` returning `CabinetFile` (details and the `Path` of the bytes); `FileCabinet.image(sub, id)` returning the user's own JPEG of at most 6 MB, else null.
 - Internal (`K/files/internal/`): `FilesController` (all `/api/files` endpoints), `JdbcFileRepository`, `FileStorage` (the only class touching the volume),
   `FileCabinetService`, `DownloadTickets`, `FileUploadGuards.kt` (`FreeSpaceGuard`, `FilesUploadLimitResolver`), `CvContent` (type from content),
   `OrphanSweep` (daily 03:30), `LegacyCvMover` (runs at startup), `FilesSettings`.

@@ -11,7 +11,7 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 1. File cabinet API (backend, `files`)
 
-- [ ] 1.1 Add `FileCabinet.image(sub, id): CabinetFile?` and implement it in `FileCabinetService` per design decision 7 (owner scoped lookup, 6 MB cap, first three bytes `FF D8 FF`, null otherwise, no logging of names). Tests in a new `FileCabinetImageTests` (integration-tagged like the neighbouring files tests): own JPEG found; other user's id null; PNG named `x.jpg` null; PDF null; oversize null; unknown id null. Update `files/README.md` and `openspec`-independent docs line in `docs/architecture.md` only if it lists the API.
+- [x] 1.1 Add `FileCabinet.image(sub, id): CabinetFile?` and implement it in `FileCabinetService` per design decision 7 (owner scoped lookup, 6 MB cap, first three bytes `FF D8 FF`, null otherwise, no logging of names). Tests in a new `FileCabinetImageTests` (integration-tagged like the neighbouring files tests): own JPEG found; other user's id null; PNG named `x.jpg` null; PDF null; oversize null; unknown id null. Update `files/README.md` and `openspec`-independent docs line in `docs/architecture.md` only if it lists the API.
 
 ## 2. Photo processor (backend, `cv.export`)
 
