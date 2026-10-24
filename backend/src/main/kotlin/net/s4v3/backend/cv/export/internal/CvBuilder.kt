@@ -129,6 +129,7 @@ internal object CvBuilder {
         place = clean(experience.location),
         bullets = experience.achievements.mapNotNull { clean(it) },
         tags = experience.technologies.mapNotNull { clean(it) },
+        titleFirst = true,
     )
 
     /** Description, then the user's note and, when asked, the analysis summary; tags are the analysed technologies. */
@@ -151,6 +152,7 @@ internal object CvBuilder {
         heading = education.institution,
         subheading = listOfNotNull(clean(education.degree), clean(education.field)).joinToString(", ").ifEmpty { null },
         period = Labels.period(education.start, education.end, language),
+        titleFirst = true,
     )
 
     private fun publication(publication: Publication) = CvEntry(

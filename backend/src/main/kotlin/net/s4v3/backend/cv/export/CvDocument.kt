@@ -50,6 +50,8 @@ data class CvEntry(
     val text: String? = null,
     val bullets: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /** True when [subheading] is the title (a job or a degree) and [heading] the organisation; the Professional template prints the title first. */
+    val titleFirst: Boolean = false,
 )
 
 /** Turns a [CvDocument] into bytes in one format. Each renderer is pure: the same document gives the same bytes. */
