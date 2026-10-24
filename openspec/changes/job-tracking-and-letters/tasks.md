@@ -12,7 +12,7 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 ## 1. Applications (backend)
 
 - [x] 1.1 Two Liquibase changesets (next ids after `moldo:015`: `application`, `motivation_letter`, per design decision 2; update the `DatabaseBaselineTests` changeset count and table assertions) and the repository.
-- [ ] 1.2 `ApplicationService` (public API) and its implementation: track (idempotent, frozen copy from `PostingQuery.find`, live status from the posting's `lastSeen` and content hash; add the hash to `Posting` minimally if missing), get, list with stage filter, patch (stage, notes, appliedOn with rules of the spec), remove, by-posting lookup, limit of 500. Replace the Java placeholder if the module rules require it.
+- [x] 1.2 `ApplicationService` (public API) and its implementation: track (idempotent, frozen copy from `PostingQuery.find`, live status from the posting's `lastSeen` and content hash; add the hash to `Posting` minimally if missing), get, list with stage filter, patch (stage, notes, appliedOn with rules of the spec), remove, by-posting lookup, limit of 500. Replace the Java placeholder if the module rules require it.
 - [ ] 1.3 `ApplicationController` with the endpoints of design decision 3 (without letters), OpenAPI summaries (the `ApiDocsContentTests` guard), errors via `ErrorResponses`. Tests (integration): every scenario of the `applications` spec including another user's id 404, idempotent track, frozen description after the posting changes, 501st conflict, stage rules, logs contain no description or notes (`captureAppLogs`). Update `applications/README.md` (new), `docs/architecture.md`, `ModularityTests` if needed.
 
 ## 2. LetterWriter (backend, `llm`)

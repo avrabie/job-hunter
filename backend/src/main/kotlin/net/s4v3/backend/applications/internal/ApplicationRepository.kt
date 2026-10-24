@@ -67,7 +67,7 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
             .param("id", row.id).param("sub", sub).param("posting", row.postingId).param("stage", row.stage.name)
             .param("title", row.title).param("company", row.company).param("url", row.url)
             .param("description", row.description).param("language", row.jobLanguage)
-            .param("captured", ts(row.capturedAt)).param("lastSeen", row.postingLastSeen?.let(::ts), java.sql.Types.TIMESTAMP_WITH_TIMEZONE)
+            .param("captured", ts(row.capturedAt)).param("lastSeen", row.postingLastSeen?.let(::ts), java.sql.Types.TIMESTAMP)
             .param("hash", row.contentHash).param("notes", row.notes)
             .param("appliedOn", row.appliedOn?.let { java.sql.Date.valueOf(it) }, java.sql.Types.DATE)
             .param("changed", ts(row.stageChangedAt)).param("now", ts(now))
