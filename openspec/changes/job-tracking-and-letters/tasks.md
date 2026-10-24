@@ -30,7 +30,7 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 
 ## 5. UI: letter workspace (needs the endpoint shapes of the Contract)
 
-- [ ] 5.1 `LetterWorkspace.tsx`: selection form from the saved profile, instructions, generate, text shown per numbered paragraph as text, per-paragraph and general comments, Regenerate, Edit and save as new version, Copy, Download, version list, the checking notice and the fixed messages for 429, 502 and 503; the TypeScript `paragraphs` function with the shared case table. Tests for every scenario of the spec.
+- [x] 5.1 `LetterWorkspace.tsx`: selection form from the saved profile, instructions, generate, text shown per numbered paragraph as text, per-paragraph and general comments, Regenerate, Edit and save as new version, Copy, Download, version list, the checking notice and the fixed messages for 429, 502 and 503; the TypeScript `paragraphs` function with the shared case table. Tests for every scenario of the spec.
 
 ## 6. Lead
 

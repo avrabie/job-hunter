@@ -1,0 +1,40 @@
+[
+  { "name": "empty text", "text": "", "paragraphs": [] },
+  { "name": "only blanks", "text": "  \n\n \n  ", "paragraphs": [] },
+  { "name": "one paragraph", "text": "Hello.", "paragraphs": ["Hello."] },
+  {
+    "name": "two paragraphs",
+    "text": "First.\n\nSecond.",
+    "paragraphs": ["First.", "Second."]
+  },
+  {
+    "name": "several blank lines",
+    "text": "First.\n\n\n\nSecond.",
+    "paragraphs": ["First.", "Second."]
+  },
+  {
+    "name": "blank line with spaces",
+    "text": "First.\n   \nSecond.",
+    "paragraphs": ["First.", "Second."]
+  },
+  {
+    "name": "single newline stays inside a paragraph",
+    "text": "Line one\nline two\n\nNext.",
+    "paragraphs": ["Line one\nline two", "Next."]
+  },
+  {
+    "name": "trimmed",
+    "text": "\n\n  Dear Ms Example,  \n\n  Body.  \n\n",
+    "paragraphs": ["Dear Ms Example,", "Body."]
+  },
+  {
+    "name": "windows line endings",
+    "text": "First.\r\n\r\nSecond.",
+    "paragraphs": ["First.", "Second."]
+  },
+  {
+    "name": "markdown is kept as source",
+    "text": "# Title\n\n- a\n- b",
+    "paragraphs": ["# Title", "- a\n- b"]
+  }
+]
