@@ -6,6 +6,8 @@ import {
   type SkillSource,
 } from './types.ts'
 
+const MAX_EVIDENCE = 300
+
 type Repo = Pick<OpenSourceProject, 'provider' | 'fullName'>
 
 const sameName = (a: string, b: string) =>
@@ -61,7 +63,8 @@ export function applyAnalysis(
       provider: project.provider,
       fullName: project.fullName,
       url: project.url,
-      evidence: `${tech.evidencePath}: ${tech.evidence}`,
+      // The server accepts at most 300 characters of evidence per source.
+      evidence: `${tech.evidencePath}: ${tech.evidence}`.slice(0, MAX_EVIDENCE),
     }
     const index = next.findIndex((s) => sameName(s.name, tech.name))
     if (index === -1) {

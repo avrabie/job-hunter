@@ -83,6 +83,16 @@ describe('applyAnalysis', () => {
     ])
   })
 
+  it('cuts the evidence of a source at the 300 characters the server accepts', () => {
+    const analysis = analysisOf([
+      'Spring Boot',
+      'build.gradle.kts',
+      'x'.repeat(400),
+    ])
+    const [skill] = applyAnalysis([], project, analysis)
+    expect(skill!.sources[0]!.evidence).toHaveLength(300)
+  })
+
   it('gives an existing skill the source and keeps its level and origin, with no second skill', () => {
     const before: Skill[] = [
       { name: 'kotlin', level: 'EXPERT', origin: 'MANUAL', sources: [] },

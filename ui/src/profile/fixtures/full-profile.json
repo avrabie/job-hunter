@@ -57,8 +57,8 @@
       "stars": 42,
       "note": "Maintainer since 2022",
       "analysis": {
-        "summary": "Invented sample project used only in tests.",
-        "architecture": "One Gradle module with a Spring Boot application.",
+        "summary": "A small Spring Boot service built with Gradle.",
+        "architecture": "One application module with a REST controller.",
         "techStack": [
           {
             "name": "Spring Boot",
