@@ -49,6 +49,9 @@ jobhunter:
     max-text-chars: 120000
     # Maximum number of CV extractions per user per hour.
     extractions-per-hour: 20
+  cv-export:
+    # Maximum number of CV exports per user per hour.
+    per-hour: 30
   analysis:
     # Maximum number of open source project analyses per user per hour; each one is one model call.
     per-hour: 10
