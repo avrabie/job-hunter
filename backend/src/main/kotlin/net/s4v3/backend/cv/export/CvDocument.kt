@@ -11,6 +11,7 @@ data class CvDocument(
     val contactLines: List<CvLink>,
     val facts: List<String>,
     val sections: List<CvSection>,
+    val photo: CvPhoto? = null,
 )
 
 /** A piece of text that is a link when [url] is set. Renderers link only http and https addresses. */
@@ -30,6 +31,12 @@ data class EntrySection(override val title: String, val entries: List<CvEntry>) 
 /** Short words shown as a comma list, such as skills. */
 data class TagSection(override val title: String, val tags: List<String>) : CvSection
 
+/** Skills in named groups (Professional template only), printed as a two-column table. Empty groups are not present. */
+data class GroupedTagSection(override val title: String, val groups: List<TagGroup>) : CvSection
+
+/** One group of a [GroupedTagSection]: the group name and its skills in the order the user typed them. */
+data class TagGroup(val name: String, val tags: List<String>)
+
 /** One line per item, such as languages. */
 data class LineSection(override val title: String, val lines: List<String>) : CvSection
 
@@ -43,6 +50,8 @@ data class CvEntry(
     val text: String? = null,
     val bullets: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
+    /** True when [subheading] is the title (a job or a degree) and [heading] the organisation; the Professional template prints the title first. */
+    val titleFirst: Boolean = false,
 )
 
 /** Turns a [CvDocument] into bytes in one format. Each renderer is pure: the same document gives the same bytes. */

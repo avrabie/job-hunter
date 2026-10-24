@@ -25,8 +25,9 @@ internal class PdfRenderer(private val html: HtmlRenderer = HtmlRenderer()) : Cv
         val out = ByteArrayOutputStream()
         val builder = PdfRendererBuilder()
         builder.useFastMode()
-        // No URI is ever resolved, so nothing is fetched (files, http, https); the http factory is a second guard.
-        builder.useUriResolver { _, _ -> null }
+        // Only an embedded JPEG data URI (the photo) is resolved; nothing is fetched (files, http, https). The http factory
+        // is a second guard.
+        builder.useUriResolver { _, uri -> uri.takeIf { it.startsWith("data:image/jpeg;base64,") } }
         builder.useHttpStreamImplementation(RefusingHttp)
         for ((file, weight, style) in FONTS) {
             val bytes = FONT_BYTES.getValue(file)

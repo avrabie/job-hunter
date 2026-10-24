@@ -14,6 +14,7 @@ import net.s4v3.backend.cv.export.ExportBusyException
 import net.s4v3.backend.cv.export.ExportFailedException
 import net.s4v3.backend.cv.export.ExportOptions
 import net.s4v3.backend.cv.export.ExportService
+import net.s4v3.backend.cv.export.InvalidPhotoException
 import net.s4v3.backend.cv.export.NameRequiredException
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpHeaders
@@ -27,6 +28,7 @@ import tools.jackson.core.JacksonException
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
+import java.util.UUID
 
 /**
  * Renders the caller's saved profile as Markdown, HTML or PDF. The profile is read by the token's `sub`, never from the
@@ -45,12 +47,15 @@ internal class CvExportController(
         summary = "Export the saved profile as a CV",
         description = "Renders the caller's saved profile (never a profile from the request) in the chosen format, template " +
             "and language, and answers with the file bytes as an attachment. `sections` selects and orders the sections " +
-            "(default: all). Needs `contact.fullName` in the saved profile. The profile is not changed. At most 30 exports " +
+            "(default: all). With the template `PROFESSIONAL` and the format HTML or PDF, `photoFileId` (the id of one of the " +
+            "caller's own JPEG files) adds a round photo; it is ignored with other templates or Markdown. Needs `contact.fullName` in the saved profile. The profile is not changed. At most 30 exports " +
             "per hour. Failures answer with a fixed `error` code.",
         responses = [
             ApiResponse(responseCode = "200", description = "The file (text/markdown, text/html or application/pdf)", content = [Content()]),
             ApiResponse(
-                responseCode = "400", description = "`invalid_request`: unknown value, unknown field or not JSON",
+                responseCode = "400",
+                description = "`invalid_request`: unknown value, unknown field or not JSON; `photo_invalid`: `photoFileId` is not " +
+                    "one of the caller's JPEG files (unknown, someone else's, not a JPEG by content, too large or damaged)",
                 content = [Content(schema = Schema(implementation = ExportErrorBody::class))],
             ),
             ApiResponse(responseCode = "401", description = "No valid access token", content = [Content()]),
@@ -80,7 +85,7 @@ internal class CvExportController(
         val options = ExportOptions(
             format = request.format, template = request.template, language = request.language, sections = sections,
             includeOpenSource = request.includeOpenSource, includeAnalysis = request.includeAnalysis,
-            includeWorkAuthorisation = request.includeWorkAuthorisation,
+            includeWorkAuthorisation = request.includeWorkAuthorisation, photoFileId = request.photoFileId,
         )
         return try {
             val cv = exports.export(sub, options)
@@ -89,6 +94,8 @@ internal class CvExportController(
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${cv.fileName}\"")
                 .cacheControl(CacheControl.noStore())
                 .body(cv.bytes)
+        } catch (_: InvalidPhotoException) {
+            codeError(HttpStatus.BAD_REQUEST, "photo_invalid")
         } catch (_: NameRequiredException) {
             codeError(HttpStatus.CONFLICT, "name_required")
         } catch (_: ExportBusyException) {
@@ -125,6 +132,7 @@ internal data class ExportRequest(
     val includeOpenSource: Boolean = true,
     val includeAnalysis: Boolean = false,
     val includeWorkAuthorisation: Boolean = true,
+    val photoFileId: UUID? = null,
 )
 
 /** Shape of an error answer, for the API description. */
