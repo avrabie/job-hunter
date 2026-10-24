@@ -6,6 +6,7 @@ import net.s4v3.backend.cv.export.ContactVisibility
 import net.s4v3.backend.cv.export.ExportOptions
 import net.s4v3.backend.cv.export.internal.CvBuilder
 import net.s4v3.backend.cv.export.internal.HtmlRenderer
+import net.s4v3.backend.cv.publiccv.HandleUnavailable
 import net.s4v3.backend.cv.publiccv.PreviewTicket
 import net.s4v3.backend.cv.publiccv.PublicCvService
 import net.s4v3.backend.cv.publiccv.PublicCvSettings
@@ -37,6 +38,20 @@ internal class DefaultPublicCvService(
     private val html = HtmlRenderer()
 
     override fun state(sub: String): PublicCvState? = repo.find(sub)?.let { state(it) }
+
+    override fun checkHandle(sub: String, handle: String): HandleUnavailable? {
+        when (HandleRules.validate(handle)) {
+            HandleProblem.INVALID -> return HandleUnavailable.INVALID
+            HandleProblem.RESERVED -> return HandleUnavailable.RESERVED
+            null -> Unit
+        }
+        val normal = HandleRules.normalize(handle)
+        val other = repo.findByHandle(normal)
+        if (other != null && other.ownerSub != sub) return HandleUnavailable.TAKEN
+        val hold = repo.activeHold(normal, clock.instant())
+        if (hold != null && hold.ownerSub != sub) return HandleUnavailable.HELD
+        return null
+    }
 
     override fun save(sub: String, handle: String, published: Boolean, settings: PublicCvSettings): SaveResult {
         when (HandleRules.validate(handle)) {

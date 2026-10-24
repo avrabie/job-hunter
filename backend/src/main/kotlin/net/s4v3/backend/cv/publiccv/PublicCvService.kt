@@ -27,6 +27,9 @@ sealed interface SaveResult {
 /** The answer to removing the owner's page. */
 enum class RemoveResult { REMOVED, NOT_FOUND, LOCKED }
 
+/** Why a handle cannot be claimed by the asker. */
+enum class HandleUnavailable { INVALID, RESERVED, TAKEN, HELD }
+
 /**
  * The public CV page: the owner's handle and settings, and the page rendered from the owner's current saved profile.
  * Everything is by the token's `sub`; nothing accepts another way to name a user. Personal data: never log it.
@@ -35,6 +38,9 @@ interface PublicCvService {
 
     /** The owner's page, or null when none is configured. */
     fun state(sub: String): PublicCvState?
+
+    /** Null when [handle] is free for [sub] (the owner's own handle and own hold included), else the reason. */
+    fun checkHandle(sub: String, handle: String): HandleUnavailable?
 
     fun save(sub: String, handle: String, published: Boolean, settings: PublicCvSettings): SaveResult
 

@@ -45,6 +45,9 @@ internal class SecurityConfig {
                 // A file's content also comes with a single-use download ticket (no token). FilesController accepts either
                 // and answers 401 otherwise; every other path, the other file endpoints included, still needs a token.
                 it.requestMatchers(HttpMethod.GET, "/api/files/*/content").permitAll()
+                // The public CV page and the owner's one-use preview need no token. Explicit single-segment patterns only:
+                // nothing else under /api/public or /api/cv/public is open.
+                it.requestMatchers(HttpMethod.GET, "/api/public/cv/*", "/api/cv/public/preview/*").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }
