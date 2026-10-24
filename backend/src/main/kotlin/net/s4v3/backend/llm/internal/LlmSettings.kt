@@ -16,7 +16,7 @@ internal class LlmConfig
 @ConfigurationProperties("jobhunter.llm")
 internal data class LlmSettings(
     val apiKey: String = "",
-    val model: String = "Sonnet_5",
+    val model: String = "Haiku_4_5",
     /** How many times a malformed answer may be sent to the cheaper repair model before the call fails. */
     val repairs: Int = 2,
     val timeout: Duration = Duration.ofSeconds(90),
