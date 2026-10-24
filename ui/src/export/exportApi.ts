@@ -8,6 +8,7 @@ export type ExportErrorCode =
   | 'too_many_exports'
   | 'busy'
   | 'render_failed'
+  | 'photo_invalid'
 
 export type ExportResult =
   | { kind: 'exported'; blob: Blob; fileName: string }
@@ -25,6 +26,8 @@ const EXPORT_MESSAGES: Record<ExportErrorCode, string> = {
     'You have reached the limit of exports for this hour. Please try again later.',
   busy: 'The server is busy creating PDFs right now. Please try again in a moment.',
   render_failed: 'The CV could not be created. Please try again later.',
+  photo_invalid:
+    'The chosen photo cannot be used. Choose another JPEG file or "No photo".',
 }
 
 // Used only when a failure has no readable code.

@@ -3,6 +3,7 @@ import {
   SECTION_KINDS,
   defaultOptions,
   moveSection,
+  showsPhotoPicker,
   toRequest,
   type SectionChoice,
 } from './options.ts'
@@ -85,5 +86,52 @@ describe('toRequest', () => {
   it('keeps the analysis choice for when open source projects come back on', () => {
     const options = { ...defaultOptions(), includeAnalysis: true }
     expect(toRequest(options).includeAnalysis).toBe(true)
+  })
+
+  const PHOTO = '00000000-0000-0000-0000-00000000000a'
+
+  it('sends the photo only for Professional with a chosen photo', () => {
+    const options = {
+      ...defaultOptions(),
+      template: 'PROFESSIONAL' as const,
+      photoFileId: PHOTO,
+    }
+    expect(toRequest(options)).toHaveProperty('photoFileId', PHOTO)
+    expect(toRequest({ ...options, format: 'HTML' })).toHaveProperty(
+      'photoFileId',
+      PHOTO,
+    )
+  })
+
+  it('sends no photo for Markdown, another template, or No photo', () => {
+    const professional = {
+      ...defaultOptions(),
+      template: 'PROFESSIONAL' as const,
+      photoFileId: PHOTO,
+    }
+    expect(
+      toRequest({ ...professional, format: 'MARKDOWN' }),
+    ).not.toHaveProperty('photoFileId')
+    expect(
+      toRequest({ ...professional, template: 'CLASSIC' }),
+    ).not.toHaveProperty('photoFileId')
+    expect(
+      toRequest({ ...professional, photoFileId: null }),
+    ).not.toHaveProperty('photoFileId')
+  })
+})
+
+describe('showsPhotoPicker', () => {
+  it('shows for Professional in PDF and HTML only', () => {
+    expect(showsPhotoPicker({ format: 'PDF', template: 'PROFESSIONAL' })).toBe(
+      true,
+    )
+    expect(showsPhotoPicker({ format: 'HTML', template: 'PROFESSIONAL' })).toBe(
+      true,
+    )
+    expect(
+      showsPhotoPicker({ format: 'MARKDOWN', template: 'PROFESSIONAL' }),
+    ).toBe(false)
+    expect(showsPhotoPicker({ format: 'PDF', template: 'MODERN' })).toBe(false)
   })
 })
