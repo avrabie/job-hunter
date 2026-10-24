@@ -229,22 +229,35 @@ liveness does not, so a database outage does not restart the pod. No other actua
 ## Profile content
 
 The profile document holds `location`, `workAuthorisation`, `languages`, `summary`, `experience`, `education`, `publications`,
-`projects`, `skills` and `preferences`. Everything is one JSONB document per user in `profile.document`, so new fields need no
+`codeAccounts`, `openSourceProjects`, `skills` and `preferences`. Everything is one JSONB document per user in `profile.document`, so new fields need no
 migration: a document without them reads with empty lists.
 
 - A **publication** has a required `title` and optional `venue`, `year` (1900 to next year), `authors` (free text) and `url`
   (absolute `http` or `https` only); at most 100.
 - Each **experience** entry has `technologies`, a list of short tags (not blank, at most 60 characters, at most 30 per list).
   The server never changes tags; the page and the CV reader tidy them (trim, drop duplicates that differ only in case).
-- A **project** has a required `name` and `type` (`ASSIGNMENT`, `PERSONAL`, `OPEN_SOURCE`, `WORK`) and optional `context`, `start`
-  and `end` (`YYYY-MM`), `description` (2000 characters), `technologies`, `results` (up to 20 lines, like achievements), `links`
-  (up to 5, each a label and an absolute `http` or `https` address) and `highlight` (set by the user only, for the CV tailoring
-  to prefer); at most 50 projects.
+- A **code account** is a `provider` (`GITHUB` for now) and a `username` (GitHub rule: 1 to 39 letters, digits and single hyphens,
+  not starting or ending with a hyphen); at most one per provider.
+- An **open source project** is a repository the user picked, stored as a snapshot: `provider`, `fullName` (`owner/repo`),
+  `name`, an `https` `url`, optional `description`, `language`, `topics`, `stars` and the user's own `note`; unique per
+  provider and `fullName`, at most 30, in the user's order. The old `projects` list is gone: stored values are ignored on
+  read and dropped on the next save, and a request that sends `projects` is rejected.
 - The request body limit is **256 KB** (413 before anything is parsed).
 
-The CV draft (`llm` module) can return technologies and projects too. A tag longer than 60 characters is dropped, an unknown
-project type becomes `PERSONAL`, a project without a name is left out, results are capped at 20, and a link without a label or
-without an `http(s)` address is dropped from its project.
+The CV draft (`llm` module) returns technologies per position and no projects (`section=projects` answers 400). A tag longer
+than 60 characters is dropped.
+
+### Repository listing
+
+`GET /api/profile/repositories?provider=GITHUB&username=<name>` (token required) lists the public, non-fork, non-archived
+repositories of that account, newest push first, at most 100 (one page), for the page's checklist. It reads and saves
+nothing of the user's. The username is checked before any outside call and the GitHub address comes from configuration
+(`jobhunter.repositories.github.base-url`, default `https://api.github.com`; timeouts and body cap beside it), so a request
+cannot reach another host. Answers are cached for 5 minutes per account because GitHub's unauthenticated limit (60 requests
+an hour per egress address) is shared by all users. Failures: 400 `invalid_username` or `unknown_provider`, 404
+`account_not_found`, 429 `provider_rate_limited`, 502 `provider_unavailable`. Nothing from the request or the answer is
+logged. A new provider is one `RepositoryProvider` implementation plus a `CodeProvider` value and its username rule in
+`UsernameRules.kt`.
 
 ## File cabinet (files module)
 
