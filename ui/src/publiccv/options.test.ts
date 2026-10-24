@@ -6,6 +6,7 @@ import {
   handleProblem,
   moveSection,
   setSection,
+  showsPublicPhotoPicker,
 } from './options.ts'
 
 describe('defaultSettings', () => {
@@ -26,7 +27,16 @@ describe('defaultSettings', () => {
         codeAccounts: false,
       },
       indexable: false,
+      photoFileId: null,
     })
+  })
+})
+
+describe('showsPublicPhotoPicker', () => {
+  it('is shown for the Professional template only', () => {
+    expect(showsPublicPhotoPicker({ template: 'PROFESSIONAL' })).toBe(true)
+    for (const template of ['CLASSIC', 'MODERN', 'COMPACT'] as const)
+      expect(showsPublicPhotoPicker({ template })).toBe(false)
   })
 })
 

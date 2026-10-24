@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { JpegPhotoPicker } from '../files/JpegPhotoPicker.tsx'
+import { listFiles, type FileInfo } from '../files/filesApi.ts'
 import {
   checkHandle,
   getPublicCv,
@@ -22,6 +24,7 @@ import {
   handleProblem,
   moveSection,
   setSection,
+  showsPublicPhotoPicker,
   type PublicCvContact,
   type PublicCvLanguage,
   type PublicCvSettings,
@@ -66,6 +69,12 @@ interface Notice {
 
 type Busy = 'save' | 'remove' | 'preview' | null
 
+/** The cabinet files for the photo picker; loaded only while the picker shows. */
+type Photos =
+  | { state: 'loading' }
+  | { state: 'loaded'; files: FileInfo[] }
+  | { state: 'failed'; message: string }
+
 function PublicCvForm() {
   const auth = useAuth()
   // The clock is read once, when the page opens: "can change from" is compared with that moment.
@@ -84,6 +93,8 @@ function PublicCvForm() {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
+  const [photos, setPhotos] = useState<Photos>({ state: 'loading' })
+  const photoPicker = showsPublicPhotoPicker(settings)
 
   // What the server holds. The form starts from it and keeps what the user types until a save or a removal.
   const savedHandle = saved.configured ? saved.handle : null
@@ -113,6 +124,22 @@ function PublicCvForm() {
       active = false
     }
   }, [auth])
+
+  useEffect(() => {
+    if (!photoPicker) return
+    let ignore = false
+    void listFiles(auth).then((result) => {
+      if (ignore) return
+      if (result.kind === 'loaded')
+        setPhotos({ state: 'loaded', files: result.files })
+      else if (result.kind === 'failed')
+        setPhotos({ state: 'failed', message: result.message })
+      else setPhotos({ state: 'failed', message: 'Please sign in again.' })
+    })
+    return () => {
+      ignore = true
+    }
+  }, [auth, photoPicker])
 
   // The availability check: only a well-formed handle that is not the saved one is looked up, once the user pauses.
   useEffect(() => {
@@ -349,8 +376,31 @@ function PublicCvForm() {
               <option value="CLASSIC">Classic</option>
               <option value="MODERN">Modern</option>
               <option value="COMPACT">Compact</option>
+              <option value="PROFESSIONAL">Professional</option>
             </select>
           </div>
+          {photoPicker && (
+            <div className="export-field">
+              {photos.state === 'loading' && (
+                <p role="status">Loading your photos…</p>
+              )}
+              {photos.state === 'failed' && (
+                <p role="alert">{photos.message}</p>
+              )}
+              {photos.state === 'loaded' && (
+                <JpegPhotoPicker
+                  id="public-photo"
+                  files={photos.files}
+                  selected={settings.photoFileId}
+                  onChange={(photoFileId) => update({ photoFileId })}
+                />
+              )}
+              <p className="notice">
+                The photo becomes visible to everyone with your link once you
+                publish.
+              </p>
+            </div>
+          )}
           <div className="export-field">
             <label htmlFor="public-language">Language</label>
             <select

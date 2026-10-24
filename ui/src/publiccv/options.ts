@@ -1,5 +1,5 @@
 /** The Public CV settings the page holds, and the JSON the backend takes (the Contract in design.md). Everything starts off. */
-export type PublicCvTemplate = 'CLASSIC' | 'MODERN' | 'COMPACT'
+export type PublicCvTemplate = 'CLASSIC' | 'MODERN' | 'COMPACT' | 'PROFESSIONAL'
 export type PublicCvLanguage = 'EN' | 'DE'
 export type PublicCvSectionKind =
   | 'PROFILE'
@@ -53,6 +53,8 @@ export interface PublicCvSettings {
   location: boolean
   contact: PublicCvContact
   indexable: boolean
+  /** The file cabinet JPEG shown on the page, or null for none. Only the Professional template shows it. */
+  photoFileId: string | null
 }
 
 export const HANDLE_FORM_MESSAGE =
@@ -84,6 +86,7 @@ export function defaultSettings(): PublicCvSettings {
       codeAccounts: false,
     },
     indexable: false,
+    photoFileId: null,
   }
 }
 
@@ -110,4 +113,11 @@ export function moveSection(
   next[index] = next[target]!
   next[target] = moved
   return next
+}
+
+/** The photo picker shows only for the Professional template. */
+export function showsPublicPhotoPicker(
+  settings: Pick<PublicCvSettings, 'template'>,
+): boolean {
+  return settings.template === 'PROFESSIONAL'
 }

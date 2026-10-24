@@ -11,6 +11,7 @@ export type PublicCvErrorCode =
   | 'name_required'
   | 'locked'
   | 'rate_limited'
+  | 'photo_invalid'
 
 export type PublicCvState =
   | { configured: false }
@@ -59,6 +60,8 @@ const MESSAGES: Record<PublicCvErrorCode, string> = {
   locked: 'An administrator disabled this page. It cannot be published again.',
   rate_limited:
     'You have reached the limit for this hour. Please try again later.',
+  photo_invalid:
+    'The chosen photo cannot be used. Choose another JPEG file or "No photo".',
 }
 
 const REASON_MESSAGES: Record<HandleReason, string> = {

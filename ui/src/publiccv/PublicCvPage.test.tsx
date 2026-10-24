@@ -140,6 +140,142 @@ afterEach(() => {
     })
 })
 
+/** A cabinet entry as the files list answers it; synthetic. */
+const cabinetFile = (id: string, name: string, contentType: string) => ({
+  id,
+  name,
+  kind: 'OTHER',
+  contentType,
+  sizeBytes: 1024,
+  uploadedAt: '2026-10-01T10:00:00Z',
+  master: false,
+})
+const PORTRAIT = cabinetFile(
+  '00000000-0000-0000-0000-00000000000a',
+  'ada-example-portrait.jpg',
+  'image/jpeg',
+)
+const CV_FILE = cabinetFile(
+  '00000000-0000-0000-0000-00000000000c',
+  'ada-example-cv.pdf',
+  'application/pdf',
+)
+
+/** Like `defaultAnswer`, and the file list answers with `cabinet`. */
+const withCabinet =
+  (cabinet: unknown[], answer: (call: Call) => Response = defaultAnswer) =>
+  (call: Call): Response =>
+    call.method === 'GET' && call.url === '/api/files'
+      ? json(200, cabinet)
+      : answer(call)
+
+/** Picks the Professional template, which shows the photo picker. */
+async function chooseProfessional() {
+  fireEvent.change(screen.getByLabelText('Template'), {
+    target: { value: 'PROFESSIONAL' },
+  })
+  await wait()
+}
+
+describe('the photo picker', () => {
+  it('is hidden for the other templates and shown for Professional', async () => {
+    stubApi(withCabinet([PORTRAIT]))
+    mount()
+    await wait()
+
+    expect(screen.queryByLabelText('Photo')).toBeNull()
+    await chooseProfessional()
+    expect(screen.getByLabelText('Photo')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Template'), {
+      target: { value: 'MODERN' },
+    })
+    await wait()
+    expect(screen.queryByLabelText('Photo')).toBeNull()
+  })
+
+  it('lists the JPEG files by name with No photo selected and says the photo is public', async () => {
+    stubApi(withCabinet([CV_FILE, PORTRAIT]))
+    mount()
+    await wait()
+    await chooseProfessional()
+
+    const select = screen.getByLabelText('Photo')
+    expect(select).toHaveValue('')
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['No photo', 'ada-example-portrait.jpg'])
+    expect(
+      screen.getByText(
+        'The photo becomes visible to everyone with your link once you publish.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('sends the chosen photo id with the settings on publish', async () => {
+    const calls = stubApi(withCabinet([PORTRAIT]))
+    mount()
+    await wait()
+    await prepareToPublish()
+    await chooseProfessional()
+    fireEvent.change(screen.getByLabelText('Photo'), {
+      target: { value: PORTRAIT.id },
+    })
+
+    fireEvent.click(button('Publish'))
+    await wait()
+
+    expect(putCalls(calls)[0]!.body).toMatchObject({
+      settings: expect.objectContaining({
+        template: 'PROFESSIONAL',
+        photoFileId: PORTRAIT.id,
+      }),
+    })
+  })
+
+  it('sends a null photo id with No photo', async () => {
+    const calls = stubApi(withCabinet([PORTRAIT]))
+    mount()
+    await wait()
+    await prepareToPublish()
+    await chooseProfessional()
+
+    fireEvent.click(button('Publish'))
+    await wait()
+
+    expect(putCalls(calls)[0]!.body).toMatchObject({
+      settings: expect.objectContaining({ photoFileId: null }),
+    })
+  })
+
+  it('shows the photo message without the file name when the save is refused', async () => {
+    stubApi(
+      withCabinet([PORTRAIT], (call) =>
+        call.method === 'PUT'
+          ? json(400, { error: 'photo_invalid' })
+          : defaultAnswer(call),
+      ),
+    )
+    mount()
+    await wait()
+    await prepareToPublish()
+    await chooseProfessional()
+    fireEvent.change(screen.getByLabelText('Photo'), {
+      target: { value: PORTRAIT.id },
+    })
+
+    fireEvent.click(button('Publish'))
+    await wait()
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(
+      'The chosen photo cannot be used. Choose another JPEG file or "No photo".',
+    )
+    expect(alert.textContent).not.toContain('ada-example-portrait')
+  })
+})
+
 describe('the public CV page', () => {
   it('starts private: every checkbox unticked, Classic, English, and the name is always shown', async () => {
     stubApi()

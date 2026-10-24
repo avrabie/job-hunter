@@ -136,6 +136,37 @@ describe('savePublicCv', () => {
     },
   )
 
+  it('sends the photo id with the settings', async () => {
+    const spy = answer(200, json(saved))
+    const photo = {
+      ...body,
+      settings: {
+        ...body.settings,
+        template: 'PROFESSIONAL' as const,
+        photoFileId: '00000000-0000-0000-0000-00000000000a',
+      },
+    }
+    await savePublicCv(auth, photo)
+    const [, init] = spy.mock.calls[0]!
+    expect(JSON.parse(init!.body as string)).toEqual(photo)
+  })
+
+  it('gives the photo message without the file name for photo_invalid', async () => {
+    answer(
+      400,
+      json({ error: 'photo_invalid', name: 'ada-example-portrait.jpg' }),
+    )
+    const result = await savePublicCv(auth, body)
+    expect(result).toEqual({
+      kind: 'failed',
+      code: 'photo_invalid',
+      message:
+        'The chosen photo cannot be used. Choose another JPEG file or "No photo".',
+    })
+    if (result.kind === 'failed')
+      expect(result.message).not.toContain('ada-example-portrait')
+  })
+
   it('gives the name message for a missing name', async () => {
     answer(409, json({ error: 'name_required' }))
     expect(await savePublicCv(auth, body)).toEqual({

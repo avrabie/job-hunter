@@ -34,7 +34,7 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 ## 6. Public page (backend and UI)
 
 - [ ] 6.1 Backend: `PublicCvSettings.photoFileId`, validation on save (400 `photo_invalid`), template PROFESSIONAL accepted, photo passed to the builder, render cache key, audit flag `photo`, route `GET|HEAD /api/public/cv/{handle}/photo` per design decision 8, OpenAPI hidden or documented like the page route, docs `docs/cv-public.md` and `docs/cv-export.md`. Tests (integration, extend `PublicCvApiTests` or a new class): off by default; photo shown and route 200 with the headers; not the owner's file 400; deleted file gives page without photo and route 404; paused 404; unknown handle `/x/photo` identical to other 404; limits shared; HEAD; cache key changes when the file is replaced; photo and file id absent from logs and audit; the existing `/api/public/cv/**` catch-all tests still pass.
-- [ ] 6.2 UI: `ui/src/publiccv` template option, photo picker and warning, options and API types, tests like `PublicCvPage.test.tsx`.
+- [x] 6.2 UI: `ui/src/publiccv` template option, photo picker and warning, options and API types, tests like `PublicCvPage.test.tsx`.
 
 ## 7. Lead
 
