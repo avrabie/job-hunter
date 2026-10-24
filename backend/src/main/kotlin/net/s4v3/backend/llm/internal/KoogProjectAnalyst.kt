@@ -110,7 +110,7 @@ internal class KoogProjectAnalyst(
     private fun origin(e: Exception): String =
         e.stackTrace.firstOrNull()?.let { " at ${it.className.substringAfterLast('.')}.${it.methodName}" }.orEmpty()
 
-    private companion object {
+    internal companion object {
         const val MAX_OUTPUT_TOKENS = 8_000
 
         val REPOSITORY_TAG = Regex("</?repository>", RegexOption.IGNORE_CASE)
