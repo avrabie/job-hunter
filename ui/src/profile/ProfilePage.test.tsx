@@ -1419,3 +1419,85 @@ describe('Traceable skills from analysis', () => {
     })
   })
 })
+
+describe('Contact section', () => {
+  it('fills the contact fields, saves them, and shows the same values after a reload', async () => {
+    const calls = stubApi((method, body) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(200, {
+            version: 1,
+            profile: (body as { profile: Profile }).profile,
+          }),
+    )
+    const first = mount()
+    await screen.findByLabelText('Full name')
+    await userEvent.type(screen.getByLabelText('Full name'), 'Ada Example')
+    await userEvent.type(screen.getByLabelText('Headline'), 'Engineer')
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@example.org')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 1).')).toBeVisible()
+    const sent = calls.find((c) => c.method === 'PUT')!.body as {
+      profile: Profile
+    }
+    expect(sent.profile.contact).toEqual({
+      fullName: 'Ada Example',
+      headline: 'Engineer',
+      email: 'ada@example.org',
+      phone: null,
+      website: null,
+      linkedin: null,
+    })
+    first.unmount()
+
+    stubApi(() => json(200, { version: 1, profile: sent.profile }))
+    mount()
+    expect(await screen.findByDisplayValue('Ada Example')).toBeVisible()
+    expect(screen.getByDisplayValue('ada@example.org')).toBeVisible()
+  })
+
+  it('names a bad email on leaving it, without saving', async () => {
+    const calls = stubApi(() =>
+      json(200, { version: 0, profile: emptyProfile() }),
+    )
+    mount()
+    await screen.findByLabelText('Email')
+    await userEvent.type(screen.getByLabelText('Email'), 'not an email')
+    await userEvent.tab()
+    expect(screen.getByText('Email: must be an email address')).toBeVisible()
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+  })
+
+  it('shows the server message at the email field when saved anyway', async () => {
+    const calls = stubApi((method) =>
+      method === 'GET'
+        ? json(200, { version: 0, profile: emptyProfile() })
+        : json(400, {
+            error: 'validation_failed',
+            fields: { 'contact.email': 'must be an email address' },
+          }),
+    )
+    mount()
+    await screen.findByLabelText('Email')
+    await userEvent.type(screen.getByLabelText('Email'), 'nope')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(1)
+    const label = (
+      await screen.findAllByText('Email: must be an email address')
+    )[0]!.closest('label')!
+    expect(within(label).getByRole('textbox')).toHaveValue('nope')
+  })
+
+  it('says the full name is needed to export and links to the export page', async () => {
+    stubApi(() => json(200, { version: 0, profile: emptyProfile() }))
+    mount()
+    expect(
+      await screen.findByText('The full name is needed to export a CV.'),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Export CV' })).toHaveAttribute(
+      'href',
+      '/export',
+    )
+  })
+})

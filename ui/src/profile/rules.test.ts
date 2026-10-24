@@ -206,3 +206,58 @@ describe('checkProfile', () => {
     })
   })
 })
+
+describe('checkProfile contact', () => {
+  const withContact = (patch: Partial<Profile['contact']>): Profile => ({
+    ...emptyProfile(),
+    contact: { ...emptyProfile().contact, ...patch },
+  })
+
+  it.each([
+    ['ada@example.org', undefined],
+    ['not an email', 'must be an email address'],
+    ['ada@example', 'must be an email address'],
+    ['ada @example.org', 'must be an email address'],
+    ['a@b@example.org', 'must be an email address'],
+    ['@example.org', 'must be an email address'],
+  ])('email "%s"', (email, message) => {
+    expect(checkProfile(withContact({ email }))['contact.email']).toBe(message)
+  })
+
+  it.each([
+    ['+41 79 000 00 00', undefined],
+    ['(044) 123-45/67', undefined],
+    ['call me', 'must use digits, spaces and + - ( ) /'],
+    ['1'.repeat(31), 'must be at most 30 characters'],
+  ])('phone "%s"', (phone, message) => {
+    expect(checkProfile(withContact({ phone }))['contact.phone']).toBe(message)
+  })
+
+  it.each([
+    ['https://example.org', undefined],
+    ['http://example.org', 'must be an https address'],
+    ['javascript:alert(1)', 'must be an https address'],
+    ['not a url', 'must be an https address'],
+  ])('website "%s"', (website, message) => {
+    expect(checkProfile(withContact({ website }))['contact.website']).toBe(
+      message,
+    )
+  })
+
+  it('checks LinkedIn like the website', () => {
+    expect(
+      checkProfile(withContact({ linkedin: 'http://linkedin.com/in/ada' })),
+    ).toEqual({ 'contact.linkedin': 'must be an https address' })
+  })
+
+  it('limits the name and headline to 200 characters', () => {
+    expect(checkProfile(withContact({ fullName: 'A'.repeat(201) }))).toEqual({
+      'contact.fullName': 'must be at most 200 characters',
+    })
+    expect(checkProfile(withContact({ headline: 'A'.repeat(200) }))).toEqual({})
+  })
+
+  it('finds nothing wrong with an empty contact block', () => {
+    expect(checkProfile(withContact({}))).toEqual({})
+  })
+})

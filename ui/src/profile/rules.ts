@@ -9,6 +9,19 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// Mirrors the backend rule: one @ with text on both sides, a dot in the domain part, no spaces.
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Mirrors the backend rule: digits, spaces, + - ( ) / only; the length is checked apart.
+const PHONE = /^[0-9+\-() /]+$/
+
 // Mirrors the backend rule: 1 to 39 letters or digits, single hyphens inside, no leading or trailing hyphen.
 const GITHUB_USERNAME = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/
 
@@ -42,6 +55,31 @@ export function checkProfile(profile: Profile): Record<string, string> {
   const order = (path: string, start: string | null, end: string | null) => {
     if (start && end && end < start)
       problems[path] = 'must not be before the start'
+  }
+
+  const contact = p.contact
+  const contactText = (field: keyof typeof contact, max: number) => {
+    const value = contact[field]
+    if (value !== null) tooLong(`contact.${field}`, value, max)
+  }
+  contactText('fullName', 200)
+  contactText('headline', 200)
+  if (contact.email !== null) {
+    tooLong('contact.email', contact.email, 200)
+    if (!EMAIL.test(contact.email))
+      problems['contact.email'] = 'must be an email address'
+  }
+  if (contact.phone !== null) {
+    tooLong('contact.phone', contact.phone, 30)
+    if (!PHONE.test(contact.phone))
+      problems['contact.phone'] = 'must use digits, spaces and + - ( ) /'
+  }
+  for (const field of ['website', 'linkedin'] as const) {
+    const value = contact[field]
+    if (value === null) continue
+    tooLong(`contact.${field}`, value, 500)
+    if (!isHttpsUrl(value))
+      problems[`contact.${field}`] = 'must be an https address'
   }
 
   const canton = p.location?.canton
