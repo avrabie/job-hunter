@@ -43,7 +43,7 @@ jobhunter:
     # The key is read from the environment and never logged; without it a CV extraction fails with a clear message.
     api-key: ${ANTHROPIC_API_KEY:}
     # Name of a Koog model constant: Haiku_4_5, Sonnet_5 or Opus_5.
-    model: Sonnet_5
+    model: Haiku_4_5
   cv:
     # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
     max-text-chars: 120000
