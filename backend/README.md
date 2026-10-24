@@ -247,6 +247,22 @@ migration: a document without them reads with empty lists.
 The CV draft (`llm` module) returns technologies per position and no projects (`section=projects` answers 400). A tag longer
 than 60 characters is dropped.
 
+### CV export
+
+`POST /api/cv/export` (token required) renders the caller's **saved** profile as a CV: `{"format":"PDF","template":"MODERN","language":"DE",
+"sections":[...],"includeOpenSource":true,"includeAnalysis":false,"includeWorkAuthorisation":true}`. `format` is `MARKDOWN`, `HTML` or
+`PDF` (A4, selectable text, fonts embedded); `template` is `CLASSIC` (single column, ATS-safe), `MODERN` (two columns, accent colour) or
+`COMPACT` (dense, aims at one page); `language` is `EN` or `DE` (Swiss spelling, no `ß`). `sections` selects and orders `PROFILE`,
+`EXPERIENCE`, `OPEN_SOURCE`, `EDUCATION`, `SKILLS`, `LANGUAGES`, `PUBLICATIONS` (default: all, in that order, empty ones left out). The
+body never carries profile content and an unknown field is a 400 `invalid_request`. It is deterministic (no model, no cost) and prints only
+what the profile holds: preferences, salary and cantons are never printed, and the user's own text is never translated. It needs
+`contact.fullName` in the saved profile (409 `name_required`). Limits: `jobhunter.cv-export.per-hour` (30) per user, counted before any
+rendering (429 `too_many_exports`); at most 2 PDF renders at once, a third waits 5 s and then gets 503 `busy`; 500 `render_failed`.
+Profile text is escaped before it enters HTML, links are emitted only for http(s), the HTML carries a CSP that forbids scripts and outside
+resources, and the PDF renderer makes no network request. Nothing of the profile is logged. See `docs/cv-export.md` for the pipeline, the
+dependency and the font licences. The profile's `contact` block (full name, headline, email, phone, website, LinkedIn) is validated like
+the other fields (`contact.email` and so on) and stored only in the profile document.
+
 ### Project analysis
 
 `POST /api/profile/open-source-projects/analyze` with `{"provider":"GITHUB","fullName":"owner/repo"}` (token required) analyses one

@@ -37,7 +37,7 @@ Groups 1, 2, 3, 5 and 6 are independent and can run in parallel. Group 3 needs t
 
 ## 7. Docs
 
-- [ ] 7.1 Document the endpoint, options, templates, limits and config key in `backend/README.md`, the Export page and Contact section in `ui/README.md`, the new dependency, its LGPL licence and the bundled font licence in `docs/` (a short `docs/cv-export.md`) and one line in `PLAN.md` (the same templates will serve tailored CVs later). Verify: `grep -n -i "export" backend/README.md ui/README.md PLAN.md` shows each file and `docs/cv-export.md` exists.
+- [x] 7.1 Document the endpoint, options, templates, limits and config key in `backend/README.md`, the Export page and Contact section in `ui/README.md`, the new dependency, its LGPL licence and the bundled font licence in `docs/` (a short `docs/cv-export.md`) and one line in `PLAN.md` (the same templates will serve tailored CVs later). Verify: `grep -n -i "export" backend/README.md ui/README.md PLAN.md` shows each file and `docs/cv-export.md` exists.
 
 ## Workflow follow-up
 

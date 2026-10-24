@@ -97,6 +97,15 @@ source and keeps its level, any other technology becomes a skill from repository
 their source links and evidence, and each skill and source can be removed. Analysing again replaces the repository's earlier sources
 (after a confirmation), and removing a project or its analysis takes its sources off the skills. Fixed messages cover each error code.
 
+## Contact and CV export
+
+The profile page starts with a **Contact** section (full name, headline, email, phone, website, LinkedIn; checked in the browser when a
+field is left, the server stays the authority). The full name is needed to export. **Export CV** (shell and profile page) opens `/export`:
+choose format (Markdown, HTML, PDF), template (Classic, Modern, Compact), language (English, Deutsch), the sections (tick, move up/down)
+and the options for open source projects, analysis summaries and work authorisation. The preview is the HTML version in a sandboxed
+`iframe` (`srcdoc`, no permissions), refreshed shortly after a change; **Download** saves the file the server names. If the server answers
+`name_required` the page links to the Contact section. Nothing of the profile or the file is kept in browser storage.
+
 ## File cabinet (profile page)
 
 The top of `/profile` has **Your files**: every file with its kind (CV or Other), size (KB, MB, GB), date and a **Master CV**
