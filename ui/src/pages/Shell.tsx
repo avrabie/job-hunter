@@ -60,6 +60,9 @@ export function Shell({ identity }: { identity: string }) {
         <Link className="button" to="/export">
           Export CV
         </Link>
+        <Link className="button" to="/publish">
+          Public CV
+        </Link>
         <button
           type="button"
           className="secondary"

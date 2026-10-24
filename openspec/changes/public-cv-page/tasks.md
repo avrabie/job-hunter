@@ -30,8 +30,8 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 
 ## 5. UI Public CV page
 
-- [ ] 5.1 Add `ui/src/publiccv/publicCvApi.ts` (get, put, delete, handleCheck, preview with fixed messages per error code; copy `exportApi.ts`/`analysisApi.ts`), `options.ts` (types of the Contract, all-off defaults) and tests. Verify: `npx vitest run src/publiccv`.
-- [ ] 5.2 Add `ui/src/publiccv/PublicCvPage.tsx` per the `ui-cv-public` requirements "Public CV page", "Handle field", "Save, publish, pause and remove" and "Preview" (debounced availability check, sections with move up/down, live banner with copy button, preview opens a new tab, no rendered HTML in the DOM), the route `/publish` in `App.tsx`, a link in `Shell.tsx`, a constant `PUBLIC_CV_PATH` (`/cv/`), CSS only for the new page. Verify: `PublicCvPage.test.tsx` for every scenario of those requirements; then `npx vitest run && npx tsc -b && npx vite build && npx oxlint --deny-warnings && npx prettier --check .`.
+- [x] 5.1 Add `ui/src/publiccv/publicCvApi.ts` (get, put, delete, handleCheck, preview with fixed messages per error code; copy `exportApi.ts`/`analysisApi.ts`), `options.ts` (types of the Contract, all-off defaults) and tests. Verify: `npx vitest run src/publiccv`.
+- [x] 5.2 Add `ui/src/publiccv/PublicCvPage.tsx` per the `ui-cv-public` requirements "Public CV page", "Handle field", "Save, publish, pause and remove" and "Preview" (debounced availability check, sections with move up/down, live banner with copy button, preview opens a new tab, no rendered HTML in the DOM), the route `/publish` in `App.tsx`, a link in `Shell.tsx`, a constant `PUBLIC_CV_PATH` (`/cv/`), CSS only for the new page. Verify: `PublicCvPage.test.tsx` for every scenario of those requirements; then `npx vitest run && npx tsc -b && npx vite build && npx oxlint --deny-warnings && npx prettier --check .`.
 
 ## 6. UI profile notice
 
