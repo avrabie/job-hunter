@@ -31,7 +31,7 @@ class GoogleAccountService(
     /** Runs the mapping in a transaction; if a parallel first sign-in won the race, runs it once more. */
     fun signIn(googleSubject: String, email: String, givenName: String?, familyName: String?): User {
         val normalized = UserRegistrationService.normalizeEmail(email)
-        fun attempt() = transaction.execute { map(googleSubject, normalized, givenName, familyName) }!!
+        fun attempt() = transaction.execute { map(googleSubject, normalized, givenName, familyName) }
         return try {
             attempt()
         } catch (_: DataIntegrityViolationException) {

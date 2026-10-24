@@ -94,11 +94,11 @@ internal class FilesController(
             ResponseEntity.ok(details)
         } catch (e: CvRejected) {
             when (e.reason) {
-                CvRejection.TOO_LARGE -> fileError(HttpStatus.PAYLOAD_TOO_LARGE, FilesMessages.TOO_LARGE_CV)
+                CvRejection.TOO_LARGE -> fileError(HttpStatus.CONTENT_TOO_LARGE, FilesMessages.TOO_LARGE_CV)
                 CvRejection.WRONG_TYPE -> fileError(HttpStatus.BAD_REQUEST, FilesMessages.WRONG_TYPE)
             }
         } catch (e: TooLargeForKind) {
-            fileError(HttpStatus.PAYLOAD_TOO_LARGE, e.message.orEmpty())
+            fileError(HttpStatus.CONTENT_TOO_LARGE, e.message.orEmpty())
         } catch (e: IOException) {
             if (!noSpace(e)) throw e
             fileError(HttpStatus.INSUFFICIENT_STORAGE, FilesMessages.NO_ROOM)

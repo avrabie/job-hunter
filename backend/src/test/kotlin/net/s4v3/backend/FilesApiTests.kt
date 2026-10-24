@@ -179,7 +179,7 @@ internal class FilesApiTests(
         val sub = newSub()
 
         upload(sub, "big.txt", ByteArray(5 * 1024 * 1024 + 1) { 'a'.code.toByte() }, kind = "CV")
-            .andExpect(status().isPayloadTooLarge)
+            .andExpect(status().isContentTooLarge)
             .andExpect(jsonPath("$.message").value("The file is larger than 5 MB."))
 
         assertEquals(0, rows(sub))
@@ -191,7 +191,7 @@ internal class FilesApiTests(
         val sub = newSub()
 
         upload(sub, "SECRETNAME4417.bin", ByteArray(1024 * 1024 + 1))
-            .andExpect(status().isPayloadTooLarge)
+            .andExpect(status().isContentTooLarge)
             .andExpect(jsonPath("$.message").value("The file is larger than 10 GB."))
 
         assertEquals(0, rows(sub))

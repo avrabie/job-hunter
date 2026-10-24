@@ -1,3 +1,7 @@
+// openhtmltopdf 1.1.100 marks useFastMode(), HttpStream and HttpStreamFactory as deprecated and offers no replacement yet.
+// They are still the documented way to pick the fast renderer and to refuse every outside request. Re-check when upgrading.
+@file:Suppress("DEPRECATION")
+
 package net.s4v3.backend.cv.export.internal
 
 import com.openhtmltopdf.extend.FSSupplier

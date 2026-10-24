@@ -185,7 +185,7 @@ internal class CvExtractApiTests(
         val sub = newSub()
         upload(sub, "scan.pdf", pdfWithText(null))
 
-        extract(sub).andExpect(status().isUnprocessableEntity)
+        extract(sub).andExpect(status().isUnprocessableContent)
 
         assertTrue(reader.received.isEmpty())
     }
@@ -195,7 +195,7 @@ internal class CvExtractApiTests(
         val sub = newSub()
         upload(sub, "long.txt", "a".repeat(2001).toByteArray())
 
-        extract(sub).andExpect(status().isPayloadTooLarge)
+        extract(sub).andExpect(status().isContentTooLarge)
 
         assertTrue(reader.received.isEmpty())
     }
