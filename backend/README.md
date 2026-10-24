@@ -73,6 +73,15 @@ Eleven modules, one top-level package each under `net.s4v3.backend`: `sources`, 
 - Module events are specified as contracts in `openspec/`; `accounts` publishes `UserRegistered(userId, registeredAt)` and
   `postings` publishes `JobIngested(postingId, ingestedAt)`.
 
+### Where things live
+
+The module `web` holds the HTTP controllers of profile (`ProfileController`), postings (`PostingsController`),
+repositories (`RepositoriesController`) and project analysis (`ProjectAnalysisController`). Its `web/internal/` also has
+`AnalysisLimiter`, `AnalysisSettings`, `ErrorResponses` and `OpenApiConfig`. The name is historical: `web` is not every HTTP
+endpoint, the CV and file endpoints live in their own modules. The module `cv` holds CV extraction (`cv/internal`, with the
+export and public-CV controllers beside it there), CV export (`cv/export`: the document model, the renderers and the export
+service) and the public CV (`cv/publiccv`).
+
 ## Postings (for source adapters)
 
 A source adapter maps what a site delivers to a `PostingCandidate` and calls `PostingIngest.ingest`. The shape below is

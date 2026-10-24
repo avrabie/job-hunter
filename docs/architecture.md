@@ -181,6 +181,15 @@ Event edges (dotted, see section 5): `postings` publishes `JobIngested`, `profil
 
 Empty module shells. The plan lists them (`PLAN.md` section 4), the code does not implement them.
 
+### Where things live
+
+The module `web` holds the HTTP controllers of profile (`ProfileController`), postings (`PostingsController`),
+repositories (`RepositoriesController`) and project analysis (`ProjectAnalysisController`). Its `web/internal/` also has
+`AnalysisLimiter`, `AnalysisSettings`, `ErrorResponses` and `OpenApiConfig`. The name is historical: `web` is not every HTTP
+endpoint, the CV and file endpoints live in their own modules. The module `cv` holds CV extraction (`cv/internal`, with the
+export and public-CV controllers beside it there), CV export (`cv/export`: the document model, the renderers and the export
+service) and the public CV (`cv/publiccv`).
+
 ## 3. Main flows
 
 ### 3.1 Sign-in and token validation
