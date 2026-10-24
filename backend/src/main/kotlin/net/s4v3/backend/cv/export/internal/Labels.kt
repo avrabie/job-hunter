@@ -74,7 +74,7 @@ internal object Labels {
             SkillLevel.BEGINNER -> "Grundkenntnisse"
             SkillLevel.INTERMEDIATE -> "Gute Kenntnisse"
             SkillLevel.ADVANCED -> "Fortgeschritten"
-            SkillLevel.EXPERT -> "Expertise"
+            SkillLevel.EXPERT -> "Experte"
         }
     }
 

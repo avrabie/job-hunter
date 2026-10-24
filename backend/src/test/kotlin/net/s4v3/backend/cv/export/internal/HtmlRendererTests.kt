@@ -48,6 +48,7 @@ class HtmlRendererTests {
         assertFalse(data.contains("<a "))
         val ok = html(docWith(CvEntry("Job", link = CvLink("repo", "https://example.org/a?b=1&c=2"))))
         assertTrue(ok.contains("<a href=\"https://example.org/a?b=1&amp;c=2\">repo</a>"))
+        assertTrue(ok.contains("<p class=\"head\">Job</p>"), "the heading stays visible when an entry has a link")
     }
 
     @Test

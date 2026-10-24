@@ -65,8 +65,8 @@ internal class HtmlRenderer : CvRenderer {
 
     private fun StringBuilder.entry(e: CvEntry) {
         append("<div class=\"entry\">\n")
-        val heading = e.link?.let { link(it) } ?: esc(e.heading)
-        append("<p class=\"head\">$heading</p>\n")
+        append("<p class=\"head\">${esc(e.heading)}</p>\n")
+        e.link?.let { append("<p class=\"link\">${link(it)}</p>\n") }
         e.subheading?.let { append("<p>${esc(it)}</p>\n") }
         val meta = listOfNotNull(e.period, e.place).filter { it.isNotBlank() }
         if (meta.isNotEmpty()) append("<p class=\"meta\">${esc(meta.joinToString(" | "))}</p>\n")

@@ -215,7 +215,7 @@ class CvBuilderTests {
         val document = build(options = options(language = CvLanguage.DE, sections = listOf(CvSectionKind.SKILLS, CvSectionKind.LANGUAGES)))
 
         val skills = document.sections[0] as TagSection
-        assertEquals(listOf("Kotlin (Expertise)", "PostgreSQL", "Spring Boot"), skills.tags)
+        assertEquals(listOf("Kotlin (Experte)", "PostgreSQL", "Spring Boot"), skills.tags)
         val languages = document.sections[1] as LineSection
         assertEquals(listOf("Englisch – Fortgeschritten", "Deutsch – Gute Kenntnisse"), languages.lines)
     }

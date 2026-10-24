@@ -77,7 +77,7 @@ class LabelsTests {
     @Test
     fun `skill and language levels are words`() {
         assertEquals("Expert", Labels.skillLevel(SkillLevel.EXPERT, CvLanguage.EN))
-        assertEquals("Expertise", Labels.skillLevel(SkillLevel.EXPERT, CvLanguage.DE))
+        assertEquals("Experte", Labels.skillLevel(SkillLevel.EXPERT, CvLanguage.DE))
         assertEquals("Advanced", Labels.languageLevel(LanguageLevel.C1, CvLanguage.EN))
         assertEquals("Fortgeschritten", Labels.languageLevel(LanguageLevel.C1, CvLanguage.DE))
         assertEquals("Native", Labels.languageLevel(LanguageLevel.NATIVE, CvLanguage.EN))
