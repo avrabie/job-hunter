@@ -195,3 +195,55 @@ section {
 .cv-section {
   margin-bottom: 2rem;
 }
+
+/* Export page: options on the left, preview and download on the right; one column on narrow screens. */
+.export-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.export-field label {
+  margin-bottom: 0.25rem;
+}
+
+.export-field select {
+  margin-bottom: 1rem;
+}
+
+.export-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.export-sections li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.export-sections label.inline {
+  flex: 1;
+  margin-right: 0;
+}
+
+.export-sections button {
+  padding: 0.25rem 0.6rem;
+}
+
+.export-preview {
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: white;
+}
+
+@media (max-width: 40rem) {
+  .export-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
