@@ -131,6 +131,14 @@ internal class PublicCvRepository(private val jdbc: JdbcTemplate) {
             sub, Timestamp.from(now.minus(CHANGE_INTERVAL)),
         ) == true
 
+    /** When the owner last changed the handle, from the audit; null when never. */
+    fun lastHandleChange(sub: String): Instant? =
+        jdbc.query(
+            "select max(occurred_at) as at from public_cv_audit where owner_sub = ? and event = 'HANDLE_CHANGED'",
+            { rs, _ -> rs.getTimestamp("at")?.toInstant() },
+            sub,
+        ).firstOrNull()
+
     /** Appends one audit row. [flags] names the settings that are on; it never carries their values. */
     fun audit(sub: String, event: PublicCvEvent, at: Instant, flags: Map<String, Boolean>) {
         jdbc.update(

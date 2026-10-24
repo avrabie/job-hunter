@@ -83,6 +83,10 @@ The owner SHALL choose what is public with a settings object: `template` (`CLASS
 - **WHEN** the profile has no full name and the user publishes
 - **THEN** the response is 409 `name_required`
 
+#### Scenario: Remove while locked
+- **WHEN** a page locked by an administrator is removed by its owner
+- **THEN** the response is 409 `locked` and the page and its lock stay
+
 #### Scenario: Another user's page is unreachable
 - **WHEN** users A and B each published and A calls the management endpoints
 - **THEN** A sees and changes only A's page
