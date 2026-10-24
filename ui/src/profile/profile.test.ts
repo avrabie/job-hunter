@@ -52,6 +52,7 @@ describe('types match the backend sample', () => {
       'username',
     ])
     expect(Object.keys(full.openSourceProjects[0]!).sort()).toEqual([
+      'analysis',
       'description',
       'fullName',
       'language',
@@ -79,6 +80,7 @@ describe('types match the backend sample', () => {
           topics: ['demo'],
           stars: 0,
           note: ' ',
+          analysis: null,
         },
       ],
     }
@@ -96,6 +98,7 @@ describe('types match the backend sample', () => {
       topics: ['demo'],
       stars: 0,
       note: null,
+      analysis: null,
     })
   })
 
@@ -138,6 +141,37 @@ describe('types match the backend sample', () => {
       authors: null,
       url: 'https://example.org/p',
     })
+  })
+
+  it('sends the analysis of a project and the origin and sources of a skill', () => {
+    const out = toRequestProfile(full)
+    expect(out.openSourceProjects[0]!.analysis).toEqual(
+      full.openSourceProjects[0]!.analysis,
+    )
+    expect(out.skills[2]).toEqual(full.skills[2])
+    expect(out.skills[2]!.origin).toBe('ANALYSIS')
+    expect(out.skills[2]!.sources).toHaveLength(1)
+  })
+
+  it('sends a project without an analysis as null', () => {
+    const p: Profile = {
+      ...emptyProfile(),
+      openSourceProjects: [
+        {
+          provider: 'GITHUB',
+          fullName: 'octocat/hello-world',
+          name: 'hello-world',
+          url: 'https://github.com/octocat/hello-world',
+          description: null,
+          language: null,
+          topics: [],
+          stars: null,
+          note: null,
+          analysis: null,
+        },
+      ],
+    }
+    expect(toRequestProfile(p).openSourceProjects[0]!.analysis).toBeNull()
   })
 
   it('goes to the wire unchanged when it is already clean', () => {

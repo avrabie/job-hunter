@@ -80,6 +80,35 @@ export interface CodeAccount {
   username: string
 }
 
+export const TECH_CATEGORIES = [
+  'LANGUAGE',
+  'FRAMEWORK',
+  'LIBRARY',
+  'DATABASE',
+  'TOOL',
+  'PLATFORM',
+  'OTHER',
+] as const
+export type TechCategory = (typeof TECH_CATEGORIES)[number]
+
+/** One technology found in a repository, with the file it was read from. */
+export interface Technology {
+  name: string
+  category: TechCategory
+  evidencePath: string
+  evidence: string
+}
+
+/** What the analysis of a repository found; stored with the picked project. */
+export interface ProjectAnalysis {
+  summary: string
+  architecture: string
+  techStack: Technology[]
+  files: string[]
+  truncated: boolean
+  analyzedAt: string
+}
+
 /** A repository the user picked; a snapshot of its public facts plus the user's note. */
 export interface OpenSourceProject {
   provider: CodeProvider
@@ -91,7 +120,14 @@ export interface OpenSourceProject {
   topics: string[]
   stars: number | null
   note: string | null
+  analysis: ProjectAnalysis | null
 }
+
+/** Two repositories are the same when provider and full name match; the page and the skills use this. */
+export const sameRepository = (
+  a: Pick<OpenSourceProject, 'provider' | 'fullName'>,
+  b: Pick<OpenSourceProject, 'provider' | 'fullName'>,
+) => a.provider === b.provider && a.fullName === b.fullName
 
 /** A repository as the listing endpoint returns it, before the user picks it. */
 export interface Repository {
@@ -106,9 +142,23 @@ export interface Repository {
   pushedAt: string | null
 }
 
+/** `ANALYSIS` skills were added from a repository analysis; `MANUAL` ones were typed by the user. */
+export const SKILL_ORIGINS = ['MANUAL', 'ANALYSIS'] as const
+export type SkillOrigin = (typeof SKILL_ORIGINS)[number]
+
+/** A repository that names a skill, with the file and note that show it. */
+export interface SkillSource {
+  provider: CodeProvider
+  fullName: string
+  url: string
+  evidence: string
+}
+
 export interface Skill {
   name: string
   level: SkillLevel | null
+  origin: SkillOrigin
+  sources: SkillSource[]
 }
 
 export interface Preferences {
@@ -189,7 +239,12 @@ export const blankPublication = (): Publication => ({
   url: null,
 })
 
-export const blankSkill = (): Skill => ({ name: '', level: null })
+export const blankSkill = (): Skill => ({
+  name: '',
+  level: null,
+  origin: 'MANUAL',
+  sources: [],
+})
 
 export const blankLanguage = (): LanguageSkill => ({ code: '', level: 'B2' })
 
@@ -264,8 +319,15 @@ export function toRequestProfile(p: Profile): Profile {
       topics: j.topics,
       stars: j.stars,
       note: text(j.note),
+      analysis: j.analysis,
     })),
-    skills: p.skills.map((s) => ({ name: required(s.name), level: s.level })),
+    // A skill from before origins and sources goes out without them; the server reads that as typed by the user.
+    skills: p.skills.map((s) => ({
+      name: required(s.name),
+      level: s.level,
+      origin: s.origin,
+      sources: s.sources,
+    })),
     preferences: {
       ...p.preferences,
       targetRoles: p.preferences.targetRoles.map(required),

@@ -9,11 +9,19 @@ import {
 import { FileCabinet } from '../files/FileCabinet.tsx'
 import { loadMaster } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { analyzeProject, type AnalysisResult } from './analysisApi.ts'
 import { ProfileForm, type FillState } from './ProfileForm.tsx'
 import { listRepositories } from './repositoriesApi.ts'
 import { loadProfile, saveProfile } from './profileApi.ts'
 import { checkProfile } from './rules.ts'
-import { emptyProfile, toRequestProfile, type Profile } from './types.ts'
+import { applyAnalysis } from './skills.ts'
+import {
+  emptyProfile,
+  sameRepository,
+  toRequestProfile,
+  type OpenSourceProject,
+  type Profile,
+} from './types.ts'
 
 /** The profile page. A visitor without a session sees the landing page and comes back here after signing in. */
 export function ProfilePage() {
@@ -67,6 +75,8 @@ function ProfileEditor() {
   const [version, setVersion] = useState(0)
   // What the server has, in the shape that is sent, to tell whether there are unsaved edits.
   const [saved, setSaved] = useState(snapshot(emptyProfile()))
+  // The projects as the server has them; only these can be analysed.
+  const [savedProjects, setSavedProjects] = useState<OpenSourceProject[]>([])
   const [save, setSave] = useState<Save>({ state: 'idle' })
   // Server messages from the last failed save, and the paths whose browser-side message is showing.
   const [serverErrors, setErrors] = useState<Record<string, string>>({})
@@ -96,6 +106,7 @@ function ProfileEditor() {
       setDraft(result.stored.profile)
       setVersion(result.stored.version)
       setSaved(snapshot(result.stored.profile))
+      setSavedProjects(result.stored.profile.openSourceProjects)
       setErrors({})
       setShown(new Set())
       setSave({ state: 'idle' })
@@ -195,6 +206,7 @@ function ProfileEditor() {
       case 'saved':
         setVersion(result.stored.version)
         setSaved(snapshot(draft))
+        setSavedProjects(result.stored.profile.openSourceProjects)
         setSave({ state: 'saved' })
         break
       case 'invalid':
@@ -211,6 +223,41 @@ function ProfileEditor() {
       case 'unauthorized':
         break
     }
+  }
+
+  /**
+   * Analyses a saved project. A success puts the analysis on the project and changes the skills, as unsaved changes;
+   * a failure changes nothing here (the section shows its message).
+   */
+  async function onAnalyze(
+    project: OpenSourceProject,
+  ): Promise<AnalysisResult> {
+    const result = await analyzeProject(
+      auth,
+      project.provider,
+      project.fullName,
+    )
+    if (result.kind === 'analyzed') {
+      const analysis = result.analysis
+      setDraft((current) => {
+        const picked = current.openSourceProjects.find((p) =>
+          sameRepository(p, project),
+        )
+        // The project may have been removed while the request ran; then nothing is added.
+        if (!picked) return current
+        return {
+          ...current,
+          openSourceProjects: current.openSourceProjects.map((p) =>
+            p === picked ? { ...p, analysis } : p,
+          ),
+          skills: applyAnalysis(current.skills, picked, analysis),
+        }
+      })
+      setNotice(
+        `${project.name} was analyzed. Its technologies are in Skills. Nothing is saved until you press Save.`,
+      )
+    }
+    return result
   }
 
   if (load.state === 'loading') return <p>Loading your profile…</p>
@@ -272,6 +319,8 @@ function ProfileEditor() {
           onLoadRepositories={(provider, username) =>
             listRepositories(auth, provider, username)
           }
+          savedProjects={savedProjects}
+          onAnalyze={onAnalyze}
         />
 
         {save.state === 'conflict' && (
