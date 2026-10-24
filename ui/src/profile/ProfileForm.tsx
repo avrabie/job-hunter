@@ -25,9 +25,33 @@ import {
 } from './fields.tsx'
 import type { AnalysisResult } from './analysisApi.ts'
 import { OpenSourceSection } from './OpenSourceSection.tsx'
+import { publicCvAddress, type PublicCvState } from './publicCvNotice.ts'
 import type { RepositoriesResult } from './repositoriesApi.ts'
 import { skillsAfterProjectChange, sourcesOf } from './skills.ts'
 import { TagInput } from './TagInput.tsx'
+
+/** Next to Contact: the live address with a link to the settings, or a link to them; nothing while unknown. */
+function PublicCvNotice({ state }: { state: PublicCvState }) {
+  if (state.state === 'live')
+    return (
+      <div className="notice">
+        <p>
+          Your public CV is live at {publicCvAddress(state.handle)}; saved
+          changes show there at once.
+        </p>
+        <p>
+          <Link to="/publish">Public CV</Link>
+        </p>
+      </div>
+    )
+  if (state.state === 'not-live')
+    return (
+      <p className="hint">
+        <Link to="/publish">Public CV</Link>
+      </p>
+    )
+  return null
+}
 
 /** The first server message for a list field or for one of its entries, such as `experience[0].technologies[1]`. */
 function listError(
@@ -62,6 +86,8 @@ interface Props {
   savedProjects: OpenSourceProject[]
   /** Analyses one saved project; the page applies a success to the project and the skills. */
   onAnalyze: (project: OpenSourceProject) => Promise<AnalysisResult>
+  /** Whether the public CV is live; shown next to the Contact section. */
+  publicCv: PublicCvState
 }
 
 export interface FillState {
@@ -81,6 +107,7 @@ export function ProfileForm({
   onLoadRepositories,
   savedProjects,
   onAnalyze,
+  publicCv,
 }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
@@ -131,6 +158,7 @@ export function ProfileForm({
           The full name is needed to export a CV.{' '}
           <Link to="/export">Export CV</Link>
         </p>
+        <PublicCvNotice state={publicCv} />
         <TextInput
           label="Full name"
           value={contact.fullName}
