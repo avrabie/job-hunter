@@ -46,6 +46,8 @@ With the template `PROFESSIONAL` the owner may pick one of their own JPEG files 
 - The photo route answers the exact same uniform 404 (same headers, same body, same per-IP 404 limit) for an unknown handle, a paused or locked page, no photo chosen, a template other than PROFESSIONAL, and a file that is deleted or no longer the owner's JPEG. Per-IP and per-handle limits are shared with the page.
 - The id is kept when the template changes (switching back restores the photo) but is unused with other templates. A deleted file removes the photo from the page on the next request, without an error.
 - The render cache key holds the file id with its stored size and SHA-256, so a replaced file shows the new photo.
+- The photo is re-encoded upright: the EXIF orientation (1, 3, 6, 8; others as 1) is applied and no metadata is written. Images over 16 megapixels (or 12 000 px a side) are refused.
+- When no render permit is free, the page is served without a photo and the photo route answers the uniform 404 for that request only; this busy result is never cached, so the next request tries again.
 - The audit trail records only the flag `photo`; the file id, name and bytes never reach logs or audit.
 
 ### Handle policy

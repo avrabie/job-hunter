@@ -46,3 +46,7 @@ Fix: lower MAX_PIXELS to about 16 MP (a 4000x4000 photo is plenty for 320 px out
 - Public page CSP (`img-src data:`, no scripts, sandbox, frame-ancestors none) matches the data-URI photo; photo route CSP is `default-src 'none'; sandbox`; nosniff everywhere. HTML export meta CSP only adds `img-src data:` when a photo is present.
 - Security config: only GET and HEAD on `/api/public/cv/**` are permitAll; export and settings need a token.
 - UI: `JpegPhotoPicker` renders file names as React text (escaped); the export preview iframe is `sandbox=""` with srcDoc; no `dangerouslySetInnerHTML`.
+
+## Lead verification
+
+M1: verified on production that the edge overwrites a forged X-Forwarded-For, so the first entry is the real client address. No code change. M2, L1, L4 fixed (16 MP cap, subsampled decode, single decode, EXIF orientation). L2 already held (a busy result is not cached); documented in docs/cv-public.md.
