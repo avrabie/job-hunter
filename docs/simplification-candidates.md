@@ -46,6 +46,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 ### C13 Unused dependencies
 - Not proven unused, only unreferenced in source: `spring-modulith-observability-api` (backend `build.gradle.kts:34`) and the runtime-only `spring-modulith-observability-core` / `spring-modulith-actuator` (`:48-49`). `grep -rn "observability\|Observation\|micrometer" backend/src` gives nothing. They may be needed for Modulith event metrics at runtime **(unverified)**. Check with `./gradlew dependencies` and a start-up trial by the owner before removal.
 - Test-only: `archunit-junit5` is used (`ModuleViolationTests`, `KoogBoundaryTests`, `TokenAccessBoundaryTests`). `kotlin-test-junit5` and `kotlin("test")` (lines 58 and 64) both declared: probably redundant (**unverified**, same library family). Effort S, risk low.
+- Done: `kotlin-test-junit5` removed; `kotlin("test")` resolves the JUnit 5 variant and `./gradlew test integrationTest` passes. The spring-modulith observability/actuator dependencies stay until verified at runtime.
 
 ### C14 What was checked and found clean
 - UI: script over all non-test `.ts/.tsx` exports in `ui/src` found no export with zero outside references; all CSS class names in `ui/src/index.css` are referenced in `.ts/.tsx`.
