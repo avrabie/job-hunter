@@ -159,9 +159,75 @@ class PhotoProcessorTests {
     }
 
     @Test
-    fun `more than forty million pixels is refused`() {
-        val patched = withDimensions(jpeg(drawn(64, 64)), 11_000, 11_000)
-        assertFailsWith<InvalidPhotoException> { processor.process(file(patched)) }
+    fun `more than sixteen million pixels is refused`() {
+        for ((w, h) in listOf(11_000 to 11_000, 5_000 to 4_000)) {
+            val patched = withDimensions(jpeg(drawn(64, 64)), w, h)
+            assertFailsWith<InvalidPhotoException> { processor.process(file(patched)) }
+        }
+    }
+
+    @Test
+    fun `sixteen million pixels is accepted`() {
+        assertEquals(320, decode(processor.process(file(jpeg(drawn(4000, 4000))))).width)
+    }
+
+    /** Left half red, right half blue, with an EXIF APP1 carrying the orientation spliced in after SOI. */
+    private fun oriented(orientation: Int, little: Boolean = false): ByteArray {
+        val img = BufferedImage(640, 640, BufferedImage.TYPE_INT_RGB)
+        val g = img.createGraphics()
+        g.color = Color(220, 0, 0); g.fillRect(0, 0, 320, 640)
+        g.color = Color(0, 0, 220); g.fillRect(320, 0, 320, 640)
+        g.dispose()
+        val src = jpeg(img)
+        val tiff = ByteArrayOutputStream()
+        fun u16(v: Int) = if (little) { tiff.write(v and 0xFF); tiff.write(v shr 8) } else { tiff.write(v shr 8); tiff.write(v and 0xFF) }
+        fun u32(v: Int) = if (little) { u16(v and 0xFFFF); u16(v ushr 16) } else { u16(v ushr 16); u16(v and 0xFFFF) }
+        tiff.write(if (little) "II".toByteArray() else "MM".toByteArray())
+        u16(42); u32(8); u16(1); u16(0x0112); u16(3); u32(1); u16(orientation); u16(0); u32(0)
+        val body = "Exif\u0000\u0000".toByteArray() + tiff.toByteArray()
+        val seg = byteArrayOf(0xFF.toByte(), 0xE1.toByte(), ((body.size + 2) shr 8).toByte(), ((body.size + 2) and 0xFF).toByte()) + body
+        return src.copyOfRange(0, 2) + seg + src.copyOfRange(2, src.size)
+    }
+
+    private fun isRed(c: Color) = c.red > 150 && c.blue < 90
+    private fun isBlue(c: Color) = c.blue > 150 && c.red < 90
+
+    @Test
+    fun `orientation 1 or absent keeps red left`() {
+        for (bytes in listOf(oriented(1), jpeg(decode(oriented(1))))) {
+            val img = decode(processor.process(file(bytes)))
+            assertTrue(isRed(Color(img.getRGB(60, 160))) && isBlue(Color(img.getRGB(260, 160))))
+        }
+    }
+
+    @Test
+    fun `orientation 6 turns clockwise so red left ends on top`() {
+        for (little in listOf(false, true)) {
+            val out = processor.process(file(oriented(6, little)))
+            val img = decode(out)
+            assertTrue(isRed(Color(img.getRGB(160, 60))), "top red")
+            assertTrue(isBlue(Color(img.getRGB(160, 260))), "bottom blue")
+            assertTrue(markers(out).none { it in 0xE1..0xEF || it == 0xFE }, "no metadata")
+        }
+    }
+
+    @Test
+    fun `orientation 8 turns counter clockwise so red left ends at the bottom`() {
+        val img = decode(processor.process(file(oriented(8))))
+        assertTrue(isBlue(Color(img.getRGB(160, 60))), "top blue")
+        assertTrue(isRed(Color(img.getRGB(160, 260))), "bottom red")
+    }
+
+    @Test
+    fun `orientation 3 turns half way`() {
+        val img = decode(processor.process(file(oriented(3))))
+        assertTrue(isBlue(Color(img.getRGB(60, 160))) && isRed(Color(img.getRGB(260, 160))))
+    }
+
+    @Test
+    fun `large photo is decoded subsampled and stays deterministic`() {
+        val src = jpeg(drawn(3000, 2000))
+        assertContentEquals(processor.process(file(src)), processor.process(file(src)))
     }
 
     @Test
