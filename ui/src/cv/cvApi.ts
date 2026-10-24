@@ -31,8 +31,7 @@ async function guarded<T extends { kind: string }>(
   }
 }
 
-export type ProfileSectionName =
-  'experience' | 'education' | 'publications' | 'projects'
+export type ProfileSectionName = 'experience' | 'education' | 'publications'
 
 const SECTION_MESSAGES: Record<number, string> = {
   400: 'That section cannot be read.',

@@ -6,7 +6,6 @@ import {
   blankPublication,
   blankExperience,
   blankLanguage,
-  blankProject,
   blankSkill,
   emptyProfile,
   type Profile,
@@ -170,57 +169,34 @@ describe('checkProfile', () => {
     })
   })
 
-  it('checks a project name, its dates and its links', () => {
-    const project = (patch: Partial<Profile['projects'][number]>) =>
+  it('checks a code account username against the GitHub rule', () => {
+    const account = (username: string) =>
       checkProfile({
         ...emptyProfile(),
-        projects: [{ ...blankProject(), name: 'Tool', ...patch }],
+        codeAccounts: [{ provider: 'GITHUB', username }],
       })
-    expect(project({ name: ' ' })).toEqual({
-      'projects[0].name': 'must not be blank',
+    expect(account('octocat')).toEqual({})
+    expect(account('a-b-c')).toEqual({})
+    expect(account('a'.repeat(39))).toEqual({})
+    expect(account('-bad-')).toEqual({
+      'codeAccounts[0].username':
+        'must follow the username rule of the provider',
     })
-    expect(project({ start: '2023-06', end: '2023-02' })).toEqual({
-      'projects[0].end': 'must not be before the start',
+    expect(account('a--b')).toEqual({
+      'codeAccounts[0].username':
+        'must follow the username rule of the provider',
     })
-    expect(project({ start: '2023-02', end: '2023-02' })).toEqual({})
-    expect(project({ start: '2023-02', end: null })).toEqual({})
-    expect(
-      project({ links: [{ label: 'Repo', url: 'javascript:alert(1)' }] }),
-    ).toEqual({
-      'projects[0].links[0].url': 'must be an http or https address',
+    expect(account('a'.repeat(40))).toEqual({
+      'codeAccounts[0].username':
+        'must follow the username rule of the provider',
     })
-    expect(project({ links: [{ label: 'Repo', url: '' }] })).toEqual({
-      'projects[0].links[0].url': 'must be an http or https address',
+    expect(account('')).toEqual({
+      'codeAccounts[0].username':
+        'must follow the username rule of the provider',
     })
-    expect(
-      project({ links: [{ label: ' ', url: 'https://example.org/x' }] }),
-    ).toEqual({ 'projects[0].links[0].label': 'must not be blank' })
-    expect(
-      project({
-        links: [
-          { label: 'Code', url: 'https://example.org/x' },
-          { label: '', url: '' },
-        ],
-      }),
-    ).toEqual({})
-  })
-
-  it('reports a bad link at the index the user sees, after a blank row', () => {
-    const p = checkProfile({
-      ...emptyProfile(),
-      projects: [
-        {
-          ...blankProject(),
-          name: 'Tool',
-          links: [
-            { label: '', url: '' },
-            { label: 'Site', url: 'ftp://example.org' },
-          ],
-        },
-      ],
-    })
-    expect(p).toEqual({
-      'projects[0].links[1].url': 'must be an http or https address',
+    expect(account('bad_name')).toEqual({
+      'codeAccounts[0].username':
+        'must follow the username rule of the provider',
     })
   })
 

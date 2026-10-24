@@ -47,25 +47,59 @@ describe('types match the backend sample', () => {
       'venue',
       'year',
     ])
-    expect(Object.keys(full.projects[0]!).sort()).toEqual([
-      'context',
-      'description',
-      'end',
-      'highlight',
-      'links',
-      'name',
-      'results',
-      'start',
-      'technologies',
-      'type',
+    expect(Object.keys(full.codeAccounts[0]!).sort()).toEqual([
+      'provider',
+      'username',
     ])
-    expect(Object.keys(full.projects[0]!.links[0]!).sort()).toEqual([
-      'label',
+    expect(Object.keys(full.openSourceProjects[0]!).sort()).toEqual([
+      'description',
+      'fullName',
+      'language',
+      'name',
+      'note',
+      'provider',
+      'stars',
+      'topics',
       'url',
     ])
   })
 
-  it('tidies technologies and drops a project link row left empty', () => {
+  it('drops an empty note and trims the account name', () => {
+    const p: Profile = {
+      ...emptyProfile(),
+      codeAccounts: [{ provider: 'GITHUB', username: ' octocat ' }],
+      openSourceProjects: [
+        {
+          provider: 'GITHUB',
+          fullName: ' octocat/hello-world ',
+          name: 'hello-world',
+          url: 'https://github.com/octocat/hello-world',
+          description: '  ',
+          language: '',
+          topics: ['demo'],
+          stars: 0,
+          note: ' ',
+        },
+      ],
+    }
+    const out = toRequestProfile(p)
+    expect(out.codeAccounts).toEqual([
+      { provider: 'GITHUB', username: 'octocat' },
+    ])
+    expect(out.openSourceProjects[0]).toEqual({
+      provider: 'GITHUB',
+      fullName: 'octocat/hello-world',
+      name: 'hello-world',
+      url: 'https://github.com/octocat/hello-world',
+      description: null,
+      language: null,
+      topics: ['demo'],
+      stars: 0,
+      note: null,
+    })
+  })
+
+  it('tidies technologies of experience', () => {
     const p: Profile = {
       ...emptyProfile(),
       experience: [
@@ -79,38 +113,9 @@ describe('types match the backend sample', () => {
           technologies: [' Kotlin ', 'kotlin', '', 'Spring Boot'],
         },
       ],
-      projects: [
-        {
-          name: ' Tool ',
-          type: 'OPEN_SOURCE',
-          context: ' ',
-          start: '',
-          end: null,
-          description: '  ',
-          technologies: ['Go', 'GO ', ' '],
-          results: [' shipped '],
-          links: [
-            { label: '', url: '  ' },
-            { label: ' Code ', url: ' https://example.org/tool ' },
-          ],
-          highlight: false,
-        },
-      ],
     }
     const out = toRequestProfile(p)
     expect(out.experience[0]!.technologies).toEqual(['Kotlin', 'Spring Boot'])
-    expect(out.projects[0]).toEqual({
-      name: 'Tool',
-      type: 'OPEN_SOURCE',
-      context: null,
-      start: null,
-      end: null,
-      description: null,
-      technologies: ['Go'],
-      results: ['shipped'],
-      links: [{ label: 'Code', url: 'https://example.org/tool' }],
-      highlight: false,
-    })
   })
 
   it('trims a publication and sends empty optional fields as null', () => {

@@ -1,19 +1,16 @@
 import type { ProfileSectionName } from '../cv/cvApi.ts'
 import {
   LANGUAGE_LEVELS,
-  PROJECT_TYPES,
   REMOTE_MODES,
   SKILL_LEVELS,
   WORK_AUTHORISATIONS,
   blankEducation,
   blankExperience,
   blankLanguage,
-  blankProject,
-  blankProjectLink,
   blankPublication,
   blankSkill,
+  type CodeProvider,
   type Profile,
-  type ProjectType,
   type RemoteMode,
 } from './types.ts'
 import {
@@ -24,14 +21,9 @@ import {
   StringList,
   TextInput,
 } from './fields.tsx'
+import { OpenSourceSection } from './OpenSourceSection.tsx'
+import type { RepositoriesResult } from './repositoriesApi.ts'
 import { TagInput } from './TagInput.tsx'
-
-const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  ASSIGNMENT: 'Assignment',
-  PERSONAL: 'Personal',
-  OPEN_SOURCE: 'Open source',
-  WORK: 'Work',
-}
 
 /** The first server message for a list field or for one of its entries, such as `experience[0].technologies[1]`. */
 function listError(
@@ -57,6 +49,11 @@ interface Props {
   onFillSection: (section: ProfileSectionName) => void
   /** Per section: whether its request is running and the last fixed message. */
   fillState: Record<ProfileSectionName, FillState>
+  /** Lists the public repositories of one code account. */
+  onLoadRepositories: (
+    provider: CodeProvider,
+    username: string,
+  ) => Promise<RepositoriesResult>
 }
 
 export interface FillState {
@@ -73,6 +70,7 @@ export function ProfileForm({
   canFillFromCv,
   onFillSection,
   fillState,
+  onLoadRepositories,
 }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
@@ -80,11 +78,10 @@ export function ProfileForm({
   const prefs = profile.preferences
   const setPrefs = (patch: Partial<Profile['preferences']>) =>
     set('preferences', { ...prefs, ...patch })
-  // Offered while a technologies field is typed in: the skills and the tags already used in positions and projects.
+  // Offered while a technologies field is typed in: the skills and the tags already used in positions.
   const suggestions = [
     ...profile.skills.map((s) => s.name),
     ...profile.experience.flatMap((e) => e.technologies),
-    ...profile.projects.flatMap((j) => j.technologies),
   ]
 
   /** A section heading with its "Fill from CV" button, status and hint. */
@@ -361,123 +358,14 @@ export function ProfileForm({
         </Repeater>
       </section>
 
-      <section aria-labelledby="projects-heading">
-        {heading('projects', 'Projects')}
-        <Repeater
-          title="Project"
-          items={profile.projects}
-          onChange={(v) => set('projects', v)}
-          blank={blankProject}
-        >
-          {(item, patch, i) => {
-            const at = `projects[${i}]`
-            return (
-              <>
-                <TextInput
-                  label="Name"
-                  value={item.name}
-                  error={errors[`${at}.name`]}
-                  path={`${at}.name`}
-                  onChange={(name) => patch({ name })}
-                />
-                <Select
-                  label="Type"
-                  value={item.type}
-                  options={PROJECT_TYPES}
-                  labels={PROJECT_TYPE_LABELS}
-                  error={errors[`${at}.type`]}
-                  path={`${at}.type`}
-                  onChange={(type) => type && patch({ type })}
-                />
-                <TextInput
-                  label="Context"
-                  value={item.context}
-                  error={errors[`${at}.context`]}
-                  path={`${at}.context`}
-                  onChange={(context) => patch({ context })}
-                />
-                <TextInput
-                  label="Start"
-                  type="month"
-                  value={item.start}
-                  error={errors[`${at}.start`]}
-                  path={`${at}.start`}
-                  onChange={(start) =>
-                    patch({ start: start === '' ? null : start })
-                  }
-                />
-                <TextInput
-                  label="End"
-                  type="month"
-                  value={item.end}
-                  error={errors[`${at}.end`]}
-                  path={`${at}.end`}
-                  onChange={(end) => patch({ end: end === '' ? null : end })}
-                />
-                <Field label="Description" error={errors[`${at}.description`]}>
-                  <textarea
-                    rows={3}
-                    value={item.description ?? ''}
-                    onChange={(e) => patch({ description: e.target.value })}
-                  />
-                </Field>
-                <TagInput
-                  label="Technologies"
-                  value={item.technologies}
-                  suggestions={suggestions}
-                  error={listError(errors, `${at}.technologies`)}
-                  path={`${at}.technologies`}
-                  onChange={(technologies) => patch({ technologies })}
-                />
-                <StringList
-                  title="Result"
-                  items={item.results}
-                  errors={errors}
-                  path={`${at}.results`}
-                  onChange={(results) => patch({ results })}
-                />
-                <Repeater
-                  title="Link"
-                  items={item.links}
-                  onChange={(links) => patch({ links })}
-                  blank={blankProjectLink}
-                  max={5}
-                >
-                  {(link, linkPatch, k) => {
-                    const linkAt = `${at}.links[${k}]`
-                    return (
-                      <>
-                        <TextInput
-                          label="Label"
-                          value={link.label}
-                          error={errors[`${linkAt}.label`]}
-                          path={`${linkAt}.label`}
-                          onChange={(label) => linkPatch({ label })}
-                        />
-                        <TextInput
-                          label="Address"
-                          value={link.url}
-                          error={errors[`${linkAt}.url`]}
-                          path={`${linkAt}.url`}
-                          onChange={(url) => linkPatch({ url })}
-                        />
-                      </>
-                    )
-                  }}
-                </Repeater>
-                <label className="inline">
-                  <input
-                    type="checkbox"
-                    checked={item.highlight}
-                    onChange={(e) => patch({ highlight: e.target.checked })}
-                  />
-                  Highlight
-                </label>
-              </>
-            )
-          }}
-        </Repeater>
-      </section>
+      <OpenSourceSection
+        accounts={profile.codeAccounts}
+        onAccountsChange={(v) => set('codeAccounts', v)}
+        projects={profile.openSourceProjects}
+        onProjectsChange={(v) => set('openSourceProjects', v)}
+        errors={errors}
+        onLoad={onLoadRepositories}
+      />
 
       <section>
         <h2>Skills</h2>

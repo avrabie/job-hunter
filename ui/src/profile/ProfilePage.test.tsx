@@ -615,66 +615,19 @@ describe('fill a section from the CV', () => {
     expect(section('Education').queryByLabelText('Institution')).toBeNull()
   })
 
-  it('fills only the projects, unsaved, and sends no profile request', async () => {
-    const calls = stubSections(true, () =>
-      json(200, {
-        ...emptyProfile(),
-        projects: [
-          {
-            name: 'Synthetic tool',
-            type: 'PERSONAL',
-            context: null,
-            start: null,
-            end: null,
-            description: null,
-            technologies: ['Go'],
-            results: [],
-            links: [],
-            highlight: false,
-          },
-        ],
-      }),
-    )
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    mount()
-    await screen.findByLabelText('City')
-    const button = section('Projects').getByRole('button', {
-      name: 'Fill from CV',
-    })
-    await waitFor(() => expect(button).toBeEnabled())
-    await userEvent.click(button)
-
-    expect(
-      await screen.findByText(/Nothing is saved until you press Save/),
-    ).toBeVisible()
-    expect(section('Projects').getByLabelText('Name')).toHaveValue(
-      'Synthetic tool',
-    )
-    expect(screen.getAllByLabelText('Employer')).toHaveLength(2)
-    expect(calls).toContainEqual({
-      url: '/api/cv/extract?section=projects',
-      method: 'POST',
-    })
-    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
-  })
-
-  it('disables the four buttons with a hint when there is no master CV', async () => {
+  it('disables the three buttons with a hint when there is no master CV', async () => {
     stubSections(false, () => json(200, emptyProfile()))
     mount()
     await screen.findByLabelText('City')
-    for (const name of [
-      'Experience',
-      'Education',
-      'Publications',
-      'Projects',
-    ]) {
+    for (const name of ['Experience', 'Education', 'Publications']) {
       expect(
         section(name).getByRole('button', { name: 'Fill from CV' }),
       ).toBeDisabled()
     }
     expect(
       screen.getAllByText('Choose a master CV in your files to use this.'),
-    ).toHaveLength(4)
+    ).toHaveLength(3)
+    expect(screen.queryByRole('region', { name: 'Projects' })).toBeNull()
   })
 
   it.each([
@@ -705,124 +658,286 @@ describe('fill a section from the CV', () => {
   )
 })
 
-describe('Projects section', () => {
-  const projects = (calls: { method: string; body: unknown }[]) =>
-    (calls.find((c) => c.method === 'PUT')!.body as { profile: Profile })
-      .profile.projects
+describe('Open Source Projects section', () => {
+  const oss = () =>
+    within(screen.getByRole('region', { name: 'Open Source Projects' }))
 
-  /** Echoes the saved profile back, or answers the save with a server message for the first link. */
-  function stubSaves(stored: Profile, status: 200 | 400 = 200) {
-    return stubApi((method, body) => {
-      if (method === 'GET') return json(200, { version: 1, profile: stored })
-      if (status === 400)
-        return json(400, {
-          error: 'validation_failed',
-          fields: {
-            'projects[0].links[0].url': 'must be an http or https address',
-          },
+  const sentProfile = (calls: { method: string; body: unknown }[]) =>
+    (calls.find((c) => c.method === 'PUT')!.body as { profile: Profile })
+      .profile
+
+  /**
+   * Answers the profile, the repository listing (`listing`) and the save (`save`). `calls` records every request of the
+   * profile and the listing, with the URL.
+   */
+  function stubOss(
+    stored: Profile,
+    options: { listing?: () => Response; save?: () => Response } = {},
+  ) {
+    const calls: { url: string; method: string; body: unknown }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/files') return json(200, [])
+        if (url.startsWith('/api/files'))
+          return new Response('', { status: 404 })
+        const method = init?.method ?? 'GET'
+        const body = init?.body ? JSON.parse(init.body as string) : undefined
+        calls.push({ url, method, body })
+        if (url.startsWith('/api/profile/repositories')) {
+          return options.listing?.() ?? json(200, { repositories: [] })
+        }
+        if (method === 'GET') return json(200, { version: 1, profile: stored })
+        if (options.save) return options.save()
+        return json(200, {
+          version: 2,
+          profile: (body as { profile: Profile }).profile,
         })
-      return json(200, {
-        version: 2,
-        profile: (body as { profile: Profile }).profile,
-      })
-    })
+      }),
+    )
+    return calls
   }
 
-  const projectsSection = () =>
-    within(screen.getByRole('region', { name: 'Projects' }))
-
-  it('adds a project with a name and type and sends empty lists', async () => {
-    const calls = stubSaves(emptyProfile())
+  it('adds an account and saves it', async () => {
+    const calls = stubOss(emptyProfile())
     mount()
     await screen.findByLabelText('City')
     await userEvent.click(
-      projectsSection().getByRole('button', { name: 'Add project' }),
+      oss().getByRole('button', { name: 'Add code account' }),
     )
-    await userEvent.type(
-      projectsSection().getByLabelText('Name'),
-      'Key-value store',
-    )
-    await userEvent.selectOptions(
-      projectsSection().getByLabelText('Type'),
-      'Work',
-    )
+    await userEvent.type(oss().getByLabelText('Username'), 'octocat')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByText('Saved (version 2).')).toBeVisible()
-    expect(projects(calls)).toEqual([
-      {
-        name: 'Key-value store',
-        type: 'WORK',
-        context: null,
-        start: null,
-        end: null,
-        description: null,
-        technologies: [],
-        results: [],
-        links: [],
-        highlight: false,
-      },
+    expect(sentProfile(calls).codeAccounts).toEqual([
+      { provider: 'GITHUB', username: 'octocat' },
     ])
   })
 
-  it('shows a stored project with its type, link and highlight', async () => {
-    stubSaves(full)
+  it('enables Load repositories only for a valid username', async () => {
+    stubOss(emptyProfile())
     mount()
     await screen.findByLabelText('City')
-    expect(projectsSection().getByLabelText('Name')).toHaveValue(
-      'Distributed key-value store',
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Add code account' }),
     )
-    expect(projectsSection().getByLabelText('Type')).toHaveValue('ASSIGNMENT')
-    expect(projectsSection().getByLabelText('Address')).toHaveValue(
-      'https://github.com/example/kv-store',
-    )
-    expect(projectsSection().getByLabelText('Highlight')).toBeChecked()
+    const load = oss().getByRole('button', { name: 'Load repositories' })
+    expect(load).toBeDisabled()
+    await userEvent.type(oss().getByLabelText('Username'), '-bad-')
+    expect(load).toBeDisabled()
+    await userEvent.clear(oss().getByLabelText('Username'))
+    await userEvent.type(oss().getByLabelText('Username'), 'octocat')
+    expect(load).toBeEnabled()
   })
 
-  it('names an unsafe link on leaving it, and shows the server message when saved anyway', async () => {
-    const calls = stubSaves(emptyProfile(), 400)
+  it('names a bad username on leaving it, and shows the server message when saved anyway', async () => {
+    const message = 'Username: must follow the username rule of the provider'
+    const calls = stubOss(emptyProfile(), {
+      save: () =>
+        json(400, {
+          error: 'validation_failed',
+          fields: {
+            'codeAccounts[0].username':
+              'must follow the username rule of the provider',
+          },
+        }),
+    })
     mount()
     await screen.findByLabelText('City')
     await userEvent.click(
-      projectsSection().getByRole('button', { name: 'Add project' }),
+      oss().getByRole('button', { name: 'Add code account' }),
     )
-    await userEvent.type(projectsSection().getByLabelText('Name'), 'Tool')
-    await userEvent.click(
-      projectsSection().getByRole('button', { name: 'Add link' }),
-    )
-    await userEvent.type(projectsSection().getByLabelText('Label'), 'Code')
-    await userEvent.type(
-      projectsSection().getByLabelText('Address'),
-      'javascript:alert(1)',
-    )
+    await userEvent.type(oss().getByLabelText('Username'), '-bad-')
     await userEvent.tab()
-    expect(
-      screen.getByText('Address: must be an http or https address'),
-    ).toBeVisible()
+    expect(screen.getByText(message)).toBeVisible()
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(1)
-    const label = (
-      await screen.findAllByText('Address: must be an http or https address')
-    )[0]!.closest('label')!
-    expect(within(label).getByRole('textbox')).toHaveValue(
-      'javascript:alert(1)',
-    )
+    const label = (await screen.findAllByText(message))[0]!.closest('label')!
+    expect(within(label).getByRole('textbox')).toHaveValue('-bad-')
   })
 
-  it('saves the highlight of a project', async () => {
-    const calls = stubSaves(emptyProfile())
+  it('keeps the note and the new order of a picked project', async () => {
+    const [first] = full.openSourceProjects
+    const stored: Profile = {
+      ...full,
+      openSourceProjects: [
+        first!,
+        { ...first!, fullName: 'octocat/spoon-knife', name: 'spoon-knife' },
+      ],
+    }
+    const calls = stubOss(stored)
     mount()
     await screen.findByLabelText('City')
+    await userEvent.type(oss().getAllByLabelText('Note')[1]!, ' again')
     await userEvent.click(
-      projectsSection().getByRole('button', { name: 'Add project' }),
+      oss().getByRole('button', { name: 'Move Project 2 up' }),
     )
-    await userEvent.type(projectsSection().getByLabelText('Name'), 'Tool')
-    await userEvent.click(projectsSection().getByLabelText('Highlight'))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByText('Saved (version 2).')).toBeVisible()
-    expect(projects(calls)[0]!.highlight).toBe(true)
+    const projects = sentProfile(calls).openSourceProjects
+    expect(projects.map((p) => p.name)).toEqual(['spoon-knife', 'hello-world'])
+    expect(projects[0]!.note).toBe('Maintainer since 2022 again')
+    expect(projects[1]!.note).toBe('Maintainer since 2022')
+  })
+
+  it('shows a stored project with its facts and a link to the repository', async () => {
+    stubOss(full)
+    mount()
+    await screen.findByLabelText('City')
+    expect(oss().getByRole('link', { name: 'hello-world' })).toHaveAttribute(
+      'href',
+      'https://github.com/octocat/hello-world',
+    )
+    expect(oss().getByText('My first repository')).toBeVisible()
+    expect(oss().getByLabelText('Note')).toHaveValue('Maintainer since 2022')
+  })
+
+  it('removes a picked project and saves the rest', async () => {
+    const calls = stubOss(full)
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Remove Project 1' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved (version 2).')).toBeVisible()
+    expect(sentProfile(calls).openSourceProjects).toEqual([])
+  })
+})
+
+describe('Pick repositories from a code account', () => {
+  const oss = () =>
+    within(screen.getByRole('region', { name: 'Open Source Projects' }))
+
+  const REPOS = [
+    {
+      provider: 'GITHUB',
+      fullName: 'octocat/hello-world',
+      name: 'hello-world',
+      url: 'https://github.com/octocat/hello-world',
+      description: 'My first repository',
+      language: 'Kotlin',
+      topics: ['demo', 'kotlin'],
+      stars: 42,
+      pushedAt: '2026-09-30T12:00:00Z',
+    },
+    {
+      provider: 'GITHUB',
+      fullName: 'octocat/spoon-knife',
+      name: 'spoon-knife',
+      url: 'https://github.com/octocat/spoon-knife',
+      description: null,
+      language: null,
+      topics: [],
+      stars: 0,
+      pushedAt: null,
+    },
+  ]
+
+  /** The profile answers with `stored`, the listing with `listing`; `calls` records the URL and method of each. */
+  function stubListing(stored: Profile, listing: () => Response) {
+    const calls: { url: string; method: string }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/files') return json(200, [])
+        if (url.startsWith('/api/files'))
+          return new Response('', { status: 404 })
+        const method = init?.method ?? 'GET'
+        calls.push({ url, method })
+        if (url.startsWith('/api/profile/repositories')) return listing()
+        if (method === 'GET') return json(200, { version: 1, profile: stored })
+        return json(200, { version: 2, profile: emptyProfile() })
+      }),
+    )
+    return calls
+  }
+
+  /** Adds an account with the username and loads its repositories. */
+  async function loadAccount(username = 'octocat') {
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Add code account' }),
+    )
+    await userEvent.type(oss().getByLabelText('Username'), username)
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Load repositories' }),
+    )
+  }
+
+  it('loads the repositories and picks two, unsaved, with no profile request', async () => {
+    const calls = stubListing(emptyProfile(), () =>
+      json(200, { repositories: REPOS }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await loadAccount()
+    await userEvent.click(
+      await oss().findByRole('checkbox', { name: /hello-world/ }),
+    )
+    await userEvent.click(oss().getByRole('checkbox', { name: /spoon-knife/ }))
+
+    expect(oss().getByRole('link', { name: 'hello-world' })).toBeVisible()
+    expect(oss().getByRole('link', { name: 'spoon-knife' })).toBeVisible()
+    expect(
+      screen.getByText('Nothing is saved until you press Save.'),
+    ).toBeVisible()
+    expect(calls).toContainEqual({
+      url: '/api/profile/repositories?provider=GITHUB&username=octocat',
+      method: 'GET',
+    })
+    expect(
+      calls.filter((c) => c.url === '/api/profile' && c.method === 'PUT'),
+    ).toHaveLength(0)
+  })
+
+  it('shows a picked repository ticked, and unticking it removes it', async () => {
+    stubListing(full, () => json(200, { repositories: REPOS }))
+    mount()
+    await screen.findByLabelText('City')
+    await loadAccount()
+    const box = await oss().findByRole('checkbox', { name: /hello-world/ })
+    expect(box).toBeChecked()
+    await userEvent.click(box)
+
+    expect(box).not.toBeChecked()
+    expect(oss().queryByRole('link', { name: 'hello-world' })).toBeNull()
+  })
+
+  it('keeps a picked repository that is missing from the list', async () => {
+    stubListing(full, () => json(200, { repositories: [REPOS[1]] }))
+    mount()
+    await screen.findByLabelText('City')
+    await loadAccount()
+    await oss().findByRole('checkbox', { name: /spoon-knife/ })
+
+    expect(oss().getByRole('link', { name: 'hello-world' })).toBeVisible()
+  })
+
+  it('shows the fixed message for an unknown account and keeps the picks', async () => {
+    stubListing(full, () => json(404, { error: 'account_not_found' }))
+    mount()
+    await screen.findByLabelText('City')
+    await loadAccount('nobody-here')
+
+    expect(await oss().findByRole('alert')).toHaveTextContent(
+      'No account with that username was found.',
+    )
+    expect(oss().getByRole('link', { name: 'hello-world' })).toBeVisible()
+  })
+
+  it('asks to try again later when the provider is rate limited', async () => {
+    stubListing(full, () => json(429, { error: 'provider_rate_limited' }))
+    mount()
+    await screen.findByLabelText('City')
+    await loadAccount()
+
+    expect(await oss().findByRole('alert')).toHaveTextContent(
+      'Please try again later.',
+    )
+    expect(oss().getByRole('link', { name: 'hello-world' })).toBeVisible()
   })
 })
 

@@ -10,6 +10,7 @@ import { FileCabinet } from '../files/FileCabinet.tsx'
 import { loadMaster } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { ProfileForm, type FillState } from './ProfileForm.tsx'
+import { listRepositories } from './repositoriesApi.ts'
 import { loadProfile, saveProfile } from './profileApi.ts'
 import { checkProfile } from './rules.ts'
 import { emptyProfile, toRequestProfile, type Profile } from './types.ts'
@@ -44,7 +45,6 @@ const SECTION_TITLE: Record<ProfileSectionName, string> = {
   experience: 'Experience',
   education: 'Education',
   publications: 'Publications',
-  projects: 'Projects',
 }
 
 const NO_FILL: FillState = { loading: false, error: null }
@@ -77,7 +77,6 @@ function ProfileEditor() {
     experience: NO_FILL,
     education: NO_FILL,
     publications: NO_FILL,
-    projects: NO_FILL,
   })
   const [notice, setNotice] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -270,6 +269,9 @@ function ProfileEditor() {
           canFillFromCv={hasMaster}
           onFillSection={(section) => void onFillSection(section)}
           fillState={fill}
+          onLoadRepositories={(provider, username) =>
+            listRepositories(auth, provider, username)
+          }
         />
 
         {save.state === 'conflict' && (

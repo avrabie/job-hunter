@@ -1,4 +1,4 @@
-import { toRequestProfile, type Profile } from './types.ts'
+import { toRequestProfile, type CodeProvider, type Profile } from './types.ts'
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -7,6 +7,22 @@ function isHttpUrl(value: string): boolean {
   } catch {
     return false
   }
+}
+
+// Mirrors the backend rule: 1 to 39 letters or digits, single hyphens inside, no leading or trailing hyphen.
+const GITHUB_USERNAME = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/
+
+/** The username rule of one provider; the server checks it too and its answer wins. */
+export function isValidUsername(
+  provider: CodeProvider,
+  username: string,
+): boolean {
+  if (provider !== 'GITHUB') return false
+  return (
+    username.length >= 1 &&
+    username.length <= 39 &&
+    GITHUB_USERNAME.test(username)
+  )
 }
 
 /**
@@ -68,20 +84,11 @@ export function checkProfile(profile: Profile): Record<string, string> {
       problems[`${at}.year`] = `must be between 1900 and ${thisYear + 1}`
   })
 
-  // Read from the profile as typed, not from the request copy: a blank link row is dropped there, and the indexes
-  // must still be the ones the user sees.
-  profile.projects.forEach((j, i) => {
-    const at = `projects[${i}]`
-    required(`${at}.name`, j.name.trim())
-    order(`${at}.end`, j.start || null, j.end || null)
-    j.links.forEach((l, k) => {
-      const label = l.label.trim()
-      const url = l.url.trim()
-      if (label === '' && url === '') return
-      if (!isHttpUrl(url))
-        problems[`${at}.links[${k}].url`] = 'must be an http or https address'
-      required(`${at}.links[${k}].label`, label)
-    })
+  // Read from the profile as typed, not from the request copy, so the index is the one the user sees.
+  profile.codeAccounts.forEach((a, i) => {
+    if (!isValidUsername(a.provider, a.username.trim()))
+      problems[`codeAccounts[${i}].username`] =
+        'must follow the username rule of the provider'
   })
 
   p.skills.forEach((s, i) => required(`skills[${i}].name`, s.name))

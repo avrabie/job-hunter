@@ -71,30 +71,39 @@ export interface Publication {
   url: string | null
 }
 
-export const PROJECT_TYPES = [
-  'ASSIGNMENT',
-  'PERSONAL',
-  'OPEN_SOURCE',
-  'WORK',
-] as const
-export type ProjectType = (typeof PROJECT_TYPES)[number]
+export const CODE_PROVIDERS = ['GITHUB'] as const
+export type CodeProvider = (typeof CODE_PROVIDERS)[number]
 
-export interface ProjectLink {
-  label: string
-  url: string
+/** A code hosting account the user picks repositories from. At most one per provider. */
+export interface CodeAccount {
+  provider: CodeProvider
+  username: string
 }
 
-export interface Project {
+/** A repository the user picked; a snapshot of its public facts plus the user's note. */
+export interface OpenSourceProject {
+  provider: CodeProvider
+  fullName: string
   name: string
-  type: ProjectType
-  context: string | null
-  start: string | null
-  end: string | null
+  url: string
   description: string | null
-  technologies: string[]
-  results: string[]
-  links: ProjectLink[]
-  highlight: boolean
+  language: string | null
+  topics: string[]
+  stars: number | null
+  note: string | null
+}
+
+/** A repository as the listing endpoint returns it, before the user picks it. */
+export interface Repository {
+  provider: CodeProvider
+  fullName: string
+  name: string
+  url: string
+  description: string | null
+  language: string | null
+  topics: string[]
+  stars: number | null
+  pushedAt: string | null
 }
 
 export interface Skill {
@@ -119,7 +128,8 @@ export interface Profile {
   experience: Experience[]
   education: Education[]
   publications: Publication[]
-  projects: Project[]
+  codeAccounts: CodeAccount[]
+  openSourceProjects: OpenSourceProject[]
   skills: Skill[]
   preferences: Preferences
 }
@@ -139,7 +149,8 @@ export function emptyProfile(): Profile {
     experience: [],
     education: [],
     publications: [],
-    projects: [],
+    codeAccounts: [],
+    openSourceProjects: [],
     skills: [],
     preferences: {
       targetRoles: [],
@@ -177,21 +188,6 @@ export const blankPublication = (): Publication => ({
   authors: null,
   url: null,
 })
-
-export const blankProject = (): Project => ({
-  name: '',
-  type: 'ASSIGNMENT',
-  context: null,
-  start: null,
-  end: null,
-  description: null,
-  technologies: [],
-  results: [],
-  links: [],
-  highlight: false,
-})
-
-export const blankProjectLink = (): ProjectLink => ({ label: '', url: '' })
 
 export const blankSkill = (): Skill => ({ name: '', level: null })
 
@@ -254,20 +250,20 @@ export function toRequestProfile(p: Profile): Profile {
       authors: text(b.authors),
       url: text(b.url),
     })),
-    projects: p.projects.map((j) => ({
+    codeAccounts: p.codeAccounts.map((a) => ({
+      provider: a.provider,
+      username: required(a.username),
+    })),
+    openSourceProjects: p.openSourceProjects.map((j) => ({
+      provider: j.provider,
+      fullName: required(j.fullName),
       name: required(j.name),
-      type: j.type,
-      context: text(j.context),
-      start: j.start === '' ? null : j.start,
-      end: j.end === '' ? null : j.end,
+      url: required(j.url),
       description: text(j.description),
-      technologies: tidyTags(j.technologies),
-      results: j.results.map(required),
-      // A link with both fields empty is a row the user left blank; it is not sent.
-      links: j.links
-        .filter((l) => required(l.label) !== '' || required(l.url) !== '')
-        .map((l) => ({ label: required(l.label), url: required(l.url) })),
-      highlight: j.highlight,
+      language: text(j.language),
+      topics: j.topics,
+      stars: j.stars,
+      note: text(j.note),
     })),
     skills: p.skills.map((s) => ({ name: required(s.name), level: s.level })),
     preferences: {
