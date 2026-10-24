@@ -384,13 +384,13 @@ curl -si https://s4v3.net/cv/a/b | head -20
 curl -si https://s4v3.net/cv/ada/ | head -20
 ```
 
-| Request | Expected | Observed |
+| Request | Expected | Observed (2026-10-24, backend 0.17.0) |
 |---|---|---|
-| `/cv/some-handle` | 404, JSON `{"error":"not_found"}` from backend, not UI HTML | 404, JSON, `no-store`, `noindex`: as expected |
-| `/cv` | 404, JSON `{"error":"not_found"}`, same as an unknown handle (after backend 0.17.0) | 401 on backend 0.16.0 (rewritten to `/api/public/cv`, not permitted); not re-checked after 0.17.0 |
-| `/cv/` | 404, same as an unknown handle (after backend 0.17.0) | 401 on backend 0.16.0 (same); not re-checked after 0.17.0 |
-| `/cv/a/b` | 404, same as an unknown handle (after backend 0.17.0), no content leaks | 401 on backend 0.16.0 (rewritten to `/api/public/cv/a/b`, not permitted); not re-checked after 0.17.0 |
-| `/cv/ada/` | 404, same as an unknown handle (after backend 0.17.0) | 401 on backend 0.16.0 (trailing slash was not matched by the permit rule); not re-checked after 0.17.0 |
+| `/cv/some-handle` | 404, JSON `{"error":"not_found"}` from backend, not UI HTML | 404, JSON, `no-store`, `noindex` |
+| `/cv` | 404, same as an unknown handle | 404 |
+| `/cv/` | 404, same as an unknown handle | 404 |
+| `/cv/a/b` | 404, same as an unknown handle | 404 |
+| `/cv/ada/` | 404, same as an unknown handle | 404 |
 
 ## 7. Environment variables
 
