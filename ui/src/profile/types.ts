@@ -170,7 +170,18 @@ export interface Preferences {
   minSalaryChf: number | null
 }
 
+/** Who the CV is about. Every field is optional to save; the full name is needed to export a CV. */
+export interface Contact {
+  fullName: string | null
+  headline: string | null
+  email: string | null
+  phone: string | null
+  website: string | null
+  linkedin: string | null
+}
+
 export interface Profile {
+  contact: Contact
   location: Location | null
   workAuthorisation: WorkAuthorisation | null
   languages: LanguageSkill[]
@@ -192,6 +203,14 @@ export interface StoredProfile {
 
 export function emptyProfile(): Profile {
   return {
+    contact: {
+      fullName: null,
+      headline: null,
+      email: null,
+      phone: null,
+      website: null,
+      linkedin: null,
+    },
     location: null,
     workAuthorisation: null,
     languages: [],
@@ -278,6 +297,14 @@ export function toRequestProfile(p: Profile): Profile {
   const city = text(p.location?.city ?? null)
   const canton = text(p.location?.canton ?? null)
   return {
+    contact: {
+      fullName: text(p.contact.fullName),
+      headline: text(p.contact.headline),
+      email: text(p.contact.email),
+      phone: text(p.contact.phone),
+      website: text(p.contact.website),
+      linkedin: text(p.contact.linkedin),
+    },
     location: city === null && canton === null ? null : { city, canton },
     workAuthorisation: p.workAuthorisation,
     languages: p.languages.map((l) => ({ ...l, code: required(l.code) })),

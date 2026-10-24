@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { ProfileSectionName } from '../cv/cvApi.ts'
 import {
   LANGUAGE_LEVELS,
@@ -83,6 +84,7 @@ export function ProfileForm({
 }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
+  const contact = profile.contact
   const location = profile.location ?? { city: null, canton: null }
   const prefs = profile.preferences
   const setPrefs = (patch: Partial<Profile['preferences']>) =>
@@ -123,6 +125,56 @@ export function ProfileForm({
         if (path) onLeave?.(path)
       }}
     >
+      <section aria-labelledby="contact-heading">
+        <h2 id="contact-heading">Contact</h2>
+        <p className="hint">
+          The full name is needed to export a CV.{' '}
+          <Link to="/export">Export CV</Link>
+        </p>
+        <TextInput
+          label="Full name"
+          value={contact.fullName}
+          error={errors['contact.fullName']}
+          path={'contact.fullName'}
+          onChange={(fullName) => set('contact', { ...contact, fullName })}
+        />
+        <TextInput
+          label="Headline"
+          value={contact.headline}
+          error={errors['contact.headline']}
+          path={'contact.headline'}
+          onChange={(headline) => set('contact', { ...contact, headline })}
+        />
+        <TextInput
+          label="Email"
+          value={contact.email}
+          error={errors['contact.email']}
+          path={'contact.email'}
+          onChange={(email) => set('contact', { ...contact, email })}
+        />
+        <TextInput
+          label="Phone"
+          value={contact.phone}
+          error={errors['contact.phone']}
+          path={'contact.phone'}
+          onChange={(phone) => set('contact', { ...contact, phone })}
+        />
+        <TextInput
+          label="Website"
+          value={contact.website}
+          error={errors['contact.website']}
+          path={'contact.website'}
+          onChange={(website) => set('contact', { ...contact, website })}
+        />
+        <TextInput
+          label="LinkedIn"
+          value={contact.linkedin}
+          error={errors['contact.linkedin']}
+          path={'contact.linkedin'}
+          onChange={(linkedin) => set('contact', { ...contact, linkedin })}
+        />
+      </section>
+
       <section>
         <h2>About you</h2>
         <TextInput

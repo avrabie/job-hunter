@@ -21,6 +21,14 @@ function stubFetch(status: number, body: unknown = {}) {
 describe('types match the backend sample', () => {
   it('has the same keys at every level as an empty profile plus its entries', () => {
     expect(Object.keys(full).sort()).toEqual(Object.keys(emptyProfile()).sort())
+    expect(Object.keys(full.contact).sort()).toEqual([
+      'email',
+      'fullName',
+      'headline',
+      'linkedin',
+      'phone',
+      'website',
+    ])
     expect(Object.keys(full.preferences).sort()).toEqual(
       Object.keys(emptyProfile().preferences).sort(),
     )
@@ -305,5 +313,33 @@ describe('saveProfile', () => {
       kind: 'failed',
       message: 'The request failed (status 500).',
     })
+  })
+})
+
+describe('contact block', () => {
+  it('trims the contact fields and sends empty ones as null', () => {
+    const p: Profile = {
+      ...emptyProfile(),
+      contact: {
+        fullName: ' Ada Example ',
+        headline: '  ',
+        email: 'ada@example.org',
+        phone: '',
+        website: ' https://example.org ',
+        linkedin: null,
+      },
+    }
+    expect(toRequestProfile(p).contact).toEqual({
+      fullName: 'Ada Example',
+      headline: null,
+      email: 'ada@example.org',
+      phone: null,
+      website: 'https://example.org',
+      linkedin: null,
+    })
+  })
+
+  it('sends the sample contact block unchanged', () => {
+    expect(toRequestProfile(full).contact).toEqual(full.contact)
   })
 })
