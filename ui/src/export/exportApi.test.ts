@@ -94,6 +94,11 @@ describe('exportCv', () => {
       500,
       'The CV could not be created. Please try again later.',
     ],
+    [
+      'photo_invalid',
+      400,
+      'The chosen photo cannot be used. Choose another JPEG file or "No photo".',
+    ],
   ])(
     'maps the %s error to a fixed message and keeps the code',
     async (code, status, message) => {
@@ -154,6 +159,20 @@ describe('exportCv', () => {
     )
     expect(result).toEqual({ kind: 'unauthorized' })
     expect(discard).toHaveBeenCalledOnce()
+  })
+
+  it('posts the chosen photo id for the Professional template', async () => {
+    const spy = answer(200, '%PDF-1.4')
+    const options = {
+      ...defaultOptions(),
+      template: 'PROFESSIONAL' as const,
+      photoFileId: '00000000-0000-0000-0000-00000000000a',
+    }
+    await exportCv(auth, options)
+    expect(JSON.parse(spy.mock.calls[0]![1]!.body as string)).toMatchObject({
+      template: 'PROFESSIONAL',
+      photoFileId: '00000000-0000-0000-0000-00000000000a',
+    })
   })
 
   it('passes the signal on so a stale preview can be cancelled', async () => {

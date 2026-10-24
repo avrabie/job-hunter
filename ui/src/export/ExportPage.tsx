@@ -2,12 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { messageForError } from '../api/messages.ts'
 import { useAuth, type AuthApi } from '../auth/authContext.ts'
+import { JpegPhotoPicker } from '../files/JpegPhotoPicker.tsx'
+import { listFiles, type FileInfo } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { exportCv, type ExportErrorCode } from './exportApi.ts'
 import {
   SECTION_TITLES,
   defaultOptions,
   moveSection,
+  showsPhotoPicker,
   type CvFormat,
   type CvLanguage,
   type CvSectionKind,
@@ -53,13 +56,37 @@ type Download =
   | { state: 'loading' }
   | { state: 'failed'; code: ExportErrorCode | null; message: string }
 
+/** The cabinet files for the photo picker; loaded only while the picker shows. */
+type Photos =
+  | { state: 'loading' }
+  | { state: 'loaded'; files: FileInfo[] }
+  | { state: 'failed'; message: string }
+
 function ExportForm() {
   const auth = useAuth()
   const [options, setOptions] = useState<ExportOptions>(defaultOptions)
   const [answer, setAnswer] = useState<Preview | null>(null)
   const [download, setDownload] = useState<Download>({ state: 'idle' })
+  const [photos, setPhotos] = useState<Photos>({ state: 'loading' })
   const key = JSON.stringify(options)
   const preview: Preview | null = answer?.key === key ? answer : null
+  const photoPicker = showsPhotoPicker(options)
+
+  useEffect(() => {
+    if (!photoPicker) return
+    let ignore = false
+    void listFiles(auth).then((result) => {
+      if (ignore) return
+      if (result.kind === 'loaded')
+        setPhotos({ state: 'loaded', files: result.files })
+      else if (result.kind === 'failed')
+        setPhotos({ state: 'failed', message: result.message })
+      else setPhotos({ state: 'failed', message: 'Please sign in again.' })
+    })
+    return () => {
+      ignore = true
+    }
+  }, [auth, photoPicker])
 
   useEffect(() => {
     // Each change cancels the pending request or the one in flight, so at most one is left running.
@@ -145,8 +172,27 @@ function ExportForm() {
               <option value="CLASSIC">Classic</option>
               <option value="MODERN">Modern</option>
               <option value="COMPACT">Compact</option>
+              <option value="PROFESSIONAL">Professional</option>
             </select>
           </div>
+          {photoPicker && (
+            <div className="export-field">
+              {photos.state === 'loading' && (
+                <p role="status">Loading your photos…</p>
+              )}
+              {photos.state === 'failed' && (
+                <p role="alert">{photos.message}</p>
+              )}
+              {photos.state === 'loaded' && (
+                <JpegPhotoPicker
+                  id="export-photo"
+                  files={photos.files}
+                  selected={options.photoFileId}
+                  onChange={(photoFileId) => update({ photoFileId })}
+                />
+              )}
+            </div>
+          )}
           <div className="export-field">
             <label htmlFor="export-language">Language</label>
             <select

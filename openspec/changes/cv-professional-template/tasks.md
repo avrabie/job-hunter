@@ -29,7 +29,7 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 5. UI (export page)
 
-- [ ] 5.1 `ui/src/export`: template option "Professional", photo picker per `ui-cv-export`, options type and request body, error message for `photo_invalid`. Tests in the style of `ExportPage.test.tsx` and `exportApi.test.ts`. Needs the Contract only; can run against the files API shape already in `ui/src/files/filesApi.ts` (read it for the list call and the `FileInfo` type).
+- [x] 5.1 `ui/src/export`: template option "Professional", photo picker per `ui-cv-export`, options type and request body, error message for `photo_invalid`. Tests in the style of `ExportPage.test.tsx` and `exportApi.test.ts`. Needs the Contract only; can run against the files API shape already in `ui/src/files/filesApi.ts` (read it for the list call and the `FileInfo` type).
 
 ## 6. Public page (backend and UI)
 
