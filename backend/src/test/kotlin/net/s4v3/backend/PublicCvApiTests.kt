@@ -1,9 +1,7 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.cv.publiccv.internal.PreviewTickets
 import org.junit.jupiter.api.Test
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
@@ -744,21 +742,21 @@ internal class PublicCvApiTests(
         val handle = newHandle()
         val ip = newIp()
         val ignoredHandle = "zzz" + UUID.randomUUID().toString().take(8)
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        LogCapture(root).use { capture ->
+        // The level as configured (no override): the test checks what the application logs.
+        val events = capture(levels = emptyMap()) {
             putCv(sub, handle, settings = settings(""""headline":true,"contact":{"email":true,"phone":true}""")).andExpect(status().isOk)
             page(handle, ip).andExpect(status().isOk)
             page(ignoredHandle, ip).andExpect(status().isNotFound)
             repeat(70) { page(handle, ip) }
             page(handle, ip).andExpect(status().isTooManyRequests)
             mvc.perform(get(previewPath(sub))).andExpect(status().isOk)
-
-            val text = capture.events().joinToString("\n") { it.fullText() }
-            listOf(handle, ignoredHandle, ip, "ada@example.org", "555 01 23", "Ada Example", "Senior Kotlin", "Builds backends").forEach {
-                assertFalse(it in text, "the log holds $it")
-            }
-            assertTrue("Public CV answer status=200" in text, "the page answers are logged by status")
-            assertFalse(Regex("/preview/[0-9a-f]{32}").containsMatchIn(text), "a ticket is in the log")
         }
+
+        val text = events.joinToString("\n") { it.fullText() }
+        listOf(handle, ignoredHandle, ip, "ada@example.org", "555 01 23", "Ada Example", "Senior Kotlin", "Builds backends").forEach {
+            assertFalse(it in text, "the log holds $it")
+        }
+        assertTrue("Public CV answer status=200" in text, "the page answers are logged by status")
+        assertFalse(Regex("/preview/[0-9a-f]{32}").containsMatchIn(text), "a ticket is in the log")
     }
 }

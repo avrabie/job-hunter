@@ -76,6 +76,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - Change: a small generic `ExpiringCache<K, V>(ttl, max)` used by both. Effort M, risk low (`RepositoryCatalogTests`, `RepositoryDigestSourceTests` cover it), value: caching logic readable once.
 
 ### C5 Log-capture boilerplate in tests
+- **Done.** `backend/src/test/kotlin/net/s4v3/backend/LogCapture.kt` has `capture { ... }` (returns the events at TRACE, or the levels given; detaches and restores in a finally) and `captureAppLogs { ... }` (root INFO, `net.s4v3` at TRACE). No `ListAppender` is left in `backend/src`; the 15 logging test classes use the helper and keep their assertions. `./gradlew test` and `integrationTest` pass.
 - `grep -rl ListAppender backend/src/test` lists 14 files (`*LoggingTests` x8 plus `ProjectAnalysisApiTests`, `CvExtractApiTests`, `CvExportApiTests`, `CrawlScheduleApiTests`, `CrawlSchedulerTests`, `LlmLoggingTests`). auth already has one helper, `auth/src/test/.../LogCapture.kt`; backend has none.
 - Change: `LogCapture` helper in backend tests (`capture { ... }` returns the messages at TRACE). Effort M, risk low, value: each logging test shows only its marker and assertions.
 - Coverage to keep: each `*LoggingTests` covers a different endpoint family (profile save, contact, posting create/update, posting search, matching, sources, files, tokens, LLM). They are not duplicates of each other; they could be merged into fewer classes (fewer Spring contexts) **(unverified which share a context)**.

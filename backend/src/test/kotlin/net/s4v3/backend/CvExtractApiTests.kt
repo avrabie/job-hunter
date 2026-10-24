@@ -1,7 +1,5 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.llm.CvReader
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
@@ -325,28 +323,17 @@ internal class CvExtractApiTests(
     @Test
     fun `CV content never reaches the logs through upload, extraction and delete`() {
         val sub = newSub()
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val ours = LoggerFactory.getLogger("net.s4v3") as Logger
-        val capture = LogCapture(root)
-        val (previous, ourPrevious) = root.level to ours.level
-        // The level the application runs at; our own code is captured at TRACE.
-        root.level = Level.INFO
-        ours.level = Level.TRACE
         reader.answer = { Profile(summary = "ANSWERMARKER4417 $it") }
-        try {
+        val events = captureAppLogs {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             upload(sub, "CVNAMEMARKER4417.txt", "CVTEXTMARKER4417 engineer".toByteArray())
             extract(sub).andExpect(status().isOk)
             val id = upload(sub, "CVNAMEMARKER4417.txt", "CVTEXTMARKER4417 again".toByteArray(), master = false)
             mvc.perform(delete("/api/files/$id").header("Authorization", bearer(sub))).andExpect(status().isNoContent)
-        } finally {
-            capture.close()
-            root.level = previous
-            ours.level = ourPrevious
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val logged = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+        val logged = events.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
             .joinToString("\n") { e -> e.fullText() }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")
         assertTrue("CV extraction requested" in logged, "our own outcome line is expected")

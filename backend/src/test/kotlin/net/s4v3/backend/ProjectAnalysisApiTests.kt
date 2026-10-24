@@ -1,7 +1,5 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
 import net.s4v3.backend.llm.ProjectAnalyst
@@ -243,13 +241,6 @@ internal class ProjectAnalysisApiTests(
     @Test
     fun `repository text, the model's answer and the repository name never reach the logs`() {
         val sub = newSub()
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val ours = LoggerFactory.getLogger("net.s4v3") as Logger
-        val capture = LogCapture(root)
-        val (previous, ourPrevious) = root.level to ours.level
-        // The level the application runs at; our own code is captured at TRACE.
-        root.level = Level.INFO
-        ours.level = Level.TRACE
         digests.answer = { provider, name ->
             DigestResult.Found(
                 RepositoryDigest(
@@ -263,18 +254,14 @@ internal class ProjectAnalysisApiTests(
             )
         }
         analyst.answer = { sampleAnalysis(summary = "ANSWERMARKER4417 summary") }
-        try {
+        val events = captureAppLogs {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             save(sub, "octocat/FULLNAMEMARKER4417")
             analyze(sub, "GITHUB", "octocat/FULLNAMEMARKER4417").andExpect(status().isOk)
-        } finally {
-            capture.close()
-            root.level = previous
-            ours.level = ourPrevious
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val logged = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+        val logged = events.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
             .joinToString("\n") { e -> e.fullText() }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")
         assertTrue("Project analysis finished" in logged, "our own outcome line is expected")
