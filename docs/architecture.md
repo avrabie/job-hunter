@@ -51,8 +51,8 @@ and `K/files/internal/DownloadTickets.kt`).
 
 Spring Modulith rule used here: the package `net.s4v3.backend.<module>` is the module's public API; other modules may use only those types.
 Everything under `<module>/internal/` (and any other sub-package) is private to the module. `ApplicationModules.verify()` enforces this
-(section 8). The `applications` and `notifications` modules have only a `package-info.java` and no code
-(`backend/src/main/java/net/s4v3/backend/applications/package-info.java`, `.../notifications/package-info.java`).
+(section 8). The `notifications` module has only a `package-info.java` and no code
+(`backend/src/main/java/net/s4v3/backend/notifications/package-info.java`); `applications` has Kotlin sources (below).
 `cv` and `files` have no `package-info.java` but are still modules (Modulith treats every top-level package as one;
 `ModularityTests.kt` asserts the eleven names).
 
@@ -177,9 +177,17 @@ Event edges (dotted, see section 5): `postings` publishes `JobIngested`, `profil
 - Events: none. Tables: none.
 - May call: `accounts`, `llm`, `postings`, `profile`.
 
-### applications, notifications
+### applications
 
-Empty module shells. The plan lists them (`PLAN.md` section 4), the code does not implement them.
+- Purpose: the user's tracked jobs. A frozen copy of the posting (title, company, link, plain-text description, capture time), the stage (`INTERESTED`, `APPLYING`, `APPLIED`, `REJECTED`), notes and the applied date. Letters come later (the `motivation_letter` table exists, no code uses it yet).
+- Public API: `ApplicationService` (`track`, `get`, `list`, `update`, `remove`, `byPosting`, `frozenJob`) and its types.
+- Internal (`K/applications/internal/`): `ApplicationController` (`/api/applications`, `/by-posting`, `/{id}`), `DefaultApplicationService`, `ApplicationRepository`, `ErrorResponses`.
+- Events: none. Tables: `application`, `motivation_letter` (`db/changelog/011-applications.sql`).
+- May call: `accounts`, `postings`. No other module calls it.
+
+### notifications
+
+Empty module shell. The plan lists it (`PLAN.md` section 4), the code does not implement it.
 
 ### Where things live
 

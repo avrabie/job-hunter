@@ -31,7 +31,8 @@ class DatabaseBaselineTests(
         assertTrue("user_file" in tables, tables.toString())
         assertTrue("public_cv" in tables && "public_cv_handle_hold" in tables && "public_cv_audit" in tables, tables.toString())
         // Raise by one for every new changeset.
-        assertEquals(15, count("select count(*) from databasechangelog"))
+        assertTrue("application" in tables && "motivation_letter" in tables, tables.toString())
+        assertEquals(17, count("select count(*) from databasechangelog"))
     }
 
     @Test

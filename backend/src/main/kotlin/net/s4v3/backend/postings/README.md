@@ -4,7 +4,7 @@ Purpose: the shared store of canonical job postings, with idempotent ingest, cro
 
 ## Public API (this package)
 - `PostingIngest.ingest(PostingCandidate)` returns `IngestResult` (`CREATED`, `UPDATED`, `UNCHANGED`). Throws `PostingRejectedException` for a blank required field.
-- `PostingQuery`: `find`, `list`, `search(PostingSearch)`; page size capped at 100.
+- `PostingQuery`: `find`, `list`, `search(PostingSearch)`, `liveState(ids)` (last seen and content hash only); page size capped at 100.
 - `Posting`, `PostingLink`, `PostingSearch`, `RemoteMode`.
 - `JobIngested(postingId, ingestedAt)`: event.
 

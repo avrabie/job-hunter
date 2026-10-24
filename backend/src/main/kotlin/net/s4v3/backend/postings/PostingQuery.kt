@@ -14,6 +14,9 @@ interface PostingQuery {
     /** Postings matching [search], newest first-seen first. Wildcard characters in the text are literal. */
     fun search(search: PostingSearch): List<Posting>
 
+    /** The current `lastSeen` and content hash of each of [ids] that still exists (one query, no descriptions). */
+    fun liveState(ids: Collection<UUID>): Map<UUID, PostingLiveState>
+
     companion object {
         const val MAX_PAGE_SIZE = 100
     }
@@ -58,4 +61,9 @@ data class Posting(
     val lastSeen: Instant,
     /** One link per source that delivered the ad, the primary source first. */
     val links: List<PostingLink> = emptyList(),
+    /** Hash of the canonical content; changes when the description or another canonical field changes. */
+    val contentHash: String = "",
 )
+
+/** When a posting was last seen and its content hash, without the text. */
+data class PostingLiveState(val lastSeen: Instant, val contentHash: String)

@@ -6,6 +6,7 @@ import net.s4v3.backend.postings.JobIngested
 import net.s4v3.backend.postings.Posting
 import net.s4v3.backend.postings.PostingCandidate
 import net.s4v3.backend.postings.PostingLink
+import net.s4v3.backend.postings.PostingLiveState
 import net.s4v3.backend.postings.PostingSearch
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.postings.PostingQuery
@@ -212,6 +213,15 @@ internal class JdbcPostings(
         )
     }
 
+    @Transactional(readOnly = true)
+    override fun liveState(ids: Collection<UUID>): Map<UUID, PostingLiveState> {
+        if (ids.isEmpty()) return emptyMap()
+        return jdbc.sql("SELECT id, last_seen, content_hash FROM posting WHERE id IN (:ids)")
+            .param("ids", ids.toList())
+            .query { rs, _ -> rs.getObject("id", UUID::class.java) to PostingLiveState(rs.getTimestamp("last_seen").toInstant(), rs.getString("content_hash")) }
+            .list().toMap()
+    }
+
     /** Fills the links of a page of postings with one query: the primary source first, then by source id. */
     private fun withLinks(postings: List<Posting>): List<Posting> {
         if (postings.isEmpty()) return postings
@@ -244,6 +254,7 @@ internal class JdbcPostings(
         needsReview = rs.getBoolean("needs_review"),
         firstSeen = rs.getTimestamp("first_seen").toInstant(),
         lastSeen = rs.getTimestamp("last_seen").toInstant(),
+        contentHash = rs.getString("content_hash"),
     )
 
     private fun ts(instant: Instant) = Timestamp.from(instant)
@@ -253,7 +264,7 @@ internal class JdbcPostings(
         const val SELECT_POSTING = """
             SELECT p.id, p.title, p.company, p.description, s.url, p.city, p.canton, p.workload_min, p.workload_max,
                    p.remote_mode, p.salary_min, p.salary_max, p.language, p.out_of_scope, p.needs_review,
-                   p.first_seen, p.last_seen
+                   p.first_seen, p.last_seen, p.content_hash
             FROM posting p JOIN posting_source s ON s.posting_id = p.id AND s.is_primary
         """
     }
