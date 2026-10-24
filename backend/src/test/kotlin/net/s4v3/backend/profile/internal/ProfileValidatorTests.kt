@@ -7,7 +7,14 @@ import net.s4v3.backend.profile.OpenSourceProject
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
+import net.s4v3.backend.profile.ProjectAnalysis
 import net.s4v3.backend.profile.Publication
+import net.s4v3.backend.profile.Skill
+import net.s4v3.backend.profile.SkillOrigin
+import net.s4v3.backend.profile.SkillSource
+import net.s4v3.backend.profile.TechCategory
+import net.s4v3.backend.profile.Technology
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.Test
@@ -257,6 +264,153 @@ class ProfileValidatorTests {
         val fields = profileFields(
             repositories(repository(url = "javascript:$marker").copy(description = marker.repeat(200), stars = -1, note = " ")),
         )
+
+        assertTrue(fields.isNotEmpty())
+        assertTrue(fields.values.none { marker in it })
+    }
+
+    private fun skills(vararg skills: Skill) = Profile(skills = skills.toList())
+
+    private fun source(
+        url: String = "https://github.com/octocat/hello-world",
+        evidence: String = "build.gradle.kts: spring-boot starter dependency",
+    ) = SkillSource(CodeProvider.GITHUB, "octocat/hello-world", url, evidence)
+
+    @Test
+    fun `a skill from analysis with one source passes`() {
+        validateProfile(skills(Skill("Spring Boot", origin = SkillOrigin.ANALYSIS, sources = listOf(source()))))
+    }
+
+    @Test
+    fun `a javascript source url is rejected by path`() {
+        val fields = profileFields(skills(Skill("Spring Boot", sources = listOf(source(url = "javascript:alert(1)")))))
+
+        assertTrue("skills[0].sources[0].url" in fields)
+    }
+
+    @Test
+    fun `a plain http source url is rejected`() {
+        val fields = profileFields(skills(Skill("Spring Boot", sources = listOf(source(url = "http://github.com/octocat/hello-world")))))
+
+        assertTrue("skills[0].sources[0].url" in fields)
+    }
+
+    @Test
+    fun `a source url of 500 characters passes and 501 is rejected`() {
+        validateProfile(skills(Skill("A", sources = listOf(source(url = "https://github.com/" + "a".repeat(481))))))
+        val fields = profileFields(skills(Skill("A", sources = listOf(source(url = "https://github.com/" + "a".repeat(482))))))
+
+        assertTrue("skills[0].sources[0].url" in fields)
+    }
+
+    @Test
+    fun `a blank source evidence is rejected by path`() {
+        val fields = profileFields(skills(Skill("Spring Boot", sources = listOf(source(evidence = " ")))))
+
+        assertEquals("must not be blank", fields.getValue("skills[0].sources[0].evidence"))
+    }
+
+    @Test
+    fun `source evidence of 300 characters passes and 301 is rejected`() {
+        validateProfile(skills(Skill("A", sources = listOf(source(evidence = "e".repeat(300))))))
+        assertTrue("skills[0].sources[0].evidence" in profileFields(skills(Skill("A", sources = listOf(source(evidence = "e".repeat(301)))))))
+    }
+
+    @Test
+    fun `20 sources on a skill pass and 21 are rejected`() {
+        validateProfile(skills(Skill("A", sources = List(20) { source() })))
+        assertTrue("skills[0].sources" in profileFields(skills(Skill("A", sources = List(21) { source() }))))
+    }
+
+    @Test
+    fun `200 skills pass and 201 are rejected`() {
+        validateProfile(Profile(skills = List(200) { Skill("S$it") }))
+        assertTrue("skills" in profileFields(Profile(skills = List(201) { Skill("S$it") })))
+    }
+
+    @Test
+    fun `a failing source never echoes the submitted value`() {
+        val marker = "SECRET-MARKER"
+        val fields = profileFields(skills(Skill("A", sources = listOf(source(url = "javascript:$marker", evidence = " ")))))
+
+        assertEquals(2, fields.size)
+        assertTrue(fields.values.none { marker in it })
+    }
+
+    private fun analysis(
+        summary: String = "A small Spring Boot service.",
+        architecture: String = "One module with a REST controller.",
+        techStack: List<Technology> = listOf(Technology("Spring Boot", TechCategory.FRAMEWORK, "build.gradle.kts", "starter dependency")),
+        files: List<String> = listOf("README.md", "build.gradle.kts"),
+    ) = ProjectAnalysis(summary, architecture, techStack, files, truncated = false, analyzedAt = Instant.parse("2026-10-24T12:00:00Z"))
+
+    private fun withAnalysis(analysis: ProjectAnalysis) = repositories(repository().copy(analysis = analysis))
+
+    private fun technology(i: Int = 0) = Technology("Tech$i", TechCategory.LIBRARY, "build.gradle.kts", "dependency")
+
+    @Test
+    fun `a full analysis passes`() {
+        validateProfile(withAnalysis(analysis()))
+    }
+
+    @Test
+    fun `a summary of 1500 characters passes and 1501 is rejected`() {
+        validateProfile(withAnalysis(analysis(summary = "s".repeat(1500))))
+        assertTrue("openSourceProjects[0].analysis.summary" in profileFields(withAnalysis(analysis(summary = "s".repeat(1501)))))
+    }
+
+    @Test
+    fun `an architecture of 2501 characters is rejected`() {
+        validateProfile(withAnalysis(analysis(architecture = "a".repeat(2500))))
+        assertTrue("openSourceProjects[0].analysis.architecture" in profileFields(withAnalysis(analysis(architecture = "a".repeat(2501)))))
+    }
+
+    @Test
+    fun `21 technologies are rejected and 20 pass`() {
+        validateProfile(withAnalysis(analysis(techStack = List(20) { technology(it) })))
+        assertTrue("openSourceProjects[0].analysis.techStack" in profileFields(withAnalysis(analysis(techStack = List(21) { technology(it) }))))
+    }
+
+    @Test
+    fun `a technology name of 61 characters is rejected by path`() {
+        val tech = Technology("n".repeat(61), TechCategory.TOOL, "README.md", "mentioned")
+        val fields = profileFields(withAnalysis(analysis(techStack = listOf(technology(), tech))))
+
+        assertTrue("openSourceProjects[0].analysis.techStack[1].name" in fields)
+    }
+
+    @Test
+    fun `a blank technology name is rejected`() {
+        val tech = Technology(" ", TechCategory.TOOL, "README.md", "mentioned")
+
+        assertTrue("openSourceProjects[0].analysis.techStack[0].name" in profileFields(withAnalysis(analysis(techStack = listOf(tech)))))
+    }
+
+    @Test
+    fun `an evidence path of 301 characters is rejected`() {
+        val tech = Technology("Kotlin", TechCategory.LANGUAGE, "p".repeat(301), "mentioned")
+
+        assertTrue("openSourceProjects[0].analysis.techStack[0].evidencePath" in profileFields(withAnalysis(analysis(techStack = listOf(tech)))))
+    }
+
+    @Test
+    fun `evidence of 301 characters is rejected`() {
+        val tech = Technology("Kotlin", TechCategory.LANGUAGE, "README.md", "e".repeat(301))
+
+        assertTrue("openSourceProjects[0].analysis.techStack[0].evidence" in profileFields(withAnalysis(analysis(techStack = listOf(tech)))))
+    }
+
+    @Test
+    fun `9 files pass and 10 are rejected`() {
+        validateProfile(withAnalysis(analysis(files = List(9) { "f$it.md" })))
+        assertTrue("openSourceProjects[0].analysis.files" in profileFields(withAnalysis(analysis(files = List(10) { "f$it.md" }))))
+    }
+
+    @Test
+    fun `a stored analysis error never echoes the submitted value`() {
+        val marker = "SECRET-MARKER"
+        val tech = Technology(marker.repeat(20), TechCategory.TOOL, "README.md", "x")
+        val fields = profileFields(withAnalysis(analysis(summary = " ", architecture = marker.repeat(600), techStack = listOf(tech))))
 
         assertTrue(fields.isNotEmpty())
         assertTrue(fields.values.none { marker in it })

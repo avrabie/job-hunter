@@ -7,6 +7,7 @@ import net.s4v3.backend.profile.ProfileConflictException
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileService
 import net.s4v3.backend.profile.ProfileUpdate
+import net.s4v3.backend.profile.SkillOrigin
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
@@ -69,6 +70,8 @@ class ProfileServiceTests(
         assertEquals(listOf("Example AG", "Beispiel GmbH"), back.experience.map { it.employer })
         assertNull(back.experience[0].end)
         assertEquals("Fast Joins on Skewed Data", back.publications.single().title)
+        assertEquals(SkillOrigin.ANALYSIS, back.skills.last().origin)
+        assertEquals("A small Spring Boot service built with Gradle.", back.openSourceProjects.single().analysis?.summary)
     }
 
     @Test
@@ -116,6 +119,33 @@ class ProfileServiceTests(
         assertEquals("Stored before code accounts", stored.profile.summary)
         assertEquals(emptyList(), stored.profile.codeAccounts)
         assertEquals(emptyList(), stored.profile.openSourceProjects)
+    }
+
+    @Test
+    fun `a profile stored before skill origins existed reads with manual origin and no sources`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 6)",
+            sub,
+            """{"skills":[{"name":"Kotlin","level":"EXPERT"}]}""",
+        )
+
+        val skill = profiles.get(sub).profile.skills.single()
+
+        assertEquals(SkillOrigin.MANUAL, skill.origin)
+        assertEquals(emptyList(), skill.sources)
+    }
+
+    @Test
+    fun `a project stored before analysis existed reads with no analysis`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 7)",
+            sub,
+            """{"openSourceProjects":[{"provider":"GITHUB","fullName":"octocat/hello-world","name":"hello-world","url":"https://github.com/octocat/hello-world"}]}""",
+        )
+
+        assertNull(profiles.get(sub).profile.openSourceProjects.single().analysis)
     }
 
     @Test

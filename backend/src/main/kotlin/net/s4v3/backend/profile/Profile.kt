@@ -1,5 +1,6 @@
 package net.s4v3.backend.profile
 
+import java.time.Instant
 import java.time.YearMonth
 
 /**
@@ -78,11 +79,50 @@ data class OpenSourceProject(
     val topics: List<String> = emptyList(),
     val stars: Int? = null,
     val note: String? = null,
+    /** What the analysis found in the repository when it was run; null until the user runs it. */
+    val analysis: ProjectAnalysis? = null,
+)
+
+/** The categories a technology can have. */
+enum class TechCategory { LANGUAGE, FRAMEWORK, LIBRARY, DATABASE, TOOL, PLATFORM, OTHER }
+
+/** A technology the repository shows, with the file path and a short note that cite it. */
+data class Technology(
+    val name: String,
+    val category: TechCategory,
+    val evidencePath: String,
+    val evidence: String,
+)
+
+/** A summary of a repository, from the files that were read. [files] are the paths read; [truncated] when the tree was cut. */
+data class ProjectAnalysis(
+    val summary: String,
+    val architecture: String,
+    val techStack: List<Technology>,
+    val files: List<String>,
+    val truncated: Boolean,
+    val analyzedAt: Instant,
 )
 
 enum class SkillLevel { BEGINNER, INTERMEDIATE, ADVANCED, EXPERT }
 
-data class Skill(val name: String, val level: SkillLevel? = null)
+/** Where a skill came from: typed by the user, or added from a repository analysis. */
+enum class SkillOrigin { MANUAL, ANALYSIS }
+
+/** A repository that supports a skill, with the path and note that cite it. [url] is the repository's address. */
+data class SkillSource(
+    val provider: CodeProvider,
+    val fullName: String,
+    val url: String,
+    val evidence: String,
+)
+
+data class Skill(
+    val name: String,
+    val level: SkillLevel? = null,
+    val origin: SkillOrigin = SkillOrigin.MANUAL,
+    val sources: List<SkillSource> = emptyList(),
+)
 
 enum class RemoteMode { ONSITE, HYBRID, REMOTE }
 

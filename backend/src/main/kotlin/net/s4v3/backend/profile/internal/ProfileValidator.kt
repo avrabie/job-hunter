@@ -4,6 +4,7 @@ import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
+import net.s4v3.backend.profile.ProjectAnalysis
 import java.net.URI
 import java.net.URISyntaxException
 import java.time.LocalDate
@@ -21,7 +22,17 @@ internal object ProfileValidator {
     const val EXPERIENCE_MAX = 30
     const val ACHIEVEMENTS_PER_ENTRY_MAX = 20
     const val EDUCATION_MAX = 20
-    const val SKILLS_MAX = 100
+    const val SKILLS_MAX = 200
+    const val SKILL_SOURCES_MAX = 20
+    const val SOURCE_EVIDENCE_MAX = 300
+    const val ANALYSIS_SUMMARY_MAX = 1500
+    const val ANALYSIS_ARCHITECTURE_MAX = 2500
+    const val TECH_STACK_MAX = 20
+    const val TECHNOLOGY_NAME_MAX = 60
+    const val EVIDENCE_PATH_MAX = 300
+    const val TECHNOLOGY_EVIDENCE_MAX = 300
+    const val ANALYSIS_FILES_MAX = 9
+    const val ANALYSIS_FILE_PATH_MAX = 300
     const val LANGUAGES_MAX = 10
     const val TARGET_ROLES_MAX = 10
     const val CANTONS_MAX = 30
@@ -113,10 +124,21 @@ internal object ProfileValidator {
             project.topics.forEachIndexed { j, topic -> requiredText("$at.topics[$j]", topic, TAG_MAX, problems) }
             project.stars?.let { if (it < 0) problems["$at.stars"] = "must not be negative" }
             optionalText("$at.note", project.note, REPOSITORY_NOTE_MAX, problems)
+            project.analysis?.let { analysis(at, it, problems) }
         }
 
         limit("skills", profile.skills.size, SKILLS_MAX, problems)
-        profile.skills.forEachIndexed { i, skill -> requiredText("skills[$i].name", skill.name, NAME_MAX, problems) }
+        profile.skills.forEachIndexed { i, skill ->
+            val at = "skills[$i]"
+            requiredText("$at.name", skill.name, NAME_MAX, problems)
+            limit("$at.sources", skill.sources.size, SKILL_SOURCES_MAX, problems)
+            skill.sources.forEachIndexed { j, source ->
+                val sourceAt = "$at.sources[$j]"
+                requiredText("$sourceAt.fullName", source.fullName, NAME_MAX, problems)
+                httpUrl("$sourceAt.url", source.url, problems, setOf("https"))
+                requiredText("$sourceAt.evidence", source.evidence, SOURCE_EVIDENCE_MAX, problems)
+            }
+        }
 
         val prefs = profile.preferences
         limit("preferences.targetRoles", prefs.targetRoles.size, TARGET_ROLES_MAX, problems)
@@ -131,6 +153,29 @@ internal object ProfileValidator {
             problems["preferences.workloadMax"] = "must not be below the minimum"
         }
         prefs.minSalaryChf?.let { if (it < 0) problems["preferences.minSalaryChf"] = "must not be negative" }
+    }
+
+    private fun analysis(at: String, analysis: ProjectAnalysis, problems: MutableMap<String, String>) {
+        val path = "$at.analysis"
+        requiredText("$path.summary", analysis.summary, ANALYSIS_SUMMARY_MAX, problems)
+        if (analysis.architecture.length > ANALYSIS_ARCHITECTURE_MAX) {
+            problems["$path.architecture"] = "must be at most $ANALYSIS_ARCHITECTURE_MAX characters"
+        }
+        limit("$path.techStack", analysis.techStack.size, TECH_STACK_MAX, problems)
+        analysis.techStack.forEachIndexed { i, technology ->
+            val tech = "$path.techStack[$i]"
+            requiredText("$tech.name", technology.name, TECHNOLOGY_NAME_MAX, problems)
+            if (technology.evidencePath.length > EVIDENCE_PATH_MAX) {
+                problems["$tech.evidencePath"] = "must be at most $EVIDENCE_PATH_MAX characters"
+            }
+            if (technology.evidence.length > TECHNOLOGY_EVIDENCE_MAX) {
+                problems["$tech.evidence"] = "must be at most $TECHNOLOGY_EVIDENCE_MAX characters"
+            }
+        }
+        limit("$path.files", analysis.files.size, ANALYSIS_FILES_MAX, problems)
+        analysis.files.forEachIndexed { i, file ->
+            if (file.length > ANALYSIS_FILE_PATH_MAX) problems["$path.files[$i]"] = "must be at most $ANALYSIS_FILE_PATH_MAX characters"
+        }
     }
 
     private fun requiredText(path: String, value: String, max: Int, problems: MutableMap<String, String>) {

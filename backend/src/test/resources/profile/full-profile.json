@@ -45,12 +45,23 @@
       "language": "Kotlin",
       "topics": ["demo", "kotlin"],
       "stars": 42,
-      "note": "Maintainer since 2022"
+      "note": "Maintainer since 2022",
+      "analysis": {
+        "summary": "A small Spring Boot service built with Gradle.",
+        "architecture": "One application module with a REST controller.",
+        "techStack": [
+          { "name": "Spring Boot", "category": "FRAMEWORK", "evidencePath": "build.gradle.kts", "evidence": "spring-boot gradle plugin and starter dependencies" }
+        ],
+        "files": ["README.md", "build.gradle.kts"],
+        "truncated": false,
+        "analyzedAt": "2026-10-24T12:00:00Z"
+      }
     }
   ],
   "skills": [
     { "name": "Kotlin", "level": "EXPERT" },
-    { "name": "PostgreSQL", "level": null }
+    { "name": "PostgreSQL", "level": null },
+    {"name":"Spring Boot","level":null,"origin":"ANALYSIS","sources":[{"provider":"GITHUB","fullName":"octocat/hello-world","url":"https://github.com/octocat/hello-world","evidence":"build.gradle.kts: spring-boot gradle plugin and starter dependencies"}]}
   ],
   "preferences": {
     "targetRoles": ["Backend Engineer", "Tech Lead"],
