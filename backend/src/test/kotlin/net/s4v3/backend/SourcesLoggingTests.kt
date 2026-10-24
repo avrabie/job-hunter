@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.FakeGreenhouse.Job
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.sources.internal.FetchStateStore
@@ -49,10 +46,9 @@ internal class SourcesLoggingTests(
             val crawl = GreenhouseCrawl(settings, PoliteHttp(settings), state, ingest, dataSource)
 
             val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-            val appender = ListAppender<ILoggingEvent>().apply { start() }
+            val capture = LogCapture(root)
             val previousLevel = root.level
             root.level = Level.TRACE
-            root.addAppender(appender)
             try {
                 crawl.run()
                 server.listStatus = 500
@@ -63,14 +59,14 @@ internal class SourcesLoggingTests(
                 server.listContentType = "text/html"
                 crawl.run()
             } finally {
-                root.detachAppender(appender)
+                capture.close()
                 root.level = previousLevel
             }
 
             val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-            val relevant = appender.list.filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
+            val relevant = capture.events().filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
             val logged = relevant.joinToString("\n") { event ->
-                event.formattedMessage + "\n" + ((event.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty())
+                event.fullText()
             }
             assertTrue(relevant.any { "Greenhouse board" in it.formattedMessage }, "the capture saw no crawl logs, so it proves nothing")
             assertTrue(marker !in logged, "job text or a response body appears in the logs")

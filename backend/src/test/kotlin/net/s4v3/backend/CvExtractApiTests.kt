@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.llm.CvReader
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
@@ -330,12 +327,11 @@ internal class CvExtractApiTests(
         val sub = newSub()
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
         val ours = LoggerFactory.getLogger("net.s4v3") as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val (previous, ourPrevious) = root.level to ours.level
         // The level the application runs at; our own code is captured at TRACE.
         root.level = Level.INFO
         ours.level = Level.TRACE
-        root.addAppender(appender)
         reader.answer = { Profile(summary = "ANSWERMARKER4417 $it") }
         try {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
@@ -344,14 +340,14 @@ internal class CvExtractApiTests(
             val id = upload(sub, "CVNAMEMARKER4417.txt", "CVTEXTMARKER4417 again".toByteArray(), master = false)
             mvc.perform(delete("/api/files/$id").header("Authorization", bearer(sub))).andExpect(status().isNoContent)
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previous
             ours.level = ourPrevious
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val logged = appender.list.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
-            .joinToString("\n") { e -> e.formattedMessage + "\n" + ((e.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty()) }
+        val logged = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+            .joinToString("\n") { e -> e.fullText() }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")
         assertTrue("CV extraction requested" in logged, "our own outcome line is expected")
         listOf("CVTEXTMARKER4417", "CVNAMEMARKER4417", "ANSWERMARKER4417").forEach {

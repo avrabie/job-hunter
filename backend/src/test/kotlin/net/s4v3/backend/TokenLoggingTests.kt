@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -28,24 +25,23 @@ class TokenLoggingTests(@Autowired private val mvc: MockMvc) {
         val rejected = listOf(wrongIssuer, expired, tampered, malformed)
 
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val previousLevel = root.level
         root.level = Level.TRACE
-        root.addAppender(appender)
         try {
             rejected.forEach { token ->
                 mvc.perform(get("/api/test/ping").header("Authorization", "Bearer $token"))
                     .andExpect(status().isUnauthorized)
             }
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previousLevel
         }
 
-        val logged = appender.list.joinToString("\n") { event ->
-            event.formattedMessage + "\n" + ((event.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty())
+        val logged = capture.events().joinToString("\n") { event ->
+            event.fullText()
         }
-        assertTrue(appender.list.isNotEmpty(), "the capture saw no log events at all, so it proves nothing")
+        assertTrue(capture.events().isNotEmpty(), "the capture saw no log events at all, so it proves nothing")
         rejected.forEach { token ->
             assertTrue(token !in logged, "a rejected token appears in the logs")
             // Also the signature part, in case only a fragment is logged.

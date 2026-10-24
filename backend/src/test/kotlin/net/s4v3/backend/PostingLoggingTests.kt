@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.postings.PostingCandidate
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.postings.PostingRejectedException
@@ -28,26 +25,25 @@ class PostingLoggingTests(@Autowired private val ingest: PostingIngest) {
     @Test
     fun `posting text and payloads never reach the logs on create, update or rejection`() {
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val previousLevel = root.level
         root.level = Level.TRACE
-        root.addAppender(appender)
         try {
             val c = candidate("We are looking for a backend engineer. $marker", """{"text":"$marker"}""")
             ingest.ingest(c)
             ingest.ingest(c.copy(description = "Changed description for the engineer role. $marker", rawPayload = "$marker v2"))
             assertFailsWith<PostingRejectedException> { ingest.ingest(c.copy(title = " ")) }
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previousLevel
         }
 
         // Spring JDBC and the PostgreSQL driver print bound SQL parameters at TRACE; they are off at the INFO level the
         // application runs at, and the rule is never to enable them. The test covers everything else.
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val relevant = appender.list.filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
+        val relevant = capture.events().filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
         val logged = relevant.joinToString("\n") { event ->
-            event.formattedMessage + "\n" + ((event.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty())
+            event.fullText()
         }
         assertTrue(relevant.isNotEmpty(), "the capture saw no log events at all, so it proves nothing")
         assertTrue(marker !in logged, "posting text appears in the logs")

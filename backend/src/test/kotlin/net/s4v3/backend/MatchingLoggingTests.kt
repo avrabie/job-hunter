@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.matching.internal.MatchEvaluator
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.profile.ProfileService
@@ -31,10 +28,9 @@ internal class MatchingLoggingTests(
     @Test
     fun `profile and posting text never reach the logs and no user id sits next to a score`() {
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val previous = root.level
         root.level = Level.TRACE
-        root.addAppender(appender)
         val user = support.newUser()
         try {
             support.saveProfile(user, role = roleMarker, skills = listOf(skillMarker))
@@ -43,14 +39,14 @@ internal class MatchingLoggingTests(
             evaluator.evaluateProfile(user)
             evaluator.evaluatePosting(posting)
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previous
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val relevant = appender.list.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+        val relevant = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
         val logged = relevant.joinToString("\n") { e ->
-            e.formattedMessage + "\n" + ((e.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty())
+            e.fullText()
         }
         assertTrue(relevant.any { "Evaluated posting" in it.formattedMessage }, "the capture saw no matching logs, so it proves nothing")
         for (marker in listOf(skillMarker, roleMarker, titleMarker)) assertFalse(marker in logged, "$marker appears in the logs")

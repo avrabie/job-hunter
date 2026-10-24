@@ -2,10 +2,9 @@ package net.s4v3.backend.llm
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.IntegrationTest
+import net.s4v3.backend.LogCapture
+import net.s4v3.backend.fullText
 import net.s4v3.backend.llm.internal.ExecutorSource
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
@@ -39,7 +38,7 @@ class LlmLoggingTests(@Autowired private val reader: CvReader) {
     @Test
     fun `neither the CV text nor the model's answer reaches the logs`() {
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val previous = root.level
         val ours = LoggerFactory.getLogger("net.s4v3") as Logger
         val ourPrevious = ours.level
@@ -47,18 +46,17 @@ class LlmLoggingTests(@Autowired private val reader: CvReader) {
         // application configures, which is what must hold.
         root.level = Level.INFO
         ours.level = Level.TRACE
-        root.addAppender(appender)
         try {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             assertFailsWith<LlmFailure> { reader.profileFrom("Jane Doe worked at CVMARKER4417 as an engineer") }
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previous
             ours.level = ourPrevious
         }
 
-        val logged = appender.list.joinToString("\n") { e ->
-            e.formattedMessage + "\n" + ((e.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty())
+        val logged = capture.events().joinToString("\n") { e ->
+            e.fullText()
         }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")
         assertTrue("CV reading failed" in logged, "our own outcome line is expected")

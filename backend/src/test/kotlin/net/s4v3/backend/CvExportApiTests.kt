@@ -2,9 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.cv.export.internal.RenderGuard
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
@@ -258,25 +255,24 @@ internal class CvExportApiTests(
         val sub = newSub()
         val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
         val ours = LoggerFactory.getLogger("net.s4v3") as Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        val capture = LogCapture(root)
         val (previous, ourPrevious) = root.level to ours.level
         root.level = Level.INFO
         ours.level = Level.TRACE
-        root.addAppender(appender)
         try {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             save(sub, profileJson(name = "Zed Logmarker4417", extra = ""))
             export(sub, request("PDF")).andExpect(status().isOk)
             export(sub, request(format = "DOCX", more = ""","note":"BODYMARKER4417"""")).andExpect(status().isBadRequest)
         } finally {
-            root.detachAppender(appender)
+            capture.close()
             root.level = previous
             ours.level = ourPrevious
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val logged = appender.list.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
-            .joinToString("\n") { e -> e.formattedMessage + "\n" + ((e.throwableProxy as? ThrowableProxy)?.throwable?.stackTraceToString().orEmpty()) }
+        val logged = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+            .joinToString("\n") { e -> e.fullText() }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")
         assertTrue("CV exported" in logged, "our own outcome line is expected")
         listOf("Logmarker4417", "BODYMARKER4417", "Built the thing", "Builds backends", "ada@example.org").forEach {

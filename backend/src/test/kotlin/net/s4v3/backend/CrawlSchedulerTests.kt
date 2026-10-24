@@ -2,8 +2,6 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.read.ListAppender
 import net.s4v3.backend.sources.AtsCrawl
 import net.s4v3.backend.sources.BoardOutcome
 import net.s4v3.backend.sources.BoardResult
@@ -42,18 +40,16 @@ internal class CrawlSchedulerTests {
     private val scheduler = CrawlScheduler(source, crawl) { queued += it }
 
     private val logger = LoggerFactory.getLogger(CrawlScheduler::class.java) as Logger
-    private val appender = ListAppender<ILoggingEvent>()
-    private fun logged() = appender.list.joinToString("\n") { it.formattedMessage }
+    private val capture = LogCapture(logger)
+    private fun logged() = capture.events().joinToString("\n") { it.formattedMessage }
 
     @BeforeEach
-    fun capture() {
-        appender.start()
+    fun setLevel() {
         logger.level = Level.INFO
-        logger.addAppender(appender)
     }
 
     @AfterEach
-    fun release() { logger.detachAppender(appender) }
+    fun release() { capture.close() }
 
     private fun at(time: String) = Instant.parse("2026-10-22T${time}Z")
     private fun runQueued() { queued.toList().forEach { it.run() }; queued.clear() }
