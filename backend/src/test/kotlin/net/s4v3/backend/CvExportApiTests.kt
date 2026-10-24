@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
 
 /** The export endpoint end to end with synthetic profiles (an invented person). */
 @ApiTest
-@TestPropertySource(properties = ["jobhunter.cv-export.per-hour=6"])
+@TestPropertySource(properties = ["jobhunter.cv-export.per-hour=6", "jobhunter.cv-export.render-wait=200ms"])
 internal class CvExportApiTests(
     @Autowired private val mvc: MockMvc,
     @Autowired private val guard: RenderGuard,
