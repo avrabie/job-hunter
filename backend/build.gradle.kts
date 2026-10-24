@@ -41,6 +41,8 @@ dependencies {
     implementation("ai.koog:koog-agents:1.3.0")
     // Reads the text of an uploaded PDF CV (no OCR).
     implementation("org.apache.pdfbox:pdfbox:3.0.8")
+    // Renders the CV HTML to PDF (LGPL 2.1+, used unmodified; same PDFBox version as above).
+    implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.100")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
