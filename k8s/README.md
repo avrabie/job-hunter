@@ -374,8 +374,7 @@ The user checked the profile page on `https://s4v3.net` (sign in, save, reload, 
 
 ### 6.3 Verify after deploy
 
-Run these from outside the cluster after the prod apply (not yet run; the public CV page is not deployed). The rewrite
-rule is new, so the trailing-slash and bare `/cv` answers are not confirmed yet.
+Run from outside the cluster after the prod apply. Observed on 2026-10-24 (backend 0.16.0, ui 0.14.0).
 
 ```
 curl -si https://s4v3.net/cv/some-handle | head -20   # expect the backend's JSON 404 {"error":"not_found"}, NOT the UI's index.html
@@ -385,13 +384,13 @@ curl -si https://s4v3.net/cv/a/b | head -20
 curl -si https://s4v3.net/cv/ada/ | head -20
 ```
 
-| Request | Expected | Observed (lead fills in) |
+| Request | Expected | Observed |
 |---|---|---|
-| `/cv/some-handle` | 404, JSON `{"error":"not_found"}` from backend, not UI HTML | to confirm on the cluster |
-| `/cv` | to confirm on the cluster | to confirm on the cluster |
-| `/cv/` | to confirm on the cluster | to confirm on the cluster |
-| `/cv/a/b` | 404 from backend (only the handle is rewritten) | to confirm on the cluster |
-| `/cv/ada/` | to confirm on the cluster (trailing slash after a handle) | to confirm on the cluster |
+| `/cv/some-handle` | 404, JSON `{"error":"not_found"}` from backend, not UI HTML | 404, JSON, `no-store`, `noindex`: as expected |
+| `/cv` | 404 or 401, nothing served | 401 (rewritten to `/api/public/cv`, not permitted) |
+| `/cv/` | 404 or 401, nothing served | 401 (same) |
+| `/cv/a/b` | 404 or 401, nothing served | 401 (rewritten to `/api/public/cv/a/b`, not permitted); no content leaks |
+| `/cv/ada/` | 404 or 401, nothing served | 401 (trailing slash is not matched by the permit rule) |
 
 ## 7. Environment variables
 

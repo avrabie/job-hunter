@@ -7,7 +7,7 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 ## 0. Checks by the lead (before building)
 
 - [x] 0.1 Find out whether the Traefik version in `k8s/platform/traefik-values.yaml` supports the Gateway API `URLRewrite` filter with `ReplacePrefixMatch` (Traefik docs for that version; do not guess) and record the answer and its source in `design.md` decision 7. If it does not, group 7 changes the UI constant to the direct address and the `edge-routing` delta is dropped.
-- [ ] 0.2 Open `/export` on the deployed UI in a browser and check whether the preview is styled or plain (the UI's CSP forbids inline styles and a sandboxed `srcdoc` frame inherits it). Record the result in `design.md` Risks; if the preview is unstyled, add the fix as a follow-up task (same-origin stylesheet link mode for the preview).
+- [x] 0.2 Open `/export` on the deployed UI in a browser and check whether the preview is styled or plain (the UI's CSP forbids inline styles and a sandboxed `srcdoc` frame inherits it). Record the result in `design.md` Risks; if the preview is unstyled, add the fix as a follow-up task (same-origin stylesheet link mode for the preview).
 
 ## 1. Database and handle rules (backend)
 
@@ -39,7 +39,7 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 
 ## 7. Edge route (after 0.1)
 
-- [ ] 7.1 In `k8s/base/gateway.yaml` (the HTTPRoutes) add the rule of `design.md` decision 7: PathPrefix `/cv/`, filter `URLRewrite` with `ReplacePrefixMatch: /api/public/cv/`, backend the gateway Service; update `k8s/validate.sh` expectations if it checks routes, and the `edge-routing` text in `k8s/README.md`. Verify: `k8s/validate.sh` passes (it renders and schema-checks both overlays); show the rendered rule in the report. The lead applies it with `kubectl diff` first.
+- [x] 7.1 In `k8s/base/gateway.yaml` (the HTTPRoutes) add the rule of `design.md` decision 7: PathPrefix `/cv/`, filter `URLRewrite` with `ReplacePrefixMatch: /api/public/cv/`, backend the gateway Service; update `k8s/validate.sh` expectations if it checks routes, and the `edge-routing` text in `k8s/README.md`. Verify: `k8s/validate.sh` passes (it renders and schema-checks both overlays); show the rendered rule in the report. The lead applies it with `kubectl diff` first.
 
 ## 8. Docs
 

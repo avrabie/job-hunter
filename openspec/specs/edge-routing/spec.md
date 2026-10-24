@@ -13,7 +13,7 @@ The system SHALL expose the UI, the `/auth` paths and the `/api` paths on one ho
 - **THEN** both requests go to the same scheme, host and port as the page
 
 ### Requirement: Path routing
-The edge SHALL send requests for `/` to `ui`, and requests for `/api` and `/auth` to the Spring gateway; only the Spring gateway SHALL route onward to `backend` and `auth`.
+The edge SHALL send requests for `/` to `ui`, requests for `/api` and `/auth` to the Spring gateway, and requests for `/cv/<handle>` to the Spring gateway with the path rewritten to `/api/public/cv/<handle>`; only the Spring gateway SHALL route onward to `backend` and `auth`.
 
 #### Scenario: UI route
 - **WHEN** a client requests `/` or an unknown non-API path
@@ -30,6 +30,14 @@ The edge SHALL send requests for `/` to `ui`, and requests for `/api` and `/auth
 #### Scenario: No direct service access
 - **WHEN** a client requests a path that only exists inside `backend` or `auth` and is not under `/api` or `/auth`
 - **THEN** the edge does not reach those services
+
+#### Scenario: Public CV address
+- **WHEN** a client requests `/cv/ada-example`
+- **THEN** the request reaches `backend` as `/api/public/cv/ada-example` through the Spring gateway and the response is the backend's page with its own security headers, not the UI's
+
+#### Scenario: Only the handle is rewritten
+- **WHEN** a client requests `/cv/` with nothing after it, or `/cv/a/b`
+- **THEN** the answer is a 4xx with no content (the backend does not serve it) and no other backend path is reachable through `/cv/`
 
 ### Requirement: TLS termination
 In production the edge SHALL serve HTTPS with a certificate issued for the public hostname and renewed automatically.
