@@ -58,20 +58,17 @@ internal class RepositoriesController(private val repositories: RepositoryCatalo
         @RequestParam(defaultValue = "") username: String,
     ): ResponseEntity<Any> {
         val code = CodeProvider.entries.firstOrNull { it.name == provider }
-            ?: return error(HttpStatus.BAD_REQUEST, "unknown_provider")
+            ?: return codeError(HttpStatus.BAD_REQUEST, "unknown_provider")
         return when (val listing = repositories.list(code, username)) {
             is RepositoryListing.Found -> ResponseEntity.ok(
                 RepositoriesBody(listing.repositories.map { RepositoryJson.of(it) }),
             )
-            RepositoryListing.InvalidUsername -> error(HttpStatus.BAD_REQUEST, "invalid_username")
-            RepositoryListing.NotFound -> error(HttpStatus.NOT_FOUND, "account_not_found")
-            RepositoryListing.RateLimited -> error(HttpStatus.TOO_MANY_REQUESTS, "provider_rate_limited")
-            RepositoryListing.Unavailable -> error(HttpStatus.BAD_GATEWAY, "provider_unavailable")
+            RepositoryListing.InvalidUsername -> codeError(HttpStatus.BAD_REQUEST, "invalid_username")
+            RepositoryListing.NotFound -> codeError(HttpStatus.NOT_FOUND, "account_not_found")
+            RepositoryListing.RateLimited -> codeError(HttpStatus.TOO_MANY_REQUESTS, "provider_rate_limited")
+            RepositoryListing.Unavailable -> codeError(HttpStatus.BAD_GATEWAY, "provider_unavailable")
         }
     }
-
-    private fun error(status: HttpStatus, code: String): ResponseEntity<Any> =
-        ResponseEntity.status(status).body(mapOf("error" to code))
 }
 
 /** Shape of a successful answer, for the API description and the body. */
