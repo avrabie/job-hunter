@@ -16,6 +16,10 @@ k8s/
 
 Traffic path: browser -> node port 80/443 -> Traefik (Gateway API `edge`) -> `/` to `ui`; `/api` and `/auth` to the
 Spring `gateway` -> `backend` / `auth`. One host, so the browser sees a single origin.
+The public CV page: `/cv/<handle>` goes to the Spring `gateway` with the path rewritten (Gateway API `URLRewrite`,
+`ReplacePrefixMatch`) to `/api/public/cv/<handle>`, so the browser shows `https://s4v3.net/cv/<handle>` and `backend` answers
+the page. Traefik v3.7.14 supports this filter (`traefik-rewrite` research report, `handoff/traefik-rewrite.report.md`).
+Only the handle is passed on; `/cv` and `/cv/` are not a handle.
 
 ## 1. Tools on your machine
 
@@ -367,6 +371,27 @@ The user checked `https://s4v3.net` in a browser on 2026-10-21 and reported it w
 **Profile field checks release, 2026-10-21:** `moldovean/job-hunter-ui:0.4.0` (amd64, anonymous pull checked) applied the same way; the `ui` rollout completed, no other workload restarted, and anonymous `GET /api/profile` still answers 401.
 
 The user checked the profile page on `https://s4v3.net` (sign in, save, reload, field messages, focus after a failed save, console) on 2026-10-21 and reported it fine.
+
+### 6.3 Verify after deploy
+
+Run these from outside the cluster after the prod apply (not yet run; the public CV page is not deployed). The rewrite
+rule is new, so the trailing-slash and bare `/cv` answers are not confirmed yet.
+
+```
+curl -si https://s4v3.net/cv/some-handle | head -20   # expect the backend's JSON 404 {"error":"not_found"}, NOT the UI's index.html
+curl -si https://s4v3.net/cv | head -20
+curl -si https://s4v3.net/cv/ | head -20
+curl -si https://s4v3.net/cv/a/b | head -20
+curl -si https://s4v3.net/cv/ada/ | head -20
+```
+
+| Request | Expected | Observed (lead fills in) |
+|---|---|---|
+| `/cv/some-handle` | 404, JSON `{"error":"not_found"}` from backend, not UI HTML | to confirm on the cluster |
+| `/cv` | to confirm on the cluster | to confirm on the cluster |
+| `/cv/` | to confirm on the cluster | to confirm on the cluster |
+| `/cv/a/b` | 404 from backend (only the handle is rewritten) | to confirm on the cluster |
+| `/cv/ada/` | to confirm on the cluster (trailing slash after a handle) | to confirm on the cluster |
 
 ## 7. Environment variables
 

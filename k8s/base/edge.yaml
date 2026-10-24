@@ -55,3 +55,18 @@ spec:
       backendRefs:
         - name: gateway
           port: 8080
+    # Public CV page: `/cv/<handle>` is served by backend as `/api/public/cv/<handle>`. Only the handle is passed on; it is the
+    # only thing after `/cv/` that the backend accepts, so `/cv/a/b` and `/cv/` get the backend's 404, never the UI.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cv
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /api/public/cv
+      backendRefs:
+        - name: gateway
+          port: 8080
