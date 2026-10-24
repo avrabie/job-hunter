@@ -1,11 +1,20 @@
 package net.s4v3.backend.profile.internal
 
+import net.s4v3.backend.profile.CodeAccount
 import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.Contact
+import net.s4v3.backend.profile.Education
+import net.s4v3.backend.profile.Experience
+import net.s4v3.backend.profile.LanguageSkill
+import net.s4v3.backend.profile.Location
+import net.s4v3.backend.profile.OpenSourceProject
+import net.s4v3.backend.profile.Preferences
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
 import net.s4v3.backend.profile.ProjectAnalysis
+import net.s4v3.backend.profile.Publication
+import net.s4v3.backend.profile.Skill
 import java.net.URI
 import java.net.URISyntaxException
 import java.time.LocalDate
@@ -65,19 +74,35 @@ internal object ProfileValidator {
 
     private fun check(profile: Profile, problems: MutableMap<String, String>) {
         contact(profile.contact, problems)
-        profile.location?.let {
+        location(profile.location, problems)
+        optionalText("summary", profile.summary, SUMMARY_MAX, problems)
+        languages(profile.languages, problems)
+        experience(profile.experience, problems)
+        education(profile.education, problems)
+        publications(profile.publications, problems)
+        codeAccounts(profile.codeAccounts, problems)
+        openSourceProjects(profile.openSourceProjects, problems)
+        skills(profile.skills, problems)
+        preferences(profile.preferences, problems)
+    }
+
+    private fun location(location: Location?, problems: MutableMap<String, String>) {
+        location?.let {
             optionalText("location.city", it.city, NAME_MAX, problems)
             it.canton?.let { canton -> if (!cantonCode.matches(canton)) problems["location.canton"] = "must be two uppercase letters" }
         }
-        optionalText("summary", profile.summary, SUMMARY_MAX, problems)
+    }
 
-        limit("languages", profile.languages.size, LANGUAGES_MAX, problems)
-        profile.languages.forEachIndexed { i, language ->
+    private fun languages(languages: List<LanguageSkill>, problems: MutableMap<String, String>) {
+        limit("languages", languages.size, LANGUAGES_MAX, problems)
+        languages.forEachIndexed { i, language ->
             if (!languageCode.matches(language.code)) problems["languages[$i].code"] = "must be two lowercase letters"
         }
+    }
 
-        limit("experience", profile.experience.size, EXPERIENCE_MAX, problems)
-        profile.experience.forEachIndexed { i, entry ->
+    private fun experience(experience: List<Experience>, problems: MutableMap<String, String>) {
+        limit("experience", experience.size, EXPERIENCE_MAX, problems)
+        experience.forEachIndexed { i, entry ->
             val at = "experience[$i]"
             requiredText("$at.employer", entry.employer, NAME_MAX, problems)
             requiredText("$at.title", entry.title, NAME_MAX, problems)
@@ -87,18 +112,22 @@ internal object ProfileValidator {
             entry.achievements.forEachIndexed { j, text -> requiredText("$at.achievements[$j]", text, ACHIEVEMENT_MAX, problems) }
             tags("$at.technologies", entry.technologies, problems)
         }
+    }
 
-        limit("education", profile.education.size, EDUCATION_MAX, problems)
-        profile.education.forEachIndexed { i, entry ->
+    private fun education(education: List<Education>, problems: MutableMap<String, String>) {
+        limit("education", education.size, EDUCATION_MAX, problems)
+        education.forEachIndexed { i, entry ->
             val at = "education[$i]"
             requiredText("$at.institution", entry.institution, NAME_MAX, problems)
             requiredText("$at.degree", entry.degree, NAME_MAX, problems)
             optionalText("$at.field", entry.field, NAME_MAX, problems)
             order("$at.end", entry.start, entry.end, problems)
         }
+    }
 
-        limit("publications", profile.publications.size, PUBLICATIONS_MAX, problems)
-        profile.publications.forEachIndexed { i, publication ->
+    private fun publications(publications: List<Publication>, problems: MutableMap<String, String>) {
+        limit("publications", publications.size, PUBLICATIONS_MAX, problems)
+        publications.forEachIndexed { i, publication ->
             val at = "publications[$i]"
             requiredText("$at.title", publication.title, NAME_MAX, problems)
             optionalText("$at.venue", publication.venue, NAME_MAX, problems)
@@ -106,19 +135,23 @@ internal object ProfileValidator {
             optionalText("$at.authors", publication.authors, AUTHORS_MAX, problems)
             publication.url?.let { httpUrl("$at.url", it, problems) }
         }
+    }
 
+    private fun codeAccounts(codeAccounts: List<CodeAccount>, problems: MutableMap<String, String>) {
         val providers = mutableSetOf<CodeProvider>()
-        profile.codeAccounts.forEachIndexed { i, account ->
+        codeAccounts.forEachIndexed { i, account ->
             val at = "codeAccounts[$i]"
             if (!providers.add(account.provider)) problems["$at.provider"] = "must appear once per provider"
             if (!isValidUsername(account.provider, account.username)) {
                 problems["$at.username"] = "must follow the username rule of the provider"
             }
         }
+    }
 
-        limit("openSourceProjects", profile.openSourceProjects.size, OPEN_SOURCE_PROJECTS_MAX, problems)
+    private fun openSourceProjects(openSourceProjects: List<OpenSourceProject>, problems: MutableMap<String, String>) {
+        limit("openSourceProjects", openSourceProjects.size, OPEN_SOURCE_PROJECTS_MAX, problems)
         val repositories = mutableSetOf<Pair<CodeProvider, String>>()
-        profile.openSourceProjects.forEachIndexed { i, project ->
+        openSourceProjects.forEachIndexed { i, project ->
             val at = "openSourceProjects[$i]"
             requiredText("$at.fullName", project.fullName, NAME_MAX, problems)
             if (!repositories.add(project.provider to project.fullName)) problems["$at.fullName"] = "must appear once per provider"
@@ -132,9 +165,11 @@ internal object ProfileValidator {
             optionalText("$at.note", project.note, REPOSITORY_NOTE_MAX, problems)
             project.analysis?.let { analysis(at, it, problems) }
         }
+    }
 
-        limit("skills", profile.skills.size, SKILLS_MAX, problems)
-        profile.skills.forEachIndexed { i, skill ->
+    private fun skills(skills: List<Skill>, problems: MutableMap<String, String>) {
+        limit("skills", skills.size, SKILLS_MAX, problems)
+        skills.forEachIndexed { i, skill ->
             val at = "skills[$i]"
             requiredText("$at.name", skill.name, NAME_MAX, problems)
             limit("$at.sources", skill.sources.size, SKILL_SOURCES_MAX, problems)
@@ -145,8 +180,9 @@ internal object ProfileValidator {
                 requiredText("$sourceAt.evidence", source.evidence, SOURCE_EVIDENCE_MAX, problems)
             }
         }
+    }
 
-        val prefs = profile.preferences
+    private fun preferences(prefs: Preferences, problems: MutableMap<String, String>) {
         limit("preferences.targetRoles", prefs.targetRoles.size, TARGET_ROLES_MAX, problems)
         prefs.targetRoles.forEachIndexed { i, role -> requiredText("preferences.targetRoles[$i]", role, NAME_MAX, problems) }
         limit("preferences.cantons", prefs.cantons.size, CANTONS_MAX, problems)
