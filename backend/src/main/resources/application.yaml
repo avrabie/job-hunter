@@ -47,6 +47,8 @@ jobhunter:
   letters:
     # Model for motivation letters (same names as above). Empty = use jobhunter.llm.model. Sonnet_5 writes better letters.
     model: ""
+    # Maximum number of letter generations and regenerations per user per hour; each one is one model call. Manual edits do not count.
+    per-hour: 20
   cv:
     # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
     max-text-chars: 120000

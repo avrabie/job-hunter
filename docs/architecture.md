@@ -179,11 +179,11 @@ Event edges (dotted, see section 5): `postings` publishes `JobIngested`, `profil
 
 ### applications
 
-- Purpose: the user's tracked jobs. A frozen copy of the posting (title, company, link, plain-text description, capture time), the stage (`INTERESTED`, `APPLYING`, `APPLIED`, `REJECTED`), notes and the applied date. Letters come later (the `motivation_letter` table exists, no code uses it yet).
-- Public API: `ApplicationService` (`track`, `get`, `list`, `update`, `remove`, `byPosting`, `frozenJob`) and its types.
-- Internal (`K/applications/internal/`): `ApplicationController` (`/api/applications`, `/by-posting`, `/{id}`), `DefaultApplicationService`, `ApplicationRepository`, `ErrorResponses`.
+- Purpose: the user's tracked jobs. A frozen copy of the posting (title, company, link, plain-text description, capture time), the stage (`INTERESTED`, `APPLYING`, `APPLIED`, `REJECTED`), notes and the applied date. Motivation letters: versions (at most 20 per application) written by `LetterWriter` from the frozen description and only the chosen profile parts (indexes resolved against the saved profile), reviewed with paragraph comments, regenerated, edited by hand, downloaded as Markdown.
+- Public API: `ApplicationService` (`track`, `get`, `list`, `update`, `remove`, `byPosting`, `frozenJob`), `LetterService` (`generate`, `saveEdited`, `list`, `get`, `file`, `delete`), `paragraphs(text)` and their types.
+- Internal (`K/applications/internal/`): `ApplicationController` (`/api/applications`, `/by-posting`, `/{id}`), `DefaultApplicationService`, `ApplicationRepository`, `ErrorResponses`, `LetterController` (`/api/applications/{id}/letters...`), `DefaultLetterService`, `LetterRepository`, `LetterLimiter`, `LetterFileName`.
 - Events: none. Tables: `application`, `motivation_letter` (`db/changelog/011-applications.sql`).
-- May call: `accounts`, `postings`. No other module calls it.
+- May call: `accounts`, `postings`, `profile`, `llm`. No other module calls it.
 
 ### notifications
 
@@ -342,7 +342,7 @@ Whether anything resubmits incomplete publications in production: unverified (no
   Postings are shared and readable by any signed-in user.
 - Architecture rules (ArchUnit): only `accounts` may touch `Jwt` or `SecurityContextHolder` (`TokenAccessBoundaryTests`); only `llm` may use `ai.koog` (`KoogBoundaryTests`).
 - Rate limiters (all in memory, per `sub`, rolling hour, one instance): `ExtractionLimiter` (`jobhunter.cv.extractions-per-hour`, 20), `ExportLimiter` (`jobhunter.cv-export.per-hour`, 30), `AnalysisLimiter`
-  (`jobhunter.analysis.per-hour`, 10). The three classes have the same body (read all three). A restart resets them. Other limits: `RenderGuard` (2 PDF renders), `PoliteHttp` (per host pause),
+  (`jobhunter.analysis.per-hour`, 10), `LetterLimiter` (`jobhunter.letters.per-hour`, 20, in `applications/internal`). The classes have the same body (read all four). A restart resets them. Other limits: `RenderGuard` (2 PDF renders), `PoliteHttp` (per host pause),
   `FreeSpaceGuard` (507 when an upload would leave under `min-free-bytes`).
 - Privacy habits that the code states in comments: error bodies use fixed codes or messages, no profile, CV or posting text in logs, tokens and tickets never logged, `LlmSettings.toString` hides the API key.
   Download tickets: 32 random bytes, bound to user and file, one use, 60 s (`DownloadTickets`).
@@ -361,6 +361,7 @@ Defaults come from the `@ConfigurationProperties` classes; where `application.ya
 | `jobhunter.cv.extractions-per-hour` | 20 | CV extractions per user per hour |
 | `jobhunter.cv-export.per-hour` | 30 | CV exports per user per hour |
 | `jobhunter.analysis.per-hour` | 10 | project analyses per user per hour |
+| `jobhunter.letters.per-hour` | 20 | letter generations and regenerations per user per hour |
 | `jobhunter.api-docs.enabled` | true | OpenAPI JSON and Swagger UI (also drives the public paths and `springdoc.*`) |
 | `jobhunter.files.dir` | `/data/files` | files volume root |
 | `jobhunter.files.min-free-bytes` | 2147483648 (2 GiB) | space uploads must leave free |

@@ -21,7 +21,7 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 
 ## 3. Letters (backend, `applications`)
 
-- [ ] 3.1 Letter service and endpoints (generate, regenerate, edited, list, read, download, delete), selection resolving against the saved profile (indexes), `paragraphs` function, `LetterLimiter` (`jobhunter.letters.per-hour`), 20-version cap, error mapping (503 `letter_not_configured`, 502 `letter_failed`, 429). API tests with a fake `LetterWriter`: all scenarios of the `motivation-letter` spec, the request the writer receives (chosen parts only, no contact data except name, no preferences), others' ids 404, comments stored with the new version, regeneration leaves the old version unchanged, limit 429 on the 21st call, download bytes and headers, logs contain no description, profile, comments or letter text.
+- [x] 3.1 Letter service and endpoints (generate, regenerate, edited, list, read, download, delete), selection resolving against the saved profile (indexes), `paragraphs` function, `LetterLimiter` (`jobhunter.letters.per-hour`), 20-version cap, error mapping (503 `letter_not_configured`, 502 `letter_failed`, 429). API tests with a fake `LetterWriter`: all scenarios of the `motivation-letter` spec, the request the writer receives (chosen parts only, no contact data except name, no preferences), others' ids 404, comments stored with the new version, regeneration leaves the old version unchanged, limit 429 on the 21st call, download bytes and headers, logs contain no description, profile, comments or letter text.
 
 ## 4. UI: tracking (can start after the Contract is fixed)
 
