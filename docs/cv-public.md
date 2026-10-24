@@ -132,5 +132,6 @@ the fallback, and `PUBLIC_CV_PATH` in `ui/src/publiccv/options.ts` decides which
 - **Live only**: there is no snapshot publishing yet.
 - **Limits are per backend process.** Rate limits and the page cache live in memory, so each instance counts on its own.
 - **The client address is best effort.** The per-IP limit uses the first `X-Forwarded-For` value; the per-handle limit is the backstop.
-- **Edge behaviour** for `/cv`, `/cv/` and a trailing slash after a handle is not confirmed until the post-deploy checks in `k8s/README.md`
-  section 6.3 have been run.
+- **Edge behaviour** for `/cv`, `/cv/` and a trailing slash after a handle: from backend 0.17.0 every path under `/api/public/cv`
+  answers the same uniform 404 as an unknown handle, for GET and HEAD, without sign-in. Backend 0.16.0 answered 401 for these
+  (not permitted). The post-deploy checks in `k8s/README.md` section 6.3 must be re-run to confirm the 404 on the cluster.

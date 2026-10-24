@@ -75,9 +75,26 @@ internal class PublicCvPageController(
             }
         }
         record(answer, started)
-        // HEAD answers like GET, without a body.
-        return if (request.method == "HEAD") ResponseEntity.status(answer.statusCode).headers(answer.headers).build() else answer
+        return headOnly(answer, request)
     }
+
+    /**
+     * Every other path under /api/public/cv: the empty path, a trailing slash, extra segments. Answers the same uniform 404
+     * as an unknown handle, through the same per-IP 404 limiter, so nothing tells a path apart from a missing page.
+     */
+    @GetMapping("/api/public/cv", "/api/public/cv/", "/api/public/cv/**")
+    @Operation(hidden = true)
+    fun unmatched(request: HttpServletRequest): ResponseEntity<Any> {
+        val started = System.nanoTime()
+        val ip = clientIp(request)
+        val answer = if (limits.notFoundByIp.tryAcquire(ip)) notFound() else rateLimited(limits.notFoundByIp, ip)
+        record(answer, started)
+        return headOnly(answer, request)
+    }
+
+    /** HEAD answers like GET, without a body. */
+    private fun headOnly(answer: ResponseEntity<Any>, request: HttpServletRequest): ResponseEntity<Any> =
+        if (request.method == "HEAD") ResponseEntity.status(answer.statusCode).headers(answer.headers).build() else answer
 
     @GetMapping("/api/cv/public/preview/{ticket}")
     @Operation(

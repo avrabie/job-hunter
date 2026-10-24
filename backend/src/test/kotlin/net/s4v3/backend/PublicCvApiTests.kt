@@ -5,6 +5,7 @@ import net.s4v3.backend.cv.publiccv.internal.PreviewTickets
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.servlet.MockMvc
@@ -13,6 +14,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -23,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 // One counter for the whole JVM: the limiters live in the shared Spring context, so no test may reuse an address.
@@ -420,6 +423,40 @@ internal class PublicCvApiTests(
     }
 
     // ---- Headers and content ----
+
+    @Test
+    fun `every path under the public CV path answers the same 404 as an unknown handle, for GET and HEAD, without sign-in`() {
+        listOf("GET", "HEAD").forEach { method ->
+            // The baseline is the unknown-handle answer to the same method, so HEAD is compared with HEAD.
+            val unknown = mvc.perform(request(HttpMethod.valueOf(method), "/api/public/cv/" + newHandle()).header("X-Forwarded-For", newIp()))
+                .andReturn().response
+            assertEquals(404, unknown.status, method)
+            listOf("/api/public/cv", "/api/public/cv/", "/api/public/cv/ada/", "/api/public/cv/a/b").forEach { path ->
+                val r = mvc.perform(request(HttpMethod.valueOf(method), path).header("X-Forwarded-For", newIp())).andReturn().response
+                val label = "$method $path"
+                assertEquals(404, r.status, label)
+                assertNull(r.getHeader("WWW-Authenticate"), label)
+                assertEquals(unknown.headerNames.toSet(), r.headerNames.toSet(), label)
+                assertEquals(unknown.getHeader("Cache-Control"), r.getHeader("Cache-Control"), label)
+                assertEquals(unknown.getHeader("X-Robots-Tag"), r.getHeader("X-Robots-Tag"), label)
+                assertEquals(unknown.getHeader("Referrer-Policy"), r.getHeader("Referrer-Policy"), label)
+                assertEquals(unknown.getHeader("X-Content-Type-Options"), r.getHeader("X-Content-Type-Options"), label)
+                assertEquals(unknown.contentType, r.contentType, label)
+                if (method == "GET") {
+                    assertEquals(unknown.contentAsString, r.contentAsString, label)
+                } else {
+                    assertEquals(0, r.contentAsByteArray.size, label)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the uniform 404 for other public CV paths shares the per-address 404 limit`() {
+        val ip = newIp()
+        repeat(10) { mvc.perform(get("/api/public/cv/a/b").header("X-Forwarded-For", ip)).andExpect(status().isNotFound) }
+        mvc.perform(get("/api/public/cv/").header("X-Forwarded-For", ip)).andExpect(status().isTooManyRequests)
+    }
 
     @Test
     fun `the page carries the safe headers`() {

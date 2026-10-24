@@ -45,11 +45,12 @@ internal class SecurityConfig {
                 // A file's content also comes with a single-use download ticket (no token). FilesController accepts either
                 // and answers 401 otherwise; every other path, the other file endpoints included, still needs a token.
                 it.requestMatchers(HttpMethod.GET, "/api/files/*/content").permitAll()
-                // The public CV page and the owner's one-use preview need no token. Explicit single-segment patterns only:
-                // nothing else under /api/public or /api/cv/public is open.
-                it.requestMatchers(HttpMethod.GET, "/api/public/cv/*", "/api/cv/public/preview/*").permitAll()
-                // Link previews and crawlers send HEAD; only the page itself, nothing broader.
-                it.requestMatchers(HttpMethod.HEAD, "/api/public/cv/*").permitAll()
+                // The public CV page and the owner's one-use preview need no token. Only the public CV path tree and the
+                // preview path are open; nothing else under /api/public or /api/cv/public is. Every path under /api/public/cv
+                // (empty, trailing slash, extra segments) answers the same uniform 404 from PublicCvPageController, not a 401.
+                it.requestMatchers(HttpMethod.GET, "/api/public/cv/**", "/api/cv/public/preview/*").permitAll()
+                // Link previews and crawlers send HEAD; the public CV path tree, nothing broader.
+                it.requestMatchers(HttpMethod.HEAD, "/api/public/cv/**").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }
