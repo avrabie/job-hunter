@@ -155,3 +155,4 @@ sections); these also need a master CV.
 - [`docs/koog-notes.md`](docs/koog-notes.md): notes on the Koog LLM library.
 - [`docs/architecture.md`](docs/architecture.md) (backend), [`docs/architecture-auth-gateway-ui.md`](docs/architecture-auth-gateway-ui.md), [`docs/glossary.md`](docs/glossary.md): how the code fits together; each backend module also has a short `README.md` in its package.
 - [`docs/deprecations.md`](docs/deprecations.md), [`docs/simplification-candidates.md`](docs/simplification-candidates.md), [`docs/cv-export.md`](docs/cv-export.md): maintenance notes.
+- [`docs/cv-public.md`](docs/cv-public.md): the public CV page, for the owner and for administrators (takedown, retention, threat model).

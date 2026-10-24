@@ -43,7 +43,7 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 
 ## 8. Docs
 
-- [ ] 8.1 Document the endpoints, settings, limits and the privacy model in `backend/README.md` (section "Public CV"), the page in `ui/README.md`, a new `docs/cv-public.md` (what is public, what never is, how to take a page down as an admin, the live-page trade-off, retention and deletion, the audit table, the threat model of `design.md`) and one line in `PLAN.md`. Verify: `grep -n -i "public cv" backend/README.md ui/README.md PLAN.md` shows each file and `docs/cv-public.md` exists.
+- [x] 8.1 Document the endpoints, settings, limits and the privacy model in `backend/README.md` (section "Public CV"), the page in `ui/README.md`, a new `docs/cv-public.md` (what is public, what never is, how to take a page down as an admin, the live-page trade-off, retention and deletion, the audit table, the threat model of `design.md`) and one line in `PLAN.md`. Verify: `grep -n -i "public cv" backend/README.md ui/README.md PLAN.md` shows each file and `docs/cv-public.md` exists.
 
 ## Workflow follow-up
 
