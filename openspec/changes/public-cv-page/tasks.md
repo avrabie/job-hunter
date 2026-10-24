@@ -17,7 +17,7 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 
 ## 2. Builder contact visibility (backend)
 
-- [ ] 2.1 In `backend/src/main/kotlin/net/s4v3/backend/cv/export/` add `ContactVisibility` (`ALL`, `NONE`) and `ExportOptions.contact` (default `ALL`), and make `internal/CvBuilder.kt` print only the contact items that are on (email, phone, website, LinkedIn, code accounts, location, headline); the full name always. Verify: new cases in `CvBuilderTests` for the three scenarios of `cv-export` "Contact visibility" and a case that `CvExportApiTests`-style default export output is unchanged (compare the builder output with and without the option); `./gradlew test --tests "CvBuilderTests"` and `./gradlew integrationTest --tests "CvExportApiTests"` pass.
+- [x] 2.1 In `backend/src/main/kotlin/net/s4v3/backend/cv/export/` add `ContactVisibility` (`ALL`, `NONE`) and `ExportOptions.contact` (default `ALL`), and make `internal/CvBuilder.kt` print only the contact items that are on (email, phone, website, LinkedIn, code accounts, location, headline); the full name always. Verify: new cases in `CvBuilderTests` for the three scenarios of `cv-export` "Contact visibility" and a case that `CvExportApiTests`-style default export output is unchanged (compare the builder output with and without the option); `./gradlew test --tests "CvBuilderTests"` and `./gradlew integrationTest --tests "CvExportApiTests"` pass.
 
 ## 3. Service (after 1 and 2)
 

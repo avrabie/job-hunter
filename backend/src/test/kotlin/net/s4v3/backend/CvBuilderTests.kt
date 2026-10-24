@@ -1,5 +1,6 @@
 package net.s4v3.backend
 
+import net.s4v3.backend.cv.export.ContactVisibility
 import net.s4v3.backend.cv.export.CvDocument
 import net.s4v3.backend.cv.export.CvFormat
 import net.s4v3.backend.cv.export.CvLanguage
@@ -12,14 +13,20 @@ import net.s4v3.backend.cv.export.LineSection
 import net.s4v3.backend.cv.export.ProseSection
 import net.s4v3.backend.cv.export.TagSection
 import net.s4v3.backend.cv.export.internal.CvBuilder
+import net.s4v3.backend.cv.export.internal.HtmlRenderer
+import net.s4v3.backend.cv.export.internal.MarkdownRenderer
+import net.s4v3.backend.cv.export.internal.PdfRenderer
 import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Preferences
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.WorkAuthorisation
 import net.s4v3.backend.profile.internal.ProfileJson
+import org.apache.pdfbox.Loader
+import org.apache.pdfbox.text.PDFTextStripper
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CvBuilderTests {
@@ -44,6 +51,7 @@ class CvBuilderTests {
         includeOpenSource: Boolean = true,
         includeAnalysis: Boolean = false,
         includeWorkAuthorisation: Boolean = true,
+        contact: ContactVisibility = ContactVisibility.ALL,
     ) = ExportOptions(
         format = CvFormat.MARKDOWN,
         template = CvTemplate.CLASSIC,
@@ -52,6 +60,7 @@ class CvBuilderTests {
         includeOpenSource = includeOpenSource,
         includeAnalysis = includeAnalysis,
         includeWorkAuthorisation = includeWorkAuthorisation,
+        contact = contact,
     )
 
     private fun build(profile: Profile = profile(), options: ExportOptions = options()): CvDocument =
@@ -244,5 +253,71 @@ class CvBuilderTests {
         val document = build(profile().copy(publications = emptyList()), options())
 
         assertFalse("Publications" in titles(document))
+    }
+
+    private fun markdown(document: CvDocument): String = MarkdownRenderer().render(document, CvTemplate.CLASSIC).decodeToString()
+
+    private fun html(document: CvDocument, template: CvTemplate): String = HtmlRenderer().html(document, template)
+
+    private fun pdfText(document: CvDocument, template: CvTemplate): String =
+        Loader.loadPDF(PdfRenderer().render(document, template)).use { PDFTextStripper().getText(it) }
+
+    @Test
+    fun `default contact visibility gives the same document as not setting it`() {
+        val without = ExportOptions(CvFormat.MARKDOWN, CvTemplate.CLASSIC, CvLanguage.EN, null)
+
+        assertEquals(CvBuilder.build(profile(), without), CvBuilder.build(profile(), without.copy(contact = ContactVisibility.ALL)))
+    }
+
+    @Test
+    fun `items off are dropped one by one and the rest stays`() {
+        val cases = listOf(
+            ContactVisibility.ALL.copy(email = false) to "ada@example.org",
+            ContactVisibility.ALL.copy(phone = false) to "+41 79 000 00 00",
+            ContactVisibility.ALL.copy(location = false) to "Zurich, ZH",
+            ContactVisibility.ALL.copy(website = false) to "https://example.org",
+            ContactVisibility.ALL.copy(linkedin = false) to "https://www.linkedin.com/in/ada-example",
+            ContactVisibility.ALL.copy(codeAccounts = false) to "github.com/octocat",
+        )
+        for ((visibility, hidden) in cases) {
+            val lines = build(options = options(contact = visibility)).contactLines.map { it.text }
+
+            assertFalse(hidden in lines, hidden)
+            assertEquals(5, lines.size, hidden)
+        }
+        assertEquals(null, build(options = options(contact = ContactVisibility.ALL.copy(headline = false))).headline)
+    }
+
+    @Test
+    fun `items off are absent from the markdown, html and pdf renderings`() {
+        val document = build(options = options(contact = ContactVisibility.ALL.copy(email = false, phone = false)))
+
+        assertFalse("ada@example.org" in markdown(document))
+        assertTrue("https://example.org" in markdown(document))
+        for (template in CvTemplate.entries) {
+            assertFalse("ada@example.org" in html(document, template), "html $template")
+            assertFalse("+41 79 000 00 00" in html(document, template), "html $template")
+            assertFalse("ada@example.org" in pdfText(document, template), "pdf $template")
+            assertFalse("+41 79 000 00 00" in pdfText(document, template), "pdf $template")
+            assertTrue("Senior Kotlin Engineer" in pdfText(document, template), "headline in pdf $template")
+        }
+    }
+
+    @Test
+    fun `all off leaves only the full name in every language`() {
+        for (language in CvLanguage.entries) {
+            val document = build(
+                options = options(language = language, sections = emptyList(), includeWorkAuthorisation = false, contact = ContactVisibility.NONE),
+            )
+
+            assertEquals("Ada Example", document.name)
+            assertNull(document.headline)
+            assertTrue(document.contactLines.isEmpty())
+            assertTrue(document.facts.isEmpty())
+            assertEquals("# Ada Example\n", markdown(build(options = options(language = language, contact = ContactVisibility.NONE, includeWorkAuthorisation = false))).substringBefore("\n## "))
+            for (template in CvTemplate.entries) {
+                assertFalse("Senior Kotlin Engineer" in html(build(options = options(language = language, contact = ContactVisibility.NONE)), template))
+            }
+        }
     }
 }
