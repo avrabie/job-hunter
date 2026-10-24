@@ -14,6 +14,8 @@ internal data class RenderKey(
     val settingsHash: String,
     val template: CvTemplate,
     val language: CvLanguage,
+    /** Empty without a photo, else the file id with its stored size and SHA-256, so a replaced file never finds the old page. */
+    val photo: String = "",
 )
 
 /** Rendered pages in memory: at most [maxEntries], each for [ttl]. The oldest entry makes room. Holds personal data: never logged. */

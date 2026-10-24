@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletRequest
 import net.s4v3.backend.cv.publiccv.PreviewTicket
 import net.s4v3.backend.cv.publiccv.PublicCvService
+import net.s4v3.backend.cv.publiccv.PublicPhoto
 import net.s4v3.backend.cv.publiccv.RenderedPage
 import net.s4v3.backend.cv.publiccv.internal.PublicCvLimits
 import net.s4v3.backend.cv.publiccv.internal.WindowLimiter
@@ -76,6 +77,66 @@ internal class PublicCvPageController(
         }
         record(answer, started)
         return headOnly(answer, request)
+    }
+
+    @GetMapping("/api/public/cv/{handle}/photo")
+    @Operation(
+        summary = "Read the photo of a public CV page",
+        description = "No token needed. Answers the processed round photo as `image/jpeg` (304 for a matching `If-None-Match`) " +
+            "only while the page is served and shows a photo. Every other case, an unknown handle included, answers the same " +
+            "uniform 404 `{\"error\":\"not_found\"}` as the page. The same limits per client IP, for 404 answers and per handle.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "The photo (image/jpeg)", content = [Content()]),
+            ApiResponse(responseCode = "304", description = "Not modified", content = [Content()]),
+            ApiResponse(
+                responseCode = "404", description = "`not_found`",
+                content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
+            ),
+            ApiResponse(
+                responseCode = "429", description = "`rate_limited`, with `Retry-After`",
+                content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
+            ),
+        ],
+    )
+    fun photo(@PathVariable handle: String, request: HttpServletRequest): ResponseEntity<Any> {
+        val started = System.nanoTime()
+        val ip = clientIp(request)
+        val normal = handle.lowercase()
+        val answer = if (!PLAUSIBLE.matches(normal)) {
+            if (limits.notFoundByIp.tryAcquire(ip)) notFound() else rateLimited(limits.notFoundByIp, ip)
+        } else if (!limits.pageByIp.tryAcquire(ip)) {
+            rateLimited(limits.pageByIp, ip)
+        } else if (!limits.pageByHandle.tryAcquire(normal)) {
+            rateLimited(limits.pageByHandle, normal)
+        } else {
+            val photo = service.renderPhoto(normal)
+            if (photo != null) {
+                servedPhoto(photo, request)
+            } else if (limits.notFoundByIp.tryAcquire(ip)) {
+                notFound()
+            } else {
+                rateLimited(limits.notFoundByIp, ip)
+            }
+        }
+        // No ETag in the log line: for a photo it is a hash of the image.
+        record(answer, started, withEtag = false)
+        return headOnly(answer, request)
+    }
+
+    private fun servedPhoto(photo: PublicPhoto, request: HttpServletRequest): ResponseEntity<Any> {
+        val quoted = "\"" + photo.etag + "\""
+        fun builder(status: HttpStatus) = ResponseEntity.status(status)
+            .header("Content-Security-Policy", "default-src 'none'; sandbox")
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Referrer-Policy", "no-referrer")
+            .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+            .header("X-Robots-Tag", NOINDEX)
+            .header(HttpHeaders.ETAG, quoted)
+        if (matches(request.getHeader(HttpHeaders.IF_NONE_MATCH), quoted)) return builder(HttpStatus.NOT_MODIFIED).build()
+        return builder(HttpStatus.OK)
+            .header(HttpHeaders.CONTENT_TYPE, "image/jpeg")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"photo.jpg\"")
+            .body(photo.bytes)
     }
 
     /**
@@ -148,8 +209,8 @@ internal class PublicCvPageController(
         set("X-Content-Type-Options", "nosniff")
     }
 
-    private fun record(answer: ResponseEntity<*>, startedNanos: Long) {
-        val etag = answer.headers.getFirst(HttpHeaders.ETAG)?.trim('"')?.take(8)
+    private fun record(answer: ResponseEntity<*>, startedNanos: Long, withEtag: Boolean = true) {
+        val etag = if (withEtag) answer.headers.getFirst(HttpHeaders.ETAG)?.trim('"')?.take(8) else null
         log.info(
             "Public CV answer status={} ms={}{}", answer.statusCode.value(), (System.nanoTime() - startedNanos) / 1_000_000,
             if (etag == null) "" else " etag=$etag",

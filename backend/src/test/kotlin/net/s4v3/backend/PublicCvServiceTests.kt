@@ -2,6 +2,10 @@ package net.s4v3.backend
 
 import net.s4v3.backend.cv.export.CvLanguage
 import net.s4v3.backend.cv.export.CvSectionKind
+import net.s4v3.backend.cv.export.internal.RenderGuard
+import net.s4v3.backend.cv.internal.ExportSettings
+import net.s4v3.backend.files.CabinetFile
+import net.s4v3.backend.files.FileCabinet
 import net.s4v3.backend.cv.publiccv.PublicCvContact
 import net.s4v3.backend.cv.publiccv.PublicCvSettings
 import net.s4v3.backend.cv.publiccv.PublicCvState
@@ -41,7 +45,7 @@ internal class PublicCvServiceTests(
 ) {
 
     private val clock = TestClock()
-    private val service = DefaultPublicCvService(repo, profiles, PreviewTickets(clock), RenderCache(clock = clock), clock)
+    private val service = DefaultPublicCvService(repo, profiles, PreviewTickets(clock), RenderCache(clock = clock), NoCabinet, RenderGuard(ExportSettings()), clock)
 
     private val fixture = javaClass.getResourceAsStream("/profile/full-profile.json")!!.readBytes().decodeToString()
 
@@ -649,4 +653,10 @@ internal class PublicCvServiceTests(
         assertTrue(state.published)
         assertFalse(state.locked)
     }
+}
+
+/** A cabinet with no files, for tests that do not use a photo. */
+private object NoCabinet : FileCabinet {
+    override fun masterCv(sub: String): CabinetFile? = null
+    override fun image(sub: String, id: java.util.UUID): CabinetFile? = null
 }
