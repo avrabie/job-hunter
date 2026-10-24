@@ -8,6 +8,7 @@ import java.time.YearMonth
  * the order the user gave them. Personal data: never log it.
  */
 data class Profile(
+    val contact: Contact = Contact(),
     val location: Location? = null,
     val workAuthorisation: WorkAuthorisation? = null,
     val languages: List<LanguageSkill> = emptyList(),
@@ -19,6 +20,16 @@ data class Profile(
     val openSourceProjects: List<OpenSourceProject> = emptyList(),
     val skills: List<Skill> = emptyList(),
     val preferences: Preferences = Preferences(),
+)
+
+/** The header of a CV: who the person is and how to reach them. All optional; [fullName] is needed to export. */
+data class Contact(
+    val fullName: String? = null,
+    val headline: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val linkedin: String? = null,
 )
 
 data class Location(val city: String? = null, val canton: String? = null)
