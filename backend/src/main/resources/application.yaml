@@ -44,6 +44,11 @@ jobhunter:
     api-key: ${ANTHROPIC_API_KEY:}
     # Name of a Koog model constant: Haiku_4_5, Sonnet_5 or Opus_5.
     model: Sonnet_5
+  cv:
+    # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
+    max-text-chars: 120000
+    # Maximum number of CV extractions per user per hour.
+    extractions-per-hour: 20
   api-docs:
     # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
     enabled: true

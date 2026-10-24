@@ -14,6 +14,6 @@ internal class CvConfig
  */
 @ConfigurationProperties("jobhunter.cv")
 internal data class CvSettings(
-    val maxTextChars: Int = 30_000,
-    val extractionsPerHour: Int = 5,
+    val maxTextChars: Int = 120_000,
+    val extractionsPerHour: Int = 20,
 )

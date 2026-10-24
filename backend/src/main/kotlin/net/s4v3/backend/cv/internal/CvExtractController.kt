@@ -70,9 +70,9 @@ internal class CvExtractController(
         val text = try {
             CvText.of(readMaster(master), master.contentType)
         } catch (_: NoCvText) {
-            return error(HttpStatus.UNPROCESSABLE_ENTITY, "No text could be read from the CV. Use a text-based PDF, a Markdown file or a plain text file.")
+            return error(HttpStatus.UNPROCESSABLE_CONTENT, "No text could be read from the CV. Use a text-based PDF, a Markdown file or a plain text file.")
         }
-        if (text.length > settings.maxTextChars) return error(HttpStatus.PAYLOAD_TOO_LARGE, "The CV text is too long to read.")
+        if (text.length > settings.maxTextChars) return error(HttpStatus.CONTENT_TOO_LARGE, "The CV text is too long to read.")
         if (!limiter.tryAcquire(sub)) return error(HttpStatus.TOO_MANY_REQUESTS, "Too many extractions. Please try again later.")
         return try {
             log.info("CV extraction requested: {} characters", text.length)
