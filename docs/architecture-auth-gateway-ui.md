@@ -209,7 +209,7 @@ framework: one `src/index.css`.
 | `register/` | `RegisterPage`, `register.ts` |
 | `profile/` | `ProfilePage`, `ProfileForm`, `fields`, `OpenSourceSection`, `TagInput`, `types`, `rules`, `skills`, `profileApi`, `repositoriesApi`, `analysisApi`, `fixtures/` |
 | `cv/` | `cvApi` (extract from the master CV) |
-| `files/` | `FileCabinet`, `filesApi`, `format`, `fakeXhr` (test helper living in src) |
+| `files/` | `FileCabinet`, `filesApi`, `format`, `fakeXhr` (test helper, lives in `src/test/`) |
 | `postings/` | `PostingsPage`, `PostingPage`, `OriginalLinks`, `postingsApi`, `links`, `types` |
 | `matches/` | `MatchesPage`, `matchesApi`, `types` |
 | `export/` | `ExportPage`, `exportApi`, `options` |
@@ -401,7 +401,7 @@ for a year with `=404` for missing files, everything else falls back to `index.h
    have their own `guarded` helper, so there are two styles. The upload also re-implements the 401 renew logic outside `apiFetch`.
 8. **Fixture is a hand-kept copy** (see 4.7); the drift test checks the copy, not the backend. The two files also differ
    in formatting only, which makes a plain `diff` noisy.
-9. **`ui/src/files/fakeXhr.ts` is a test helper inside a production folder** (and `src/test/` exists for helpers).
+9. **`ui/src/test/fakeXhr.ts` is a test helper** (it now lives in `src/test/` with the other helpers, not in the production `files/` folder).
 10. **Auth state is memory-only in three separate places** (signing key, registered client, authorizations) and the three
     follow-ups are one idea (known, see `PLAN.md` and the memory note), but nothing in `auth/` says so beyond comments in
     `AuthorizationServerConfig.kt`.

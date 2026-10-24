@@ -14,7 +14,7 @@ through the gateway. Longer text: `docs/architecture-auth-gateway-ui.md`. Setup 
   `ProfilePage` (state, save, fill from CV), `OpenSourceSection`, `skills`, API modules, `fixtures/`.
 - `cv/`, `files/`, `postings/`, `matches/`, `export/`, `admin/`: one folder per feature, each with a `*Page.tsx`
   and a `*Api.ts` returning result unions (`loaded`, `unauthorized`, `failed`, ...).
-- `test/`: `setup.ts`, `fakeAuth.ts`, `fakeManager.ts`.
+- `test/`: `setup.ts`, `fakeAuth.ts`, `fakeManager.ts`, `fakeXhr.ts`.
 
 ## Conventions
 
