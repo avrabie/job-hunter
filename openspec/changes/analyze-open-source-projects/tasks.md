@@ -31,7 +31,7 @@ Groups 1, 2 and 3 are independent and can run in parallel (they share only the C
 
 ## 6. Docs
 
-- [ ] 6.1 Document the endpoint, limits, config keys (`jobhunter.analysis.per-hour`, the raw base URL) and the skill origin and sources in `backend/README.md`, the Analyze flow in `ui/README.md`, one paragraph on the analyst and its evidence check in `docs/koog-notes.md`, and one line in `PLAN.md`. Verify: `grep -n -i "analy" backend/README.md ui/README.md docs/koog-notes.md PLAN.md` shows each file.
+- [x] 6.1 Document the endpoint, limits, config keys (`jobhunter.analysis.per-hour`, the raw base URL) and the skill origin and sources in `backend/README.md`, the Analyze flow in `ui/README.md`, one paragraph on the analyst and its evidence check in `docs/koog-notes.md`, and one line in `PLAN.md`. Verify: `grep -n -i "analy" backend/README.md ui/README.md docs/koog-notes.md PLAN.md` shows each file.
 
 ## Workflow follow-up
 

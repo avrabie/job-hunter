@@ -135,3 +135,12 @@ really lists every achievement can only be seen with a real CV: compare a sectio
 `ProfileSection.PROJECTS` were removed with the `github-open-source-projects` change: open source work now comes from the
 user's code account, not from the CV. Koog's structured parse ignores unknown keys, so a model answer that still contains
 `projects` is read without them (tested in `KoogCvReaderTests`).
+
+## Part 6: project analysis (analyze-open-source-projects)
+
+`KoogProjectAnalyst` follows `KoogCvReader`: one structured request in Koog's manual JSON mode, the repository digest (tree paths, then
+each file under a heading) quoted between `<repository>` tags with the closing tag removed, no tools, a repair model for malformed
+JSON, and the same fixed `LlmFailure`. What differs is the check. Each technology the model names must cite a path that is in the
+digest's tree, so `AnalysisMapper` drops anything it cannot trace to a file it was shown; that is also what limits a prompt injection in
+a README, which can ask for a technology but cannot make a file exist. Names over 60 characters are dropped, not cut; summary and
+architecture are cut at a sentence end where possible; an empty summary is a failure. The model is never asked for a skill level.

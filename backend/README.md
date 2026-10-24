@@ -247,6 +247,21 @@ migration: a document without them reads with empty lists.
 The CV draft (`llm` module) returns technologies per position and no projects (`section=projects` answers 400). A tag longer
 than 60 characters is dropped.
 
+### Project analysis
+
+`POST /api/profile/open-source-projects/analyze` with `{"provider":"GITHUB","fullName":"owner/repo"}` (token required) analyses one
+repository of the caller's **saved** profile (404 `project_not_found` otherwise, so it cannot be used on arbitrary repositories). It
+reads the file tree (one GitHub API call, at most 400 paths to depth 3), the README (20 KB) and up to 8 build files (12 KB each, such as
+`build.gradle.kts`, `package.json`, `pom.xml`) from `raw.githubusercontent.com` (`jobhunter.repositories.github.raw-base-url`), asks the
+model for a summary, an architecture description and the technologies, and returns them without saving anything. A technology is kept
+only when the file it cites is in the repository's tree, so an answer cannot invent evidence, and repository text is passed to the
+model as quoted data with no tools. Limited to `jobhunter.analysis.per-hour` (10) per user, counted before the model is called, with
+its own counter. Failures: 400 `invalid_request`, 404 `repository_not_found`, 429 `too_many_analyses` or `provider_rate_limited`,
+502 `provider_unavailable` or `analysis_failed`, 503 `analysis_not_configured` (no API key). The client stores the analysis on the
+project and adds the technologies to the skills: a skill has an `origin` (`MANUAL` or `ANALYSIS`) and `sources` (repository, link and
+the file that shows it), so every analysis skill is traceable; the server only checks their shape (at most 20 sources per skill, 200
+skills in all). Nothing of the repository, the model's answer or the repository name is logged.
+
 ### Repository listing
 
 `GET /api/profile/repositories?provider=GITHUB&username=<name>` (token required) lists the public, non-fork, non-archived
@@ -295,8 +310,8 @@ the database today), and the node's free disk is the only real limit. File bytes
 ## CV extraction (cv module)
 
 `POST /api/cv/extract` reads the caller's **master CV** (chosen in the cabinet) with the language model and returns a profile draft
-(same shape as the profile's content); nothing is saved. 409 no master CV, 413 text over `jobhunter.cv.max-text-chars` (30000),
-422 no text (a scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (5) per user, 502 model failure, 503 no API key.
+(same shape as the profile's content); nothing is saved. 409 no master CV, 413 text over `jobhunter.cv.max-text-chars` (120000),
+422 no text (a scanned PDF), 429 more than `jobhunter.cv.extractions-per-hour` (20) per user, 502 model failure, 503 no API key.
 With `?section=experience|education|publications` (any letter case) the model is asked only for that section, every entry of it
 (for experience every achievement, in the CV's wording), and the answer is a profile in which only that field is filled; an
 unknown section answers 400 before anything else. A section request counts as one extraction for the hourly limit.

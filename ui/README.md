@@ -46,7 +46,7 @@ Open http://localhost:5173, choose Register, create an account and sign in. `bac
 the dev proxy, so keep `pnpm dev` running while you call `/api`. The `dev` profile of `auth` already allows the
 redirect addresses `http://localhost:5173/callback` and `http://localhost:5173/`.
 
-The signed-in page calls `/api/` once and shows "The backend has no endpoints yet." until `backend` has endpoints.
+After signing in, the shell shows the postings, matches, profile and files pages; the backend endpoints they call are listed in `backend/README.md`.
 
 ## Production check
 
@@ -89,6 +89,13 @@ see the account's public repositories as a checklist, and tick the ones to show.
 **Picked projects** list, where each has a **Note**, move up/down and remove controls; repositories that disappear from the
 account stay until removed. Loading saves nothing: the page says so and the picks are saved with **Save**. Fixed messages
 cover an unknown account, rate limiting and an unreachable provider. There is no "Fill from CV" on this section.
+
+Each saved project has an **Analyze** button (disabled until the project is saved). It calls
+`POST /api/profile/open-source-projects/analyze`, shows the summary, the architecture and the technologies with their evidence, and
+adds the technologies to **Skills** as unsaved changes: an existing skill of the same name (any letter case) gets the repository as a
+source and keeps its level, any other technology becomes a skill from repository analysis with no level. Skills from analysis show
+their source links and evidence, and each skill and source can be removed. Analysing again replaces the repository's earlier sources
+(after a confirmation), and removing a project or its analysis takes its sources off the skills. Fixed messages cover each error code.
 
 ## File cabinet (profile page)
 
