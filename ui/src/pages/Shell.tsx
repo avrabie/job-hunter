@@ -57,6 +57,9 @@ export function Shell({ identity }: { identity: string }) {
         <Link className="button" to="/profile">
           Your profile
         </Link>
+        <Link className="button" to="/export">
+          Export CV
+        </Link>
         <button
           type="button"
           className="secondary"
