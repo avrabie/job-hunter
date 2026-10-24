@@ -125,7 +125,7 @@ export function ProfileForm({
         if (path) onLeave?.(path)
       }}
     >
-      <section aria-labelledby="contact-heading">
+      <section id="contact" aria-labelledby="contact-heading">
         <h2 id="contact-heading">Contact</h2>
         <p className="hint">
           The full name is needed to export a CV.{' '}
