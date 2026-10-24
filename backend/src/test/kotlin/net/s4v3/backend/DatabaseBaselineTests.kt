@@ -29,7 +29,9 @@ class DatabaseBaselineTests(
         assertTrue("source_fetch_state" in tables && "crawl_schedule" in tables && "posting_match" in tables, tables.toString())
         assertTrue("cv_document" in tables, tables.toString())
         assertTrue("user_file" in tables, tables.toString())
-        assertEquals(11, count("select count(*) from databasechangelog"))
+        assertTrue("public_cv" in tables && "public_cv_handle_hold" in tables && "public_cv_audit" in tables, tables.toString())
+        // Raise by one for every new changeset.
+        assertEquals(15, count("select count(*) from databasechangelog"))
     }
 
     @Test
