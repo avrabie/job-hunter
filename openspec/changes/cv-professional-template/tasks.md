@@ -19,7 +19,7 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 3. Skill groups and labels (backend, `cv.export`)
 
-- [ ] 3.1 Add `SkillGroups` and the `SkillGroup` enum per design decision 3, the nine EN and DE labels in `Labels` (match the style of the existing labels; German: Programmiersprachen, Frameworks, Messaging, Sicherheit & Identität, Cloud & Container, Tests & Observability, Datenbanken, Werkzeuge, Weitere), and tests pinning the spec examples plus whole-token matching (`Javascript` is not `Java`, `C` is not inside `Docker`), `PL/SQL`, `C++`, case-insensitivity, first-group-wins, unknown to OTHER.
+- [x] 3.1 Add `SkillGroups` and the `SkillGroup` enum per design decision 3, the nine EN and DE labels in `Labels` (match the style of the existing labels; German: Programmiersprachen, Frameworks, Messaging, Sicherheit & Identität, Cloud & Container, Tests & Observability, Datenbanken, Werkzeuge, Weitere), and tests pinning the spec examples plus whole-token matching (`Javascript` is not `Java`, `C` is not inside `Docker`), `PL/SQL`, `C++`, case-insensitivity, first-group-wins, unknown to OTHER.
 
 ## 4. Professional template (backend, `cv.export`)
 

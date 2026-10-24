@@ -2,6 +2,7 @@ package net.s4v3.backend.cv.export.internal
 
 import net.s4v3.backend.cv.export.CvLanguage
 import net.s4v3.backend.cv.export.CvSectionKind
+import net.s4v3.backend.cv.export.SkillGroup
 import net.s4v3.backend.profile.LanguageLevel
 import net.s4v3.backend.profile.SkillLevel
 import net.s4v3.backend.profile.WorkAuthorisation
@@ -34,6 +35,31 @@ internal object Labels {
             CvSectionKind.SKILLS -> "Kenntnisse"
             CvSectionKind.LANGUAGES -> "Sprachen"
             CvSectionKind.PUBLICATIONS -> "Publikationen"
+        }
+    }
+
+    fun skillGroup(group: SkillGroup, language: CvLanguage): String = when (language) {
+        CvLanguage.EN -> when (group) {
+            SkillGroup.LANGUAGES -> "Programming languages"
+            SkillGroup.FRAMEWORKS -> "Frameworks"
+            SkillGroup.MESSAGING -> "Messaging"
+            SkillGroup.SECURITY -> "Security & identity"
+            SkillGroup.CLOUD -> "Cloud & containers"
+            SkillGroup.TESTING -> "Tests & observability"
+            SkillGroup.DATABASES -> "Databases"
+            SkillGroup.TOOLS -> "Tools"
+            SkillGroup.OTHER -> "Other"
+        }
+        CvLanguage.DE -> when (group) {
+            SkillGroup.LANGUAGES -> "Programmiersprachen"
+            SkillGroup.FRAMEWORKS -> "Frameworks"
+            SkillGroup.MESSAGING -> "Messaging"
+            SkillGroup.SECURITY -> "Sicherheit & Identität"
+            SkillGroup.CLOUD -> "Cloud & Container"
+            SkillGroup.TESTING -> "Tests & Observability"
+            SkillGroup.DATABASES -> "Datenbanken"
+            SkillGroup.TOOLS -> "Werkzeuge"
+            SkillGroup.OTHER -> "Weitere"
         }
     }
 
