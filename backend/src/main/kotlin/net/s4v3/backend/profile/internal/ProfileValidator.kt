@@ -1,6 +1,7 @@
 package net.s4v3.backend.profile.internal
 
 import net.s4v3.backend.profile.CodeProvider
+import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
@@ -17,6 +18,8 @@ import java.time.YearMonth
 internal object ProfileValidator {
 
     const val NAME_MAX = 200
+    const val CONTACT_TEXT_MAX = 200
+    const val PHONE_MAX = 30
     const val SUMMARY_MAX = 4000
     const val ACHIEVEMENT_MAX = 600
     const val EXPERIENCE_MAX = 30
@@ -49,6 +52,8 @@ internal object ProfileValidator {
 
     private val languageCode = Regex("[a-z]{2}")
     private val cantonCode = Regex("[A-Z]{2}")
+    private val emailShape = Regex("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")
+    private val phoneCharacters = Regex("[0-9 +()/-]+")
     private val httpSchemes = setOf("http", "https")
 
     fun validate(update: ProfileUpdate) {
@@ -59,6 +64,7 @@ internal object ProfileValidator {
     }
 
     private fun check(profile: Profile, problems: MutableMap<String, String>) {
+        contact(profile.contact, problems)
         profile.location?.let {
             optionalText("location.city", it.city, NAME_MAX, problems)
             it.canton?.let { canton -> if (!cantonCode.matches(canton)) problems["location.canton"] = "must be two uppercase letters" }
@@ -153,6 +159,25 @@ internal object ProfileValidator {
             problems["preferences.workloadMax"] = "must not be below the minimum"
         }
         prefs.minSalaryChf?.let { if (it < 0) problems["preferences.minSalaryChf"] = "must not be negative" }
+    }
+
+    private fun contact(contact: Contact, problems: MutableMap<String, String>) {
+        optionalText("contact.fullName", contact.fullName, CONTACT_TEXT_MAX, problems)
+        optionalText("contact.headline", contact.headline, CONTACT_TEXT_MAX, problems)
+        contact.email?.let { email ->
+            optionalText("contact.email", email, CONTACT_TEXT_MAX, problems)
+            if (problems["contact.email"] == null && !emailShape.matches(email)) {
+                problems["contact.email"] = "must be an email address without spaces"
+            }
+        }
+        contact.phone?.let { phone ->
+            optionalText("contact.phone", phone, PHONE_MAX, problems)
+            if (problems["contact.phone"] == null && !phoneCharacters.matches(phone)) {
+                problems["contact.phone"] = "may contain only digits, spaces, +, -, (, ) and /"
+            }
+        }
+        contact.website?.let { httpUrl("contact.website", it, problems, setOf("https")) }
+        contact.linkedin?.let { httpUrl("contact.linkedin", it, problems, setOf("https")) }
     }
 
     private fun analysis(at: String, analysis: ProjectAnalysis, problems: MutableMap<String, String>) {

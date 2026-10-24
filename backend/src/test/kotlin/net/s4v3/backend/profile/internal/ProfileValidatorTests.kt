@@ -2,6 +2,7 @@ package net.s4v3.backend.profile.internal
 
 import net.s4v3.backend.profile.CodeAccount
 import net.s4v3.backend.profile.CodeProvider
+import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Experience
 import net.s4v3.backend.profile.OpenSourceProject
 import net.s4v3.backend.profile.Profile
@@ -413,6 +414,85 @@ class ProfileValidatorTests {
         val fields = profileFields(withAnalysis(analysis(summary = " ", architecture = marker.repeat(600), techStack = listOf(tech))))
 
         assertTrue(fields.isNotEmpty())
+        assertTrue(fields.values.none { marker in it })
+    }
+
+    private val fullContact = Contact(
+        fullName = "Ada Example",
+        headline = "Senior Kotlin Engineer",
+        email = "ada@example.org",
+        phone = "+41 79 000 00 00",
+        website = "https://example.org",
+        linkedin = "https://www.linkedin.com/in/ada-example",
+    )
+
+    private fun withContact(contact: Contact) = Profile(contact = contact)
+
+    @Test
+    fun `a valid contact with every field passes`() {
+        validateProfile(withContact(fullContact))
+    }
+
+    @Test
+    fun `an empty contact passes`() {
+        validateProfile(withContact(Contact()))
+    }
+
+    @Test
+    fun `an email without an at sign is rejected by path`() {
+        assertTrue("contact.email" in profileFields(withContact(fullContact.copy(email = "not an email"))))
+    }
+
+    @Test
+    fun `an email with a space or no dot in the domain is rejected`() {
+        assertTrue("contact.email" in profileFields(withContact(fullContact.copy(email = "ada@example.org x"))))
+        assertTrue("contact.email" in profileFields(withContact(fullContact.copy(email = "ada@example"))))
+    }
+
+    @Test
+    fun `a phone with letters is rejected by path`() {
+        assertTrue("contact.phone" in profileFields(withContact(fullContact.copy(phone = "call me"))))
+    }
+
+    @Test
+    fun `a phone of 31 characters is rejected and 30 pass`() {
+        validateProfile(withContact(fullContact.copy(phone = "+" + "1".repeat(29))))
+        assertTrue("contact.phone" in profileFields(withContact(fullContact.copy(phone = "+" + "1".repeat(30)))))
+    }
+
+    @Test
+    fun `a plain http or javascript website is rejected by path`() {
+        assertTrue("contact.website" in profileFields(withContact(fullContact.copy(website = "http://example.org"))))
+        assertTrue("contact.website" in profileFields(withContact(fullContact.copy(website = "javascript:alert(1)"))))
+    }
+
+    @Test
+    fun `a plain http linkedin address is rejected by path`() {
+        assertTrue("contact.linkedin" in profileFields(withContact(fullContact.copy(linkedin = "http://www.linkedin.com/in/ada"))))
+    }
+
+    @Test
+    fun `a full name of 201 characters is rejected by path`() {
+        assertTrue("contact.fullName" in profileFields(withContact(fullContact.copy(fullName = "A".repeat(201)))))
+    }
+
+    @Test
+    fun `a failing contact field never echoes the submitted value`() {
+        val marker = "SECRET-MARKER"
+        val fields = profileFields(
+            withContact(
+                Contact(
+                    fullName = " ",
+                    headline = marker.repeat(50),
+                    email = "$marker@",
+                    phone = "$marker!",
+                    website = "javascript:$marker",
+                    linkedin = "http://$marker.example.org",
+                ),
+            ),
+        )
+
+        assertEquals(setOf("contact.fullName", "contact.headline", "contact.email", "contact.phone", "contact.website", "contact.linkedin"), fields.keys)
         assertTrue(fields.values.none { marker in it })
     }
 }

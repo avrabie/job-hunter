@@ -1,4 +1,12 @@
 {
+  "contact": {
+    "fullName": "Ada Example",
+    "headline": "Senior Kotlin Engineer",
+    "email": "ada@example.org",
+    "phone": "+41 79 000 00 00",
+    "website": "https://example.org",
+    "linkedin": "https://www.linkedin.com/in/ada-example"
+  },
   "location": { "city": "Zurich", "canton": "ZH" },
   "workAuthorisation": "PERMIT_B",
   "languages": [

@@ -1,5 +1,6 @@
 package net.s4v3.backend
 
+import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Education
 import net.s4v3.backend.profile.Experience
 import net.s4v3.backend.profile.Profile
@@ -134,6 +135,21 @@ class ProfileServiceTests(
 
         assertEquals(SkillOrigin.MANUAL, skill.origin)
         assertEquals(emptyList(), skill.sources)
+    }
+
+    @Test
+    fun `a profile stored before contact existed reads with an all-null contact`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 8)",
+            sub,
+            """{"summary":"Stored before contact"}""",
+        )
+
+        val stored = profiles.get(sub)
+
+        assertEquals("Stored before contact", stored.profile.summary)
+        assertEquals(Contact(), stored.profile.contact)
     }
 
     @Test
