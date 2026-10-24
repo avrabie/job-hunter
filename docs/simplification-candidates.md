@@ -80,7 +80,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - Change: `LogCapture` helper in backend tests (`capture { ... }` returns the messages at TRACE). Effort M, risk low, value: each logging test shows only its marker and assertions.
 - Coverage to keep: each `*LoggingTests` covers a different endpoint family (profile save, contact, posting create/update, posting search, matching, sources, files, tokens, LLM). They are not duplicates of each other; they could be merged into fewer classes (fewer Spring contexts) **(unverified which share a context)**.
 
-### C6 Local HTTP fakes
+### C6 Local HTTP fakes (done)
 - `HttpServer.create` in 7 test files: `MockIssuer.kt`, `FakeGreenhouse.kt`, `RepositoriesApiTests.kt:133` (`FakeGitHub`), `PdfRendererTests.kt:71`, `PoliteHttpTests.kt:19`, `GitHubRepositoryProviderTests.kt:18`, `GitHubDigestProviderTests.kt:20`. Each redoes start, port, handler map, close.
 - Change: one `FakeHttpServer` (path to response, request log). Effort M, risk low, value: tests read as behaviour, not plumbing.
 

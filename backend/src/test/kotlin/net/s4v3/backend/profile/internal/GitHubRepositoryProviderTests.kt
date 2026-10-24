@@ -1,26 +1,22 @@
 package net.s4v3.backend.profile.internal
 
-import com.sun.net.httpserver.HttpServer
+import net.s4v3.backend.FakeHttpServer
 import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.RepositoryListing
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.net.InetSocketAddress
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class GitHubRepositoryProviderTests {
 
-    private val server = HttpServer.create(InetSocketAddress("localhost", 0), 0).apply { start() }
-    private val seenUris = CopyOnWriteArrayList<String>()
-    private val seenHeaders = CopyOnWriteArrayList<Map<String, String?>>()
+    private val server = FakeHttpServer()
 
     @AfterEach
-    fun stop() = server.stop(0)
+    fun stop() = server.close()
 
     private fun serve(
         status: Int,
@@ -29,19 +25,9 @@ class GitHubRepositoryProviderTests {
         delayMs: Long = 0,
         path: String = "/users/octocat/repos",
     ) {
-        server.createContext(path) { ex ->
-            seenUris += ex.requestURI.toString()
-            seenHeaders += mapOf(
-                "accept" to ex.requestHeaders.getFirst("Accept"),
-                "userAgent" to ex.requestHeaders.getFirst("User-Agent"),
-                "version" to ex.requestHeaders.getFirst("X-GitHub-Api-Version"),
-            )
+        server.on(path) {
             if (delayMs > 0) Thread.sleep(delayMs)
-            headers.forEach { (name, value) -> ex.responseHeaders.add(name, value) }
-            val bytes = body.toByteArray()
-            ex.responseHeaders.add("Content-Type", "application/json")
-            ex.sendResponseHeaders(status, bytes.size.toLong())
-            ex.responseBody.use { it.write(bytes) }
+            FakeHttpServer.Reply(status, body, headers = headers)
         }
     }
 
@@ -49,7 +35,7 @@ class GitHubRepositoryProviderTests {
         GitHubRepositoryProvider(
             RepositoriesSettings(
                 github = RepositoriesSettings.GitHub(
-                    baseUrl = "http://localhost:${server.address.port}",
+                    baseUrl = server.baseUrl,
                     readTimeout = read,
                     maxBodyBytes = maxBytes,
                 ),
@@ -103,11 +89,11 @@ class GitHubRepositoryProviderTests {
 
         provider().list("octocat")
 
-        assertEquals(listOf("/users/octocat/repos?type=owner&sort=pushed&per_page=100"), seenUris)
-        val headers = seenHeaders.single()
-        assertEquals("application/vnd.github+json", headers["accept"])
-        assertEquals("2022-11-28", headers["version"])
-        assertEquals("JobHunter/0.1 (+https://s4v3.net)", headers["userAgent"])
+        val request = server.requests.single()
+        assertEquals("/users/octocat/repos?type=owner&sort=pushed&per_page=100", request.uri)
+        assertEquals("application/vnd.github+json", request.header("Accept"))
+        assertEquals("2022-11-28", request.header("X-GitHub-Api-Version"))
+        assertEquals("JobHunter/0.1 (+https://s4v3.net)", request.header("User-Agent"))
     }
 
     @Test

@@ -1,14 +1,10 @@
 package net.s4v3.backend.profile.internal
 
-import com.sun.net.httpserver.HttpServer
+import net.s4v3.backend.FakeHttpServer
 import net.s4v3.backend.profile.DigestResult
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.net.InetSocketAddress
 import java.time.Duration
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -17,45 +13,22 @@ import kotlin.test.assertTrue
 
 class GitHubDigestProviderTests {
 
-    private val server = HttpServer.create(InetSocketAddress("localhost", 0), 0)
-    private val executor = Executors.newCachedThreadPool()
-    private val base = "http://localhost:${server.address.port}"
-    private val routes = ConcurrentHashMap<String, Route>()
-    private val seenUris = CopyOnWriteArrayList<String>()
-    private val seenHeaders = ConcurrentHashMap<String, Map<String, String?>>()
-
-    private data class Route(
-        val status: Int,
-        val body: String,
-        val headers: Map<String, String> = emptyMap(),
-        val delayMs: Long = 0,
-    )
-
-    init {
-        server.createContext("/") { ex ->
-            val uri = ex.requestURI.toString()
-            seenUris += uri
-            seenHeaders[uri] = mapOf(
-                "accept" to ex.requestHeaders.getFirst("Accept"),
-                "userAgent" to ex.requestHeaders.getFirst("User-Agent"),
-                "version" to ex.requestHeaders.getFirst("X-GitHub-Api-Version"),
-            )
-            val route = routes[ex.requestURI.rawPath] ?: Route(404, """{"message":"Not Found"}""")
-            if (route.delayMs > 0) Thread.sleep(route.delayMs)
-            route.headers.forEach { (name, value) -> ex.responseHeaders.add(name, value) }
-            val bytes = route.body.toByteArray()
-            ex.sendResponseHeaders(route.status, bytes.size.toLong())
-            ex.responseBody.use { it.write(bytes) }
-        }
-        server.executor = executor
-        server.start()
-    }
+    private val server = FakeHttpServer()
+    private val base = server.baseUrl
 
     @AfterEach
-    fun stop() {
-        server.stop(0)
-        executor.shutdownNow()
+    fun stop() = server.close()
+
+    /** Answers [path] with a status, body and headers; [delayMs] holds the reply back. */
+    private fun respond(path: String, status: Int, body: String, headers: Map<String, String> = emptyMap(), delayMs: Long = 0) {
+        server.on(path) {
+            if (delayMs > 0) Thread.sleep(delayMs)
+            FakeHttpServer.Reply(status, body, headers = headers)
+        }
     }
+
+    /** The last request for [uri] (path and query), as sent. */
+    private fun requestFor(uri: String) = server.requests.last { it.uri == uri }
 
     private fun provider(read: Duration = Duration.ofSeconds(2), treeBytes: Int = 8 * 1024 * 1024) =
         GitHubDigestProvider(
@@ -80,11 +53,11 @@ class GitHubDigestProviderTests {
     }
 
     private fun tree(vararg entries: Pair<String, String>, truncated: Boolean = false) {
-        routes[TREE] = Route(200, treeJson(*entries, truncated = truncated))
+        respond(TREE, 200, treeJson(*entries, truncated = truncated))
     }
 
     private fun raw(path: String, body: String, status: Int = 200, delayMs: Long = 0) {
-        routes["/raw/octocat/hello-world/HEAD/$path"] = Route(status, body, delayMs = delayMs)
+        respond("/raw/octocat/hello-world/HEAD/$path", status, body, delayMs = delayMs)
     }
 
     private fun found(answer: DigestResult) = assertIs<DigestResult.Found>(answer).digest
@@ -129,7 +102,7 @@ class GitHubDigestProviderTests {
             listOf("build.gradle.kts", "settings.gradle.kts", "Cargo.toml", "go.mod", "Gemfile", "composer.json", "Dockerfile", "a/pom.xml"),
             digest.files.keys.toList(),
         )
-        assertFalse(seenUris.any { it.endsWith("/a/b/package.json") })
+        assertFalse(server.requests.any { it.uri.endsWith("/a/b/package.json") })
     }
 
     @Test
@@ -141,7 +114,7 @@ class GitHubDigestProviderTests {
 
         assertNull(digest.readme)
         assertEquals(listOf("build.gradle.kts"), digest.files.keys.toList())
-        assertFalse(seenUris.any { it.endsWith("/HEAD/README.md") || it.endsWith("/HEAD/docs/README.md") })
+        assertFalse(server.requests.any { it.uri.endsWith("/HEAD/README.md") || it.uri.endsWith("/HEAD/docs/README.md") })
     }
 
     @Test
@@ -178,52 +151,52 @@ class GitHubDigestProviderTests {
 
     @Test
     fun `404 means the repository is not found`() {
-        routes[TREE] = Route(404, """{"message":"Not Found"}""")
+        respond(TREE, 404, """{"message":"Not Found"}""")
         assertEquals(DigestResult.NotFound, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `403 with an exhausted rate limit is rate limited`() {
-        routes[TREE] = Route(403, "{}", headers = mapOf("x-ratelimit-remaining" to "0"))
+        respond(TREE, 403, "{}", headers = mapOf("x-ratelimit-remaining" to "0"))
         assertEquals(DigestResult.RateLimited, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `403 without an exhausted rate limit is unavailable`() {
-        routes[TREE] = Route(403, "{}", headers = mapOf("x-ratelimit-remaining" to "12"))
+        respond(TREE, 403, "{}", headers = mapOf("x-ratelimit-remaining" to "12"))
         assertEquals(DigestResult.Unavailable, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `429 is rate limited`() {
-        routes[TREE] = Route(429, "{}")
+        respond(TREE, 429, "{}")
         assertEquals(DigestResult.RateLimited, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `5xx is unavailable`() {
-        routes[TREE] = Route(503, "{}")
+        respond(TREE, 503, "{}")
         assertEquals(DigestResult.Unavailable, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `a redirect is not followed and is unavailable`() {
-        routes[TREE] = Route(302, "", headers = mapOf("Location" to "http://localhost:1/elsewhere"))
+        respond(TREE, 302, "", headers = mapOf("Location" to "http://localhost:1/elsewhere"))
         assertEquals(DigestResult.Unavailable, provider().digest("octocat/hello-world"))
     }
 
     @Test
     fun `a timeout on the tree is unavailable`() {
-        routes[TREE] = Route(200, treeJson(blob("README.md")), delayMs = 1500)
+        respond(TREE, 200, treeJson(blob("README.md")), delayMs = 1500)
         assertEquals(DigestResult.Unavailable, provider(read = Duration.ofMillis(300)).digest("octocat/hello-world"))
     }
 
     @Test
     fun `an unparseable tree, a tree without a list and a tree above the size cap are unavailable`() {
-        routes[TREE] = Route(200, "{not json")
+        respond(TREE, 200, "{not json")
         assertEquals(DigestResult.Unavailable, provider().digest("octocat/hello-world"))
 
-        routes[TREE] = Route(200, """{"tree":{"path":"README.md"}}""")
+        respond(TREE, 200, """{"tree":{"path":"README.md"}}""")
         assertEquals(DigestResult.Unavailable, provider().digest("octocat/hello-world"))
 
         tree(blob("README.md"))
@@ -269,13 +242,13 @@ class GitHubDigestProviderTests {
                 "/raw/octocat/hello-world/HEAD/README.md",
                 "/raw/octocat/hello-world/HEAD/sub%20dir/package.json",
             ),
-            seenUris.toList(),
+            server.requests.map { it.uri },
         )
-        val treeHeaders = seenHeaders.getValue("/repos/octocat/hello-world/git/trees/HEAD?recursive=1")
-        assertEquals("application/vnd.github+json", treeHeaders["accept"])
-        assertEquals("2022-11-28", treeHeaders["version"])
-        assertEquals("JobHunter/0.1 (+https://s4v3.net)", treeHeaders["userAgent"])
-        assertEquals("JobHunter/0.1 (+https://s4v3.net)", seenHeaders.getValue("/raw/octocat/hello-world/HEAD/README.md")["userAgent"])
+        val tree = requestFor("/repos/octocat/hello-world/git/trees/HEAD?recursive=1")
+        assertEquals("application/vnd.github+json", tree.header("Accept"))
+        assertEquals("2022-11-28", tree.header("X-GitHub-Api-Version"))
+        assertEquals("JobHunter/0.1 (+https://s4v3.net)", tree.header("User-Agent"))
+        assertEquals("JobHunter/0.1 (+https://s4v3.net)", requestFor("/raw/octocat/hello-world/HEAD/README.md").header("User-Agent"))
     }
 
     private companion object {

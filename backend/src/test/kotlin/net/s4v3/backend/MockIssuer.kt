@@ -8,8 +8,6 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import com.sun.net.httpserver.HttpServer
-import java.net.InetSocketAddress
 import java.time.Instant
 import java.util.Date
 
@@ -20,24 +18,15 @@ import java.util.Date
 class MockIssuer {
 
     private val key: RSAKey = RSAKeyGenerator(2048).keyID("test-key").generate()
-    private val server: HttpServer = HttpServer.create(InetSocketAddress("localhost", 0), 0)
+    private val server = FakeHttpServer()
 
-    val issuer: String
+    val issuer: String = server.baseUrl
 
     init {
-        issuer = "http://localhost:${server.address.port}"
-        serve("/.well-known/openid-configuration", """{"issuer":"$issuer","jwks_uri":"$issuer/jwks"}""")
-        serve("/jwks", JWKSet(key.toPublicJWK()).toString())
-        server.start()
-    }
-
-    private fun serve(path: String, body: String) {
-        server.createContext(path) { exchange ->
-            val bytes = body.toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
+        server.on("/.well-known/openid-configuration") {
+            FakeHttpServer.Reply(body = """{"issuer":"$issuer","jwks_uri":"$issuer/jwks"}""")
         }
+        server.on("/jwks") { FakeHttpServer.Reply(body = JWKSet(key.toPublicJWK()).toString()) }
     }
 
     fun token(
@@ -59,5 +48,5 @@ class MockIssuer {
         return jwt.serialize()
     }
 
-    fun stop() = server.stop(0)
+    fun stop() = server.close()
 }
