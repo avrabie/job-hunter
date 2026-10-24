@@ -52,4 +52,16 @@ internal class PreviewTicketsTests {
         assertNull(tickets.redeem("0".repeat(32)))
         assertNull(tickets.redeem(""))
     }
+
+    @Test
+    fun `expired tickets are swept when a ticket is issued, not when one is redeemed`() {
+        tickets.issue("u", settings)
+        clock.advance(Duration.ofSeconds(61))
+
+        assertNull(tickets.redeem("0".repeat(32)))
+        assertEquals(1, tickets.size())
+
+        tickets.issue("u", settings)
+        assertEquals(1, tickets.size())
+    }
 }

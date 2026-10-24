@@ -76,12 +76,18 @@ internal class PublicCvController(
                 description = "`handle_taken`, `handle_reserved`, `handle_held`, `handle_change_too_soon`, `name_required` or `locked`",
                 content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
             ),
+            ApiResponse(
+                responseCode = "429", description = "`rate_limited`: at most 30 saves and removals per hour",
+                content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
+            ),
         ],
     )
     fun put(@RequestBody(required = false) body: ByteArray?): ResponseEntity<Any> {
         val request = parse(body, SaveRequest::class.java) ?: return codeError(HttpStatus.BAD_REQUEST, "invalid_request")
         val settings = request.settings.toSettings() ?: return codeError(HttpStatus.BAD_REQUEST, "invalid_request")
-        return when (val result = service.save(currentUser.id(), request.handle, request.published, settings)) {
+        val sub = currentUser.id()
+        if (!limits.saves.tryAcquire(sub)) return rateLimited(limits.saves, sub)
+        return when (val result = service.save(sub, request.handle, request.published, settings)) {
             is SaveResult.Saved -> ResponseEntity.ok(body(result.state))
             is SaveResult.ValidationFailed ->
                 ResponseEntity.badRequest().body(mapOf("error" to "validation_failed", "fields" to result.fields))
@@ -106,13 +112,20 @@ internal class PublicCvController(
                 responseCode = "409", description = "`locked`",
                 content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
             ),
+            ApiResponse(
+                responseCode = "429", description = "`rate_limited`: at most 30 saves and removals per hour",
+                content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
+            ),
         ],
     )
-    fun delete(): ResponseEntity<Any> =
-        when (service.remove(currentUser.id())) {
+    fun delete(): ResponseEntity<Any> {
+        val sub = currentUser.id()
+        if (!limits.saves.tryAcquire(sub)) return rateLimited(limits.saves, sub)
+        return when (service.remove(sub)) {
             RemoveResult.REMOVED, RemoveResult.NOT_FOUND -> ResponseEntity.noContent().build()
             RemoveResult.LOCKED -> codeError(HttpStatus.CONFLICT, "locked")
         }
+    }
 
     @GetMapping("/api/cv/public/handle")
     @Operation(

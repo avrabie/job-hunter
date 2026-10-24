@@ -35,11 +35,12 @@ internal class PreviewTickets(
 
     /** The binding when the ticket is valid; null for an unknown, used or expired value. Any attempt uses the ticket up. */
     fun redeem(value: String): PreviewBinding? {
-        removeExpired()
         val ticket = tickets.remove(value) ?: return null
         if (!clock.instant().isBefore(ticket.expiresAt)) return null
         return ticket.binding
     }
+
+    fun size(): Int = tickets.size
 
     private fun removeExpired() {
         val now = clock.instant()

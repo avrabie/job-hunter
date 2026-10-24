@@ -18,6 +18,7 @@ import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileService
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -53,6 +54,7 @@ internal class DefaultPublicCvService(
         return null
     }
 
+    @Transactional
     override fun save(sub: String, handle: String, published: Boolean, settings: PublicCvSettings): SaveResult {
         when (HandleRules.validate(handle)) {
             HandleProblem.INVALID -> return SaveResult.ValidationFailed(mapOf("handle" to INVALID_HANDLE))
@@ -75,6 +77,15 @@ internal class DefaultPublicCvService(
             val last = repo.lastHandleChange(sub)
             if (last != null && last.plus(CHANGE_INTERVAL).isAfter(now)) return SaveResult.ChangeTooSoon(last.plus(CHANGE_INTERVAL))
         }
+        // A claim after a removal counts like a change: within 30 days of the last claim only the owner's most recent handle
+        // (on hold for the owner) may be claimed again, so deleting the page does not open a way around the rule.
+        val claim = existing == null
+        if (claim) {
+            val last = repo.lastHandleClaim(sub)
+            if (last != null && last.plus(CHANGE_INTERVAL).isAfter(now) && repo.latestHeldHandle(sub) != normal) {
+                return SaveResult.ChangeTooSoon(last.plus(CHANGE_INTERVAL))
+            }
+        }
 
         val settingsChanged = existing == null || existing.settings != settings
         val row = PublicCvRow(
@@ -89,14 +100,17 @@ internal class DefaultPublicCvService(
         )
         try {
             repo.upsert(row)
-        } catch (_: DataIntegrityViolationException) {
-            // Another user claimed the handle between the check and the write.
+        } catch (e: DataIntegrityViolationException) {
+            // Another user claimed the handle between the check and the write; any other violation is a real error.
+            if (!isHandleConflict(e)) throw e
             return SaveResult.Taken
         }
+        cache.invalidate(sub)
         if (hold != null) repo.deleteHold(normal)
         if (changed) repo.insertHold(existing.handle, sub, now.plus(HOLD))
 
         val flags = flags(settings)
+        if (claim) repo.audit(sub, PublicCvEvent.HANDLE_CLAIMED, now, flags)
         if (changed) repo.audit(sub, PublicCvEvent.HANDLE_CHANGED, now, flags)
         val wasPublished = existing?.published == true
         if (published && !wasPublished) repo.audit(sub, PublicCvEvent.PUBLISHED, now, flags)
@@ -108,12 +122,14 @@ internal class DefaultPublicCvService(
         return SaveResult.Saved(state(row))
     }
 
+    @Transactional
     override fun remove(sub: String): RemoveResult {
         val existing = repo.find(sub) ?: return RemoveResult.NOT_FOUND
         // An owner under an administrator's lock must not escape it by deleting and claiming the handle again.
         if (existing.locked) return RemoveResult.LOCKED
         val now = clock.instant()
         repo.delete(sub)
+        cache.invalidate(sub)
         repo.insertHold(existing.handle, sub, now.plus(HOLD))
         repo.audit(sub, PublicCvEvent.REMOVED, now, flags(existing.settings))
         return RemoveResult.REMOVED
@@ -125,7 +141,7 @@ internal class DefaultPublicCvService(
         if (!row.published || row.locked) return null
         val stored = profiles.get(row.ownerSub)
         if (stored.profile.contact.fullName.isNullOrBlank()) return null
-        val key = RenderKey(row.ownerSub, stored.version, row.settingsVersion, row.settings.template, row.settings.language)
+        val key = RenderKey(row.ownerSub, stored.version, settingsHash(row.settings, row.published), row.settings.template, row.settings.language)
         cache.get(key)?.let { return it }
         return render(stored.profile, row.settings).also { cache.put(key, it) }
     }
@@ -142,12 +158,14 @@ internal class DefaultPublicCvService(
 
     override fun takeDown(handle: String): Boolean {
         val sub = repo.takeDown(HandleRules.normalize(handle), clock.instant()) ?: return false
+        cache.invalidate(sub)
         repo.audit(sub, PublicCvEvent.TAKEN_DOWN, clock.instant(), emptyMap())
         return true
     }
 
     override fun unlock(handle: String): Boolean {
         val sub = repo.unlock(HandleRules.normalize(handle), clock.instant()) ?: return false
+        cache.invalidate(sub)
         repo.audit(sub, PublicCvEvent.UNLOCKED, clock.instant(), emptyMap())
         return true
     }
@@ -188,6 +206,17 @@ internal class DefaultPublicCvService(
         return RenderedPage(bytes, sha256(bytes), settings.indexable)
     }
 
+    /** SHA-256 of every setting that shapes the page, in a fixed order, so a page is never found for other settings. */
+    private fun settingsHash(s: PublicCvSettings, published: Boolean): String {
+        val canonical = listOf(
+            "p=$published", "t=${s.template.name}", "l=${s.language.name}", "s=${s.sections.joinToString(",") { it.name }}",
+            "h=${s.headline}", "a=${s.analysis}", "w=${s.workAuthorisation}", "loc=${s.location}",
+            "ce=${s.contact.email}", "cp=${s.contact.phone}", "cw=${s.contact.website}", "cl=${s.contact.linkedin}",
+            "cc=${s.contact.codeAccounts}", "i=${s.indexable}",
+        ).joinToString(";")
+        return sha256(canonical.toByteArray(Charsets.UTF_8))
+    }
+
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
@@ -206,9 +235,15 @@ internal class DefaultPublicCvService(
         CvSectionKind.entries.forEach { put("section.${it.name}", it in s.sections) }
     }
 
-    private companion object {
-        val HOLD: Duration = Duration.ofDays(90)
-        val CHANGE_INTERVAL: Duration = Duration.ofDays(30)
-        const val INVALID_HANDLE = "Use 3 to 30 lower-case letters, digits or single hyphens, not only digits."
+    internal companion object {
+        /** True only for a violation of the unique handle index; the name is in the database error text. */
+        fun isHandleConflict(e: DataIntegrityViolationException): Boolean =
+            generateSequence<Throwable>(e) { it.cause }.any { it.message?.contains(HANDLE_INDEX) == true }
+
+        private const val HANDLE_INDEX = "public_cv_handle_lower_idx"
+
+        private val HOLD: Duration = Duration.ofDays(90)
+        private val CHANGE_INTERVAL: Duration = Duration.ofDays(30)
+        private const val INVALID_HANDLE = "Use 3 to 30 lower-case letters, digits or single hyphens, not only digits."
     }
 }

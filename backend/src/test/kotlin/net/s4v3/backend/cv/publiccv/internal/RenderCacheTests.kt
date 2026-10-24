@@ -18,7 +18,7 @@ internal class RenderCacheTests {
     private fun key(
         sub: String = "u",
         profile: Long = 1,
-        settings: Int = 1,
+        settings: String = "h1",
         template: CvTemplate = CvTemplate.CLASSIC,
         language: CvLanguage = CvLanguage.EN,
     ) = RenderKey(sub, profile, settings, template, language)
@@ -36,9 +36,22 @@ internal class RenderCacheTests {
         cache.put(key(), page("a"))
         assertNull(cache.get(key(sub = "v")))
         assertNull(cache.get(key(profile = 2)))
-        assertNull(cache.get(key(settings = 2)))
+        assertNull(cache.get(key(settings = "h2")))
         assertNull(cache.get(key(template = CvTemplate.MODERN)))
         assertNull(cache.get(key(language = CvLanguage.DE)))
+    }
+
+    @Test
+    fun `invalidate drops every entry of one owner and no other`() {
+        cache.put(key(sub = "u"), page("a"))
+        cache.put(key(sub = "u", profile = 2), page("b"))
+        cache.put(key(sub = "v"), page("c"))
+
+        cache.invalidate("u")
+
+        assertNull(cache.get(key(sub = "u")))
+        assertNull(cache.get(key(sub = "u", profile = 2)))
+        assertNotNull(cache.get(key(sub = "v")))
     }
 
     @Test

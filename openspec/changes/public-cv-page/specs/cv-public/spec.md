@@ -204,3 +204,18 @@ Every publish, pause, settings change, handle change, removal, takedown and unlo
 #### Scenario: Nothing in logs
 - **WHEN** a page is requested, rejected, limited or previewed
 - **THEN** the captured application log contains no handle, email, phone or profile text
+
+### Requirement: Review fixes
+The render cache SHALL never serve a page built from older settings or an older profile, an owner who removes a page and claims a different handle SHALL be bound by the 30-day rule, and saves and removals SHALL be rate limited per user.
+
+#### Scenario: Cache never shows older settings
+- **WHEN** a page with the email on has been requested, then the owner removes it and saves again with the email off (or saves twice, or edits the profile)
+- **THEN** the next request of the page does not contain the email
+
+#### Scenario: Reclaim after remove
+- **WHEN** an owner removes the page and, less than 30 days after the last handle claim, claims a different handle
+- **THEN** the answer is 409 `handle_change_too_soon`; claiming the same handle again, or any handle after 30 days, is allowed; the first claim is always allowed
+
+#### Scenario: Save rate limit
+- **WHEN** one user sends more than 30 saves and removals in an hour
+- **THEN** the next one is 429 `rate_limited` with `Retry-After`; conflict answers such as `handle_taken` are unchanged

@@ -90,4 +90,23 @@ class PublicCvSchemaTests(@Autowired private val jdbc: JdbcTemplate) {
             assertEquals(1, count(table, kept), table)
         }
     }
+
+    @Test
+    fun `the audit accepts a handle claim`() {
+        jdbc.update(
+            "insert into public_cv_audit (owner_sub, event, occurred_at, flags) values (?, 'HANDLE_CLAIMED', now(), '{}'::jsonb)",
+            newUser(),
+        )
+    }
+
+    @Test
+    fun `a real duplicate handle violation is recognised as the handle conflict and a real null violation is not`() {
+        val taken = handle()
+        insertPage(newUser(), taken)
+        val duplicate = assertFailsWith<DataIntegrityViolationException> { insertPage(newUser(), taken) }
+        assertEquals(true, net.s4v3.backend.cv.publiccv.internal.DefaultPublicCvService.isHandleConflict(duplicate))
+
+        val upper = assertFailsWith<DataIntegrityViolationException> { insertPage(newUser(), "Pcv-Upper") }
+        assertEquals(false, net.s4v3.backend.cv.publiccv.internal.DefaultPublicCvService.isHandleConflict(upper))
+    }
 }

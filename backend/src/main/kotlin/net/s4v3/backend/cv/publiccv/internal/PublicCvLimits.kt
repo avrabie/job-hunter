@@ -17,7 +17,7 @@ internal class PublicCvConfig {
 
 /**
  * `jobhunter.public-cv.*`: the limits of the public page (per client IP and minute, per handle and minute) and of the
- * owner endpoints (per user and hour).
+ * owner endpoints (per user and hour: handle checks, previews, saves and removals).
  */
 @ConfigurationProperties("jobhunter.public-cv")
 internal data class PublicCvLimitSettings(
@@ -26,6 +26,7 @@ internal data class PublicCvLimitSettings(
     val pagePerHandlePerMinute: Int = 600,
     val handleChecksPerHour: Int = 60,
     val previewsPerHour: Int = 30,
+    val savesPerHour: Int = 30,
 )
 
 /** The limiters of design decision 9, built from [PublicCvLimitSettings]. The controllers (group 4) use them; keys are never logged. */
@@ -36,4 +37,5 @@ internal class PublicCvLimits(settings: PublicCvLimitSettings, clock: Clock = Cl
     val pageByHandle = WindowLimiter(settings.pagePerHandlePerMinute, Duration.ofMinutes(1), clock)
     val handleChecks = WindowLimiter(settings.handleChecksPerHour, Duration.ofHours(1), clock)
     val previews = WindowLimiter(settings.previewsPerHour, Duration.ofHours(1), clock)
+    val saves = WindowLimiter(settings.savesPerHour, Duration.ofHours(1), clock)
 }
