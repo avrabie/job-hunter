@@ -4,8 +4,6 @@ import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.DigestResult
 import net.s4v3.backend.profile.RepositoryDigestSource
 import org.springframework.stereotype.Component
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 
 private val nameSegment = Regex("[A-Za-z0-9._-]{1,100}")
 
@@ -18,11 +16,7 @@ internal class DefaultRepositoryDigestSource(providers: List<RepositoryDigestPro
 
     private val byProvider: Map<CodeProvider, RepositoryDigestProvider>
 
-    private data class CacheKey(val provider: CodeProvider, val fullName: String)
-
-    private class Cached(val found: DigestResult.Found, val expiresAt: Long)
-
-    private val cache = ConcurrentHashMap<CacheKey, Cached>()
+    private val cache = ProviderCache<DigestResult.Found>(ttlMinutes = TTL_MINUTES, maxEntries = MAX_ENTRIES)
 
     init {
         require(providers.map { it.provider }.toSet().size == providers.size) { "one repository digest provider per value" }
@@ -32,21 +26,12 @@ internal class DefaultRepositoryDigestSource(providers: List<RepositoryDigestPro
     override fun digest(provider: CodeProvider, fullName: String): DigestResult {
         if (!isValidFullName(fullName)) return DigestResult.InvalidName
 
-        val key = CacheKey(provider, fullName.lowercase())
-        cache[key]?.let { hit ->
-            if (System.nanoTime() < hit.expiresAt) return hit.found
-            cache.remove(key, hit)
-        }
+        cache.get(provider, fullName)?.let { return it }
 
         val source = byProvider[provider] ?: return DigestResult.Unavailable
         val answer = source.digest(fullName)
-        if (answer is DigestResult.Found) store(key, answer)
+        if (answer is DigestResult.Found) cache.put(provider, fullName, answer)
         return answer
-    }
-
-    private fun store(key: CacheKey, found: DigestResult.Found) {
-        if (cache.size >= MAX_ENTRIES) cache.entries.removeIf { System.nanoTime() >= it.value.expiresAt }
-        cache[key] = Cached(found, System.nanoTime() + TimeUnit.MINUTES.toNanos(TTL_MINUTES))
     }
 
     private companion object {
