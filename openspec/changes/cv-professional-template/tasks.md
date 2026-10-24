@@ -15,7 +15,7 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 2. Photo processor (backend, `cv.export`)
 
-- [ ] 2.1 Add `PhotoProcessor`, `InvalidPhotoException` and `CvPhoto` per design decision 4 (public API in `net.s4v3.backend.cv.export`, implementation internal). Tests (fast tier, no Spring): a generated 1000x600 JPEG gives 320x320 output, the output is a JPEG, the four corners are white, the centre keeps the colour, determinism (same input same bytes), an EXIF-bearing JPEG (write one with a metadata node via `ImageIO`) gives output with no `APP1` segment, a truncated file, a PNG, a 13 000 px wide header-only JPEG and a 7 MB file all raise `InvalidPhotoException` without reading the whole image for the oversize cases, and a CMYK/greyscale JPEG converts.
+- [x] 2.1 Add `PhotoProcessor`, `InvalidPhotoException` and `CvPhoto` per design decision 4 (public API in `net.s4v3.backend.cv.export`, implementation internal). Tests (fast tier, no Spring): a generated 1000x600 JPEG gives 320x320 output, the output is a JPEG, the four corners are white, the centre keeps the colour, determinism (same input same bytes), an EXIF-bearing JPEG (write one with a metadata node via `ImageIO`) gives output with no `APP1` segment, a truncated file, a PNG, a 13 000 px wide header-only JPEG and a 7 MB file all raise `InvalidPhotoException` without reading the whole image for the oversize cases, and a CMYK/greyscale JPEG converts.
 
 ## 3. Skill groups and labels (backend, `cv.export`)
 
