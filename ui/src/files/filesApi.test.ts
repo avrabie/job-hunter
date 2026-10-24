@@ -9,7 +9,7 @@ import {
   uploadFile,
   type FileInfo,
 } from './filesApi.ts'
-import { stubXhr, type FakeXhr } from './fakeXhr.ts'
+import { stubXhr, type FakeXhr } from '../test/fakeXhr.ts'
 
 const ID = '0b6f2c1e-7d3a-4e8b-9f1a-2c3d4e5f6a7b'
 

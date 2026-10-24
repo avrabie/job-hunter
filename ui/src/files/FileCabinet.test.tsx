@@ -5,7 +5,7 @@ import { AuthContext, type AuthApi } from '../auth/authContext.ts'
 import { emptyProfile, type Profile } from '../profile/types.ts'
 import { fakeAuth, signedIn } from '../test/fakeAuth.ts'
 import { FileCabinet } from './FileCabinet.tsx'
-import { FakeXhr, stubXhr } from './fakeXhr.ts'
+import { FakeXhr, stubXhr } from '../test/fakeXhr.ts'
 import type { FileInfo } from './filesApi.ts'
 
 const cv: FileInfo = {
