@@ -35,7 +35,7 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 
 ## 6. UI profile notice
 
-- [ ] 6.1 In `ui/src/profile/ProfileForm.tsx`/`ProfilePage.tsx` show the live notice or the "Public CV" link per `ui-cv-public` "Profile page shows the live state" (one `getPublicCv` call that must not block or fail the page; import the function from `ui/src/publiccv/publicCvApi.ts` once group 5 is merged, until then a local type and a stub in tests). Verify: tests for the three scenarios; the full UI check chain passes.
+- [x] 6.1 In `ui/src/profile/ProfileForm.tsx`/`ProfilePage.tsx` show the live notice or the "Public CV" link per `ui-cv-public` "Profile page shows the live state" (one `getPublicCv` call that must not block or fail the page; import the function from `ui/src/publiccv/publicCvApi.ts` once group 5 is merged, until then a local type and a stub in tests). Verify: tests for the three scenarios; the full UI check chain passes.
 
 ## 7. Edge route (after 0.1)
 

@@ -13,6 +13,7 @@ import { analyzeProject, type AnalysisResult } from './analysisApi.ts'
 import { ProfileForm, type FillState } from './ProfileForm.tsx'
 import { listRepositories } from './repositoriesApi.ts'
 import { loadProfile, saveProfile } from './profileApi.ts'
+import { loadPublicCvState, type PublicCvState } from './publicCvNotice.ts'
 import { checkProfile } from './rules.ts'
 import { applyAnalysis } from './skills.ts'
 import {
@@ -89,12 +90,15 @@ function ProfileEditor() {
     publications: NO_FILL,
   })
   const [notice, setNotice] = useState<string | null>(null)
+  // Whether the public CV is live; it only adds the notice, so the page never waits for it.
+  const [publicCv, setPublicCv] = useState<PublicCvState>({ state: 'unknown' })
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     void loadMaster(auth).then((result) => {
       if (result.kind === 'loaded') setHasMaster(result.hasMaster)
     })
+    void loadPublicCvState(auth).then(setPublicCv)
     // Loaded once with the page; `auth` changes with the sign-in state and the cabinet reports later changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -321,6 +325,7 @@ function ProfileEditor() {
           }
           savedProjects={savedProjects}
           onAnalyze={onAnalyze}
+          publicCv={publicCv}
         />
 
         {save.state === 'conflict' && (

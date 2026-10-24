@@ -24,13 +24,19 @@ type Handler = (method: string, body: unknown) => Response
  * Stubs fetch for `/api/profile`; `calls` records the method and parsed body of each request. The file cabinet of the page
  * asks `/api/files` too: that is answered "no files" here and not recorded (its own tests are in `files/FileCabinet.test.tsx`).
  */
-function stubApi(handler: Handler) {
+function stubApi(
+  handler: Handler,
+  publicCv: () => Promise<Response> | Response = () =>
+    new Response('', { status: 404 }),
+) {
   const calls: { method: string; body: unknown }[] = []
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === '/api/files') return new Response('[]', { status: 200 })
       if (url.startsWith('/api/files')) return new Response('', { status: 404 })
+      // The public CV state of the notice: not recorded, the tests of the page look at the profile calls only.
+      if (url === '/api/cv/public') return publicCv()
       const method = init?.method ?? 'GET'
       const body = init?.body ? JSON.parse(init.body as string) : undefined
       calls.push({ method, body })
@@ -1499,5 +1505,74 @@ describe('Contact section', () => {
       'href',
       '/export',
     )
+  })
+})
+
+describe('Public CV notice', () => {
+  const live = () =>
+    json(200, {
+      configured: true,
+      handle: 'ada-example',
+      published: true,
+      locked: false,
+      settings: {},
+      handleChangeableAt: null,
+      updatedAt: '2026-10-24T10:00:00Z',
+    })
+
+  it('shows the live address with a link to the settings', async () => {
+    stubApi(
+      () => json(200, { version: 0, profile: emptyProfile() }),
+      () => live(),
+    )
+    mount()
+    expect(
+      await screen.findByText(
+        `Your public CV is live at ${window.location.origin}/cv/ada-example; saved changes show there at once.`,
+      ),
+    ).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Public CV' })).toHaveAttribute(
+      'href',
+      '/publish',
+    )
+    expect(screen.getByLabelText('Full name')).toBeVisible()
+  })
+
+  it('shows only the Public CV link when there is no public page', async () => {
+    stubApi(
+      () => json(200, { version: 0, profile: emptyProfile() }),
+      () => json(200, { configured: false }),
+    )
+    mount()
+    expect(
+      await screen.findByRole('link', { name: 'Public CV' }),
+    ).toHaveAttribute('href', '/publish')
+    expect(screen.queryByText(/is live at/)).toBeNull()
+  })
+
+  it('works as before and shows no notice when the call fails', async () => {
+    stubApi(
+      () => json(200, { version: 0, profile: emptyProfile() }),
+      () => {
+        throw new TypeError('network down')
+      },
+    )
+    mount()
+    expect(await screen.findByLabelText('Full name')).toBeVisible()
+    expect(screen.queryByText(/is live at/)).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Public CV' })).toBeNull()
+  })
+
+  it('does not wait for a slow call', async () => {
+    stubApi(
+      () => json(200, { version: 0, profile: emptyProfile() }),
+      () => new Promise<Response>(() => {}),
+    )
+    mount()
+    expect(await screen.findByLabelText('Full name')).toBeVisible()
+    await userEvent.type(screen.getByLabelText('Full name'), 'Ada Example')
+    expect(screen.getByLabelText('Full name')).toHaveValue('Ada Example')
+    expect(screen.queryByText(/is live at/)).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Public CV' })).toBeNull()
   })
 })
