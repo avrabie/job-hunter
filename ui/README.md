@@ -106,6 +106,32 @@ and the options for open source projects, analysis summaries and work authorisat
 `iframe` (`srcdoc`, no permissions), refreshed shortly after a change; **Download** saves the file the server names. If the server answers
 `name_required` the page links to the Contact section. Nothing of the profile or the file is kept in browser storage.
 
+## Public CV page
+
+`/publish` (linked as **Public CV** in the shell; signed-out visitors see the sign-in page first) is the owner's control for the
+public CV page of the `cv-public` spec. Code: `ui/src/publiccv/` (`PublicCvPage.tsx`, `publicCvApi.ts`, `options.ts`).
+
+- **Handle.** The field lower-cases what is typed. After a short pause (400 ms) the server checks it (`GET /api/cv/public/handle`) and
+  the text under the field says whether it is free, invalid, reserved, taken or held. The field shows `Your page will be at …/cv/<handle>`.
+  When the handle is locked by the 30-day rule the page says the date it can be changed.
+- **Layout and ticks.** Template (Classic, Modern, Compact) and language (English, Deutsch). Sections: the ticked ones come first, in the
+  order set with the move up and move down buttons; the others follow. Ticks: headline, analysis summaries, work authorisation, location,
+  email, phone, website, LinkedIn, code-account links, and **Allow search engines** (off by default). The text on the page says that the
+  full name is always shown and preferences never are.
+- **Status and the live banner.** Published: "Your CV is live at <address>. Every change you save in your profile shows there at once,
+  in the fields ticked above.", with **Copy link**. Not published: "Your CV is not public." An administrator's takedown shows
+  "An administrator disabled this page. Publishing is not possible." and disables **Publish**.
+- **Buttons.** **Publish** (when not live), **Pause** (saves with `published: false`; the address answers 404 and the settings are
+  kept), **Save**, **Preview** and **Remove** (after an inline confirmation; the handle is kept for 90 days).
+- **Preview** asks the backend for a one-use ticket and opens `/api/cv/public/preview/<ticket>` in a new tab (`window.open(…, '_blank',
+  'noopener')`). It is not shown inline: the app's Content-Security-Policy (`style-src 'self'`) would block the page's styles in a frame.
+  The page never reads or stores the HTML.
+- **Profile page notice.** `ui/src/profile/publicCvNotice.ts` reads the state with the shared client. When the page is live the profile
+  page says "Your public CV is live at <address>" (`ProfileForm.tsx`). A failed read shows nothing.
+- **Address constant.** `PUBLIC_CV_PATH = '/cv/'` in `ui/src/publiccv/options.ts` is the path shown to users; the page and the profile
+  notice both build the address from it and from `window.location.origin`.
+- Nothing of the page's content or the handle is kept in browser storage.
+
 ## File cabinet (profile page)
 
 The top of `/profile` has **Your files**: every file with its kind (CV or Other), size (KB, MB, GB), date and a **Master CV**

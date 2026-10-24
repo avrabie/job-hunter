@@ -264,6 +264,110 @@ resources, and the PDF renderer makes no network request. Nothing of the profile
 dependency and the font licences. The profile's `contact` block (full name, headline, email, phone, website, LinkedIn) is validated like
 the other fields (`contact.email` and so on) and stored only in the profile document.
 
+### Public CV
+
+The owner can publish an opt-in public page of the CV at a handle they choose (`https://s4v3.net/cv/<handle>`). Everything is
+off until the owner ticks it. The rules are in `cv.publiccv` (`PublicCvService`, `internal/HandleRules`); the endpoints are in
+`cv/internal` (`PublicCvController`, `PublicCvPageController`, `PublicCvAdminController`). The owner's and the administrator's
+guide is `docs/cv-public.md`.
+
+**Owner endpoints** (token required; everything is by the token's `sub`):
+
+| Endpoint | Answers | Errors |
+|---|---|---|
+| `GET /api/cv/public` | `{"configured":false}` or the state: `handle`, `published`, `locked`, `settings`, `handleChangeableAt`, `updatedAt` | 401 |
+| `PUT /api/cv/public`, body `{handle, published, settings}` | the state. `handle` and `published` are required; `settings` defaults to all off | 400 `validation_failed` (`fields.handle`) or `invalid_request` (unknown field or value); 409 `handle_taken`, `handle_reserved`, `handle_held`, `handle_change_too_soon`, `name_required`, `locked`; 429 |
+| `GET /api/cv/public/handle?handle=` | `{"available":true}`, or `{"available":false,"reason":"invalid"\|"reserved"\|"taken"\|"held"}`. The owner's own handle is available | 400 `invalid_request` (no handle); 429 |
+| `POST /api/cv/public/preview`, body `{settings}` | `{"path":"/api/cv/public/preview/<ticket>"}` | 400 `invalid_request`; 429 |
+| `DELETE /api/cv/public` | 204, also when there is no page; the handle is held 90 days | 409 `locked` |
+
+A 429 is `{"error":"rate_limited"}` with `Retry-After`.
+
+**Public endpoints** (no token):
+
+- `GET /api/public/cv/{handle}`: 200 HTML; 304 for a matching `If-None-Match`; otherwise one uniform 404 `{"error":"not_found"}`
+  for every handle that is not served (unknown, paused, removed, locked, never published, owner without a full name, malformed).
+  429 `rate_limited` as above.
+- `GET /api/cv/public/preview/{ticket}`: the owner's preview, once, then 404. The ticket is the credential (128 random bits).
+
+**Administrator endpoints** (ADMIN role, through the `/api/admin/**` rule):
+
+- `DELETE /api/admin/public-cv/{handle}`: takedown. Sets `published = false` and `locked = true`, so the owner cannot publish
+  again. 204, or 404 `not_found` for an unknown handle; 403 for a non-administrator.
+- `POST /api/admin/public-cv/{handle}/unlock`: lifts the lock. The page stays paused until the owner publishes it. 204 or 404.
+
+**Settings** (`PublicCvSettings`, the JSON of the owner's endpoints):
+
+```
+{"template":"CLASSIC|MODERN|COMPACT","language":"EN|DE","sections":["EXPERIENCE",...],"headline":false,"analysis":false,
+ "workAuthorisation":false,"location":false,"contact":{"email":false,"phone":false,"website":false,"linkedin":false,
+ "codeAccounts":false},"indexable":false}
+```
+
+Defaults: `template` `CLASSIC`, `language` `EN`, `sections` empty, every flag and every contact field false. The full name is
+always printed (the page needs it; without it the page is not served). Each other field is printed only when ticked. `OPEN_SOURCE`
+in `sections` includes the projects with their notes and technologies; `analysis` adds the analysis summaries; `indexable` allows
+search engines. Duplicate sections are kept once, at their first position.
+
+**Never printed:** preferences (target roles, workload, cantons, salary), anything unticked, the profile document, the file
+cabinet, the stored CV. `CvBuilder` in `cv.export` decides what is printed for both export and the public page.
+
+**Handle rules** (`HandleRules`):
+
+- The input is lower-cased first. 3 to 30 characters, `[a-z0-9]` with single hyphens between them (no leading, trailing or
+  doubled hyphen). Not only digits. Violations are 400 `validation_failed` with `fields.handle`, a fixed message that never
+  repeats the value.
+- Reserved words (`HandleRules.RESERVED`, for example `admin`, `api`, `cv`, `profile`, `publish`, `public`, `s4v3`, `undefined`)
+  are 409 `handle_reserved`.
+- Unique across users, compared case-insensitively (unique index on `lower(handle)`); one handle per user. Taken: 409 `handle_taken`.
+- A change is allowed once every 30 days. The first claim is not a change. The rule reads the audit table (`HANDLE_CHANGED`),
+  so deleting and claiming again does not reset it. Too soon: 409 `handle_change_too_soon`, with the date in `handleChangeableAt`.
+- A released handle (after a change or a removal) is **held for 90 days**: another user gets 409 `handle_held`; the owner can take
+  it back. The hold rows are purged once a day at 03:45 (`PublicCvMaintenance`, one query, only a count is logged).
+- Publishing while the profile has no full name is 409 `name_required`. A save under an administrator's lock that publishes is 409 `locked`.
+
+**Live rendering and caching.** The page is rendered from the owner's stored profile, not from a copy, so a saved profile edit is
+public at once in the ticked fields. Rendered pages are cached in memory (`RenderCache`, at most 500 entries, 10 minutes) under the
+key (owner, profile version, settings version, template, language): a save changes a version and the next request renders again.
+A paused, locked or removed page is never served from the cache (the state is checked first). The cache and the limiters live in
+each backend process.
+
+**Headers** of the public page:
+
+- `Content-Type: text/html; charset=utf-8`; `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:;
+  base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox`.
+- `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet` (or `index, follow` when `indexable`); the HTML has a matching robots meta.
+- `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-cache`, `ETag` (quoted SHA-256 of the HTML,
+  hex).
+- The preview: `Cache-Control: no-store`, `X-Robots-Tag` always `noindex`. Every 404 and 429 carries `no-store`, `noindex`,
+  `nosniff` and `no-referrer`.
+- The page has no script. Links are http(s) only, with `rel="noopener noreferrer nofollow"`.
+
+**Rate limits** (`jobhunter.public-cv.*` in `application.yaml`, defaults in brackets):
+
+- `page-per-ip-per-minute` (60): page requests per client IP.
+- `not-found-per-ip-per-minute` (10): answers that are 404, including malformed handles; the stricter limit.
+- `page-per-handle-per-minute` (600): page requests for one handle, all clients together (a backstop when the IP is wrong).
+- `handle-checks-per-hour` (60) and `previews-per-hour` (30): per user, for the owner's endpoints.
+
+Previews have no IP limit: their tickets are random, one-use and valid for 60 seconds (`PreviewTickets`).
+
+**Client IP.** The first value of `X-Forwarded-For`, trimmed, when it is 1 to 45 characters; otherwise the socket address. The
+backend does not configure a forwarded-header strategy and the edge's setting is not in this repository (`k8s/platform/traefik-values.yaml`
+has no forwarded-header key), so the IP limit is best effort; the per-handle cap is the backstop.
+
+**Audit table** `public_cv_audit` (`owner_sub`, `event`, `occurred_at`, `flags` JSON): events `PUBLISHED`, `PAUSED`,
+`SETTINGS_CHANGED`, `HANDLE_CHANGED`, `REMOVED`, `TAKEN_DOWN`, `UNLOCKED`. `flags` says which settings are on (for example
+`contact.email`, `section.SKILLS`, `indexable`) and never their values. It has no handle. Takedown and unlock store empty flags.
+Rows are deleted with the account.
+
+**Retention.** `public_cv` (settings, handle, flags), `public_cv_handle_hold` and `public_cv_audit` reference `app_user` with
+`ON DELETE CASCADE`, so deleting an account removes its page, its holds and its audit rows; the handle is then free at once.
+Liquibase changesets `moldo:012-public-cv`, `013-public-cv-handle-hold`, `014-public-cv-audit` (file `009-public-cv.sql`).
+
+**Logging.** A public page answer logs one line: status, duration and the first 8 characters of the ETag. The owner and
+administrator endpoints log nothing. No line holds a handle together with an address, profile text, a setting value or a ticket.
+
 ### Project analysis
 
 `POST /api/profile/open-source-projects/analyze` with `{"provider":"GITHUB","fullName":"owner/repo"}` (token required) analyses one
