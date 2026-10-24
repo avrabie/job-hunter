@@ -1,7 +1,11 @@
 package net.s4v3.backend.cv.export
 
-/** The file format of an export. */
-enum class CvFormat { MARKDOWN, HTML, PDF }
+/** The file format of an export, with the content type and file extension it is served under. */
+enum class CvFormat(val contentType: String, val extension: String) {
+    MARKDOWN("text/markdown; charset=utf-8", "md"),
+    HTML("text/html; charset=utf-8", "html"),
+    PDF("application/pdf", "pdf"),
+}
 
 /** The layout of an export. Markdown has one structure for all templates. */
 enum class CvTemplate { CLASSIC, MODERN, COMPACT }

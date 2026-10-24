@@ -65,7 +65,7 @@ internal class DefaultExportService(
             "CV exported: format {}, template {}, {} bytes, {} ms",
             options.format, options.template, bytes.size, (System.nanoTime() - started) / 1_000_000,
         )
-        return ExportedCv(bytes, contentType(options.format), fileName(document.name, options))
+        return ExportedCv(bytes, options.format.contentType, fileName(document.name, options))
     }
 
     private fun renderPdf(render: () -> ByteArray): ByteArray {
@@ -77,20 +77,8 @@ internal class DefaultExportService(
         }
     }
 
-    private fun contentType(format: CvFormat) = when (format) {
-        CvFormat.MARKDOWN -> "text/markdown; charset=utf-8"
-        CvFormat.HTML -> "text/html; charset=utf-8"
-        CvFormat.PDF -> "application/pdf"
-    }
-
-    private fun fileName(name: String, options: ExportOptions): String {
-        val extension = when (options.format) {
-            CvFormat.MARKDOWN -> "md"
-            CvFormat.HTML -> "html"
-            CvFormat.PDF -> "pdf"
-        }
-        return "${slug(name)}-cv-${options.language.name.lowercase()}.$extension"
-    }
+    private fun fileName(name: String, options: ExportOptions): String =
+        "${slug(name)}-cv-${options.language.name.lowercase()}.${options.format.extension}"
 
     /** ASCII only: accents are stripped, `ß` becomes `ss`, every other run of characters becomes one dash. */
     private fun slug(name: String): String {
