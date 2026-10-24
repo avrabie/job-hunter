@@ -121,5 +121,7 @@ class ApiDocsContentTests(
 
     private fun isExcluded(path: String) =
         path.startsWith("/api/test/") || path == "/api/admin/test/unlisted" || path.startsWith("/api/docs") ||
-            path.startsWith("/api/swagger-ui") || path.startsWith("/api/openapi")
+            path.startsWith("/api/swagger-ui") || path.startsWith("/api/openapi") ||
+            // the public CV catch-all answers the uniform 404 and is hidden from the document on purpose
+            path in setOf("/api/public/cv", "/api/public/cv/", "/api/public/cv/**")
 }
