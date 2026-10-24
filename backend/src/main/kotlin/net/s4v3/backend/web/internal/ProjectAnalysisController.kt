@@ -14,6 +14,7 @@ import net.s4v3.backend.profile.DigestResult
 import net.s4v3.backend.profile.ProfileService
 import net.s4v3.backend.profile.ProjectAnalysis
 import net.s4v3.backend.profile.RepositoryDigestSource
+import net.s4v3.backend.profile.isValidFullName
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -21,8 +22,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-
-private val ownerRepoSegment = Regex("[A-Za-z0-9._-]{1,100}")
 
 /**
  * Analyses one saved open source project: reads its repository, asks the model, and returns the checked analysis. Only a
@@ -79,20 +78,20 @@ internal class ProjectAnalysisController(
     fun analyze(@RequestBody(required = false) request: AnalyzeRequest?): ResponseEntity<Any> {
         val provider = CodeProvider.entries.firstOrNull { it.name == request?.provider }
         val fullName = request?.fullName
-        if (provider == null || fullName == null || !isOwnerRepo(fullName)) return error(HttpStatus.BAD_REQUEST, "invalid_request")
+        if (provider == null || fullName == null || !isValidFullName(fullName)) return codeError(HttpStatus.BAD_REQUEST, "invalid_request")
 
         val sub = currentUser.id()
         val saved = profiles.get(sub).profile.openSourceProjects
             .any { it.provider == provider && it.fullName.equals(fullName, ignoreCase = true) }
-        if (!saved) return error(HttpStatus.NOT_FOUND, "project_not_found")
-        if (!limiter.tryAcquire(sub)) return error(HttpStatus.TOO_MANY_REQUESTS, "too_many_analyses")
+        if (!saved) return codeError(HttpStatus.NOT_FOUND, "project_not_found")
+        if (!limiter.tryAcquire(sub)) return codeError(HttpStatus.TOO_MANY_REQUESTS, "too_many_analyses")
 
         val digest = when (val answer = digests.digest(provider, fullName)) {
             is DigestResult.Found -> answer.digest
-            DigestResult.InvalidName -> return error(HttpStatus.BAD_REQUEST, "invalid_request")
-            DigestResult.NotFound -> return error(HttpStatus.NOT_FOUND, "repository_not_found")
-            DigestResult.RateLimited -> return error(HttpStatus.TOO_MANY_REQUESTS, "provider_rate_limited")
-            DigestResult.Unavailable -> return error(HttpStatus.BAD_GATEWAY, "provider_unavailable")
+            DigestResult.InvalidName -> return codeError(HttpStatus.BAD_REQUEST, "invalid_request")
+            DigestResult.NotFound -> return codeError(HttpStatus.NOT_FOUND, "repository_not_found")
+            DigestResult.RateLimited -> return codeError(HttpStatus.TOO_MANY_REQUESTS, "provider_rate_limited")
+            DigestResult.Unavailable -> return codeError(HttpStatus.BAD_GATEWAY, "provider_unavailable")
         }
         return try {
             val started = System.nanoTime()
@@ -101,19 +100,10 @@ internal class ProjectAnalysisController(
             ResponseEntity.ok(AnalysisBody(analysis))
         } catch (e: LlmFailure) {
             when (e.kind) {
-                LlmFailureKind.NOT_CONFIGURED -> error(HttpStatus.SERVICE_UNAVAILABLE, "analysis_not_configured")
-                LlmFailureKind.FAILED -> error(HttpStatus.BAD_GATEWAY, "analysis_failed")
+                LlmFailureKind.NOT_CONFIGURED -> codeError(HttpStatus.SERVICE_UNAVAILABLE, "analysis_not_configured")
+                LlmFailureKind.FAILED -> codeError(HttpStatus.BAD_GATEWAY, "analysis_failed")
             }
         }
-    }
-
-    private fun error(status: HttpStatus, code: String): ResponseEntity<Any> =
-        ResponseEntity.status(status).body(mapOf("error" to code))
-
-    /** Same rule as the digest source: `owner/repo`, each part 1 to 100 letters, digits, dots, dashes or underscores, no dot segments. */
-    private fun isOwnerRepo(fullName: String): Boolean {
-        val parts = fullName.split('/')
-        return parts.size == 2 && parts.all { it != "." && it != ".." && ownerRepoSegment.matches(it) }
     }
 }
 

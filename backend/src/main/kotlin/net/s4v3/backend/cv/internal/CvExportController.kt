@@ -73,10 +73,10 @@ internal class CvExportController(
         ],
     )
     fun export(@RequestBody(required = false) body: ByteArray?): ResponseEntity<Any> {
-        val request = parse(body) ?: return error(HttpStatus.BAD_REQUEST, "invalid_request")
-        val sections = request.sections?.map { it ?: return error(HttpStatus.BAD_REQUEST, "invalid_request") }
+        val request = parse(body) ?: return codeError(HttpStatus.BAD_REQUEST, "invalid_request")
+        val sections = request.sections?.map { it ?: return codeError(HttpStatus.BAD_REQUEST, "invalid_request") }
         val sub = currentUser.id()
-        if (!limiter.tryAcquire(sub)) return error(HttpStatus.TOO_MANY_REQUESTS, "too_many_exports")
+        if (!limiter.tryAcquire(sub)) return codeError(HttpStatus.TOO_MANY_REQUESTS, "too_many_exports")
         val options = ExportOptions(
             format = request.format, template = request.template, language = request.language, sections = sections,
             includeOpenSource = request.includeOpenSource, includeAnalysis = request.includeAnalysis,
@@ -90,11 +90,11 @@ internal class CvExportController(
                 .cacheControl(CacheControl.noStore())
                 .body(cv.bytes)
         } catch (_: NameRequiredException) {
-            error(HttpStatus.CONFLICT, "name_required")
+            codeError(HttpStatus.CONFLICT, "name_required")
         } catch (_: ExportBusyException) {
-            error(HttpStatus.SERVICE_UNAVAILABLE, "busy")
+            codeError(HttpStatus.SERVICE_UNAVAILABLE, "busy")
         } catch (_: ExportFailedException) {
-            error(HttpStatus.INTERNAL_SERVER_ERROR, "render_failed")
+            codeError(HttpStatus.INTERNAL_SERVER_ERROR, "render_failed")
         }
     }
 
@@ -105,9 +105,6 @@ internal class CvExportController(
             // The exception message quotes the input, so it is dropped.
             null
         }
-
-    private fun error(status: HttpStatus, code: String): ResponseEntity<Any> =
-        ResponseEntity.status(status).body(mapOf("error" to code))
 
     private companion object {
         val strict: JsonMapper = JsonMapper.builder()

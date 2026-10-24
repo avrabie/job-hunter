@@ -3,9 +3,8 @@ package net.s4v3.backend.profile.internal
 import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.DigestResult
 import net.s4v3.backend.profile.RepositoryDigestSource
+import net.s4v3.backend.profile.isValidFullName
 import org.springframework.stereotype.Component
-
-private val nameSegment = Regex("[A-Za-z0-9._-]{1,100}")
 
 /**
  * Checks `owner/repo`, picks the provider by its value and caches found digests for ten minutes per provider and full
@@ -38,10 +37,4 @@ internal class DefaultRepositoryDigestSource(providers: List<RepositoryDigestPro
         const val TTL_MINUTES = 10L
         const val MAX_ENTRIES = 1000
     }
-}
-
-/** Whether [fullName] is `owner/repo` with each part 1 to 100 characters of letters, digits, dots, dashes and underscores. */
-internal fun isValidFullName(fullName: String): Boolean {
-    val parts = fullName.split('/')
-    return parts.size == 2 && parts.all { it != "." && it != ".." && nameSegment.matches(it) }
 }
