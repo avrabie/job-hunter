@@ -452,7 +452,8 @@ and durations (`CvExtractApiTests` and `FilesLoggingTests` check this with marke
 
 `CvReader` turns CV text into a typed profile draft through Koog and Claude (`docs/koog-notes.md` explains the code).
 Configuration: `ANTHROPIC_API_KEY` (read into `jobhunter.llm.api-key`, never logged; without it a call fails with a fixed
-error) and `jobhunter.llm.model` (`Haiku_4_5`, `Sonnet_5` or `Opus_5`). Only the `llm` module imports `ai.koog`.
+error) and `jobhunter.llm.model` (`Haiku_4_5`, `Sonnet_5` or `Opus_5`). `LetterWriter` (motivation letters) uses
+`jobhunter.letters.model` (same names; empty = `jobhunter.llm.model`). Only the `llm` module imports `ai.koog`.
 
 Logging: `logging.level.ai.koog` is `OFF` because Koog prints the model's raw answer when it cannot parse it. Do not turn
 Koog or HTTP client DEBUG logging on in the cluster: prompts and answers hold CV text.

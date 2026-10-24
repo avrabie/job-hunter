@@ -44,6 +44,9 @@ jobhunter:
     api-key: ${ANTHROPIC_API_KEY:}
     # Name of a Koog model constant: Haiku_4_5, Sonnet_5 or Opus_5.
     model: Haiku_4_5
+  letters:
+    # Model for motivation letters (same names as above). Empty = use jobhunter.llm.model. Sonnet_5 writes better letters.
+    model: ""
   cv:
     # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
     max-text-chars: 120000

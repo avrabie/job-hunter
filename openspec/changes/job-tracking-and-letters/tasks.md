@@ -17,7 +17,7 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 
 ## 2. LetterWriter (backend, `llm`)
 
-- [ ] 2.1 `LetterWriter` interface and request types in `net.s4v3.backend.llm`, internal `KoogLetterWriter` plus `LetterPrompts`, settings `jobhunter.letters.model` (default empty = use `jobhunter.llm.model`), output cleaning per design decision 5, `llm/README.md`. Tests with `FakePromptExecutor`: delimiters around the description, instructions outside the data block, only given candidate facts present, previous letter and comments present for regeneration, injection text stays inside the data block, truncation at 20 000, cleaning (code fence, HTML refused, empty refused, over-length refused), `LlmFailure` mapping, no prompt or answer text in exception messages, and a `LlmLoggingTests`-style check.
+- [x] 2.1 `LetterWriter` interface and request types in `net.s4v3.backend.llm`, internal `KoogLetterWriter` plus `LetterPrompts`, settings `jobhunter.letters.model` (default empty = use `jobhunter.llm.model`), output cleaning per design decision 5, `llm/README.md`. Tests with `FakePromptExecutor`: delimiters around the description, instructions outside the data block, only given candidate facts present, previous letter and comments present for regeneration, injection text stays inside the data block, truncation at 20 000, cleaning (code fence, HTML refused, empty refused, over-length refused), `LlmFailure` mapping, no prompt or answer text in exception messages, and a `LlmLoggingTests`-style check.
 
 ## 3. Letters (backend, `applications`)
 
