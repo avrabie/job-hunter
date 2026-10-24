@@ -79,3 +79,30 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// Fast tier: everything not tagged "integration" (no Spring context, no container).
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
+}
+
+// Slow tier: Spring contexts and the shared Testcontainers Postgres, one JVM fork.
+val integrationTest by tasks.registering(Test::class) {
+    description = "Runs the tests tagged integration (Spring contexts, Testcontainers)."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("integration")
+    }
+    shouldRunAfter(tasks.test)
+    maxParallelForks = 1
+}
+
+// Both tiers; `check` and `build` stay on the fast tier only.
+tasks.register("verify") {
+    description = "Runs the fast tier and the integration tier."
+    group = "verification"
+    dependsOn(tasks.test, integrationTest)
+}

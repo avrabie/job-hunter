@@ -1,6 +1,7 @@
 package net.s4v3.backend
 
 import com.zaxxer.hikari.HikariDataSource
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -13,6 +14,7 @@ import javax.sql.DataSource
 import kotlin.test.assertEquals
 
 /** Needs a real servlet container: MockMvc handles requests on the test thread. */
+@Tag("integration")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration::class, TestEndpoints::class)
 @ActiveProfiles("test")
