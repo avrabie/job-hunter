@@ -1,48 +1,34 @@
 package net.s4v3.backend
 
-import com.sun.net.httpserver.HttpServer
 import net.s4v3.backend.sources.internal.Fetched
 import net.s4v3.backend.sources.internal.PoliteHttp
 import net.s4v3.backend.sources.internal.SourcesSettings
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.net.InetSocketAddress
 import java.net.URI
 import java.time.Duration
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class PoliteHttpTests {
 
-    private val server = HttpServer.create(InetSocketAddress("localhost", 0), 0).apply { start() }
-    private val seen = CopyOnWriteArrayList<Map<String, String?>>()
-    private val starts = CopyOnWriteArrayList<Long>()
-    private val finishes = CopyOnWriteArrayList<Long>()
+    private val server = FakeHttpServer()
 
     @AfterEach
-    fun stop() = server.stop(0)
+    fun stop() = server.close()
 
     private fun serve(path: String, status: Int = 200, type: String = "application/json", body: String = "{}", etag: String? = null, delayMs: Long = 0) {
-        server.createContext(path) { ex ->
-            starts += System.nanoTime()
-            seen += mapOf("ua" to ex.requestHeaders.getFirst("User-Agent"), "inm" to ex.requestHeaders.getFirst("If-None-Match"))
+        server.on(path) {
             if (delayMs > 0) Thread.sleep(delayMs)
-            ex.responseHeaders.add("Content-Type", type)
-            etag?.let { ex.responseHeaders.add("ETag", it) }
-            val bytes = body.toByteArray()
-            if (status == 304) ex.sendResponseHeaders(304, -1) else ex.sendResponseHeaders(status, bytes.size.toLong())
-            if (status != 304) ex.responseBody.use { it.write(bytes) }
-            ex.close()
-            finishes += System.nanoTime()
+            FakeHttpServer.Reply(status, body, type, headers = etag?.let { mapOf("ETag" to it) } ?: emptyMap())
         }
     }
 
     private fun http(pause: Duration = Duration.ZERO, read: Duration = Duration.ofSeconds(2)) =
         PoliteHttp(SourcesSettings(pause = pause, readTimeout = read))
 
-    private fun uri(path: String) = URI("http://localhost:${server.address.port}$path")
+    private fun uri(path: String) = URI("${server.baseUrl}$path")
 
     @Test
     fun `a 200 returns the body and its etag`() {
@@ -59,8 +45,8 @@ class PoliteHttpTests {
 
         http().get(uri("/h"), 1000, etag = "W/\"v1\"")
 
-        assertEquals(SourcesSettings().userAgent, seen.single()["ua"])
-        assertEquals("W/\"v1\"", seen.single()["inm"])
+        assertEquals(SourcesSettings().userAgent, server.requests.single().header("User-Agent"))
+        assertEquals("W/\"v1\"", server.requests.single().header("If-None-Match"))
         assertTrue("s4v3.net" in SourcesSettings().userAgent)
     }
 
@@ -115,7 +101,7 @@ class PoliteHttpTests {
         client.get(uri("/p"), 1000)
         client.get(uri("/p"), 1000)
 
-        val gapMs = (starts[1] - finishes[0]) / 1_000_000
+        val gapMs = (server.requests[1].startedAt - server.requests[0].finishedAt) / 1_000_000
         assertTrue(gapMs >= 350, "gap was $gapMs ms")
     }
 }

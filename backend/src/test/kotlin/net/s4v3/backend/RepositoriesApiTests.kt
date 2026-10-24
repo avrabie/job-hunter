@@ -1,6 +1,5 @@
 package net.s4v3.backend
 
-import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -11,10 +10,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.net.InetSocketAddress
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertTrue
 
 @ApiTest
@@ -130,31 +126,14 @@ class RepositoriesApiTests(@Autowired private val mvc: MockMvc) {
 
     /** A local stand-in for the GitHub API; answers are set per request path. */
     private class FakeGitHub : AutoCloseable {
-        private val server = HttpServer.create(InetSocketAddress("localhost", 0), 0)
-        val port get() = server.address.port
-
-        private data class Answer(val status: Int, val body: String, val header: Pair<String, String>?)
-
-        private val answers = ConcurrentHashMap<String, Answer>()
-        val requests = CopyOnWriteArrayList<String>()
-
-        init {
-            server.createContext("/") { ex ->
-                requests += ex.requestURI.path
-                val answer = answers[ex.requestURI.path] ?: Answer(404, """{"message":"Not Found"}""", null)
-                answer.header?.let { ex.responseHeaders.add(it.first, it.second) }
-                val bytes = answer.body.toByteArray()
-                ex.responseHeaders.add("Content-Type", "application/json")
-                ex.sendResponseHeaders(answer.status, bytes.size.toLong())
-                ex.responseBody.use { it.write(bytes) }
-            }
-            server.start()
-        }
+        private val server = FakeHttpServer()
+        val port get() = server.port
+        val requests get() = server.requests
 
         fun answer(path: String, status: Int, body: String, header: Pair<String, String>? = null) {
-            answers[path] = Answer(status, body, header)
+            server.on(path) { FakeHttpServer.Reply(status, body, headers = header?.let { mapOf(it) } ?: emptyMap()) }
         }
 
-        override fun close() = server.stop(0)
+        override fun close() = server.close()
     }
 }

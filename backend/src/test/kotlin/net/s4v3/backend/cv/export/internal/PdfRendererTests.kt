@@ -1,15 +1,12 @@
 package net.s4v3.backend.cv.export.internal
 
-import com.sun.net.httpserver.HttpServer
+import net.s4v3.backend.FakeHttpServer
 import net.s4v3.backend.cv.export.CvEntry
 import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.EntrySection
 import net.s4v3.backend.cv.export.ProseSection
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -67,22 +64,16 @@ class PdfRendererTests {
 
     @Test
     fun `no network request is made`() {
-        val hits = AtomicInteger()
-        val server = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
-        server.createContext("/") { ex -> hits.incrementAndGet(); ex.sendResponseHeaders(404, -1); ex.close() }
-        server.start()
-        try {
-            val url = "http://127.0.0.1:${server.address.port}/x.png"
+        FakeHttpServer("127.0.0.1").use { server ->
+            val url = "${server.baseUrl}/x.png"
             val evil = "<img src=\"$url\"> $url <link rel=\"stylesheet\" href=\"$url\">"
             val doc = CvFixtures.small().copy(
                 sections = listOf(ProseSection("Profile", listOf(evil))),
             )
             val pdf = renderer.render(doc, CvTemplate.MODERN)
             assertTrue(text(pdf).contains("Ada Example"))
-            // render() is synchronous: a fetch would have been answered (and counted) before it returned.
-            assertEquals(0, hits.get())
-        } finally {
-            server.stop(0)
+            // render() is synchronous: a fetch would have been answered (and logged) before it returned.
+            assertEquals(0, server.requests.size)
         }
     }
 }
