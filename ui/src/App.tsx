@@ -1,5 +1,7 @@
 import { Route, Routes } from 'react-router'
 import { AdminPage } from './admin/AdminPage.tsx'
+import { ApplicationPage } from './applications/ApplicationPage.tsx'
+import { ApplicationsPage } from './applications/ApplicationsPage.tsx'
 import { CallbackPage } from './auth/CallbackPage.tsx'
 import { ExportPage } from './export/ExportPage.tsx'
 import { MatchesPage } from './matches/MatchesPage.tsx'
@@ -17,6 +19,8 @@ export default function App() {
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/postings" element={<PostingsPage />} />
       <Route path="/postings/:id" element={<PostingPage />} />
+      <Route path="/applications" element={<ApplicationsPage />} />
+      <Route path="/applications/:id" element={<ApplicationPage />} />
       <Route path="/matches" element={<MatchesPage />} />
       <Route path="/export" element={<ExportPage />} />
       <Route path="/publish" element={<PublicCvPage />} />

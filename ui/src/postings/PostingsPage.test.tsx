@@ -42,6 +42,10 @@ function stubFetch(handler: (url: string) => Response) {
   return urls
 }
 
+/** The posting list requests only; the stage lookup for the visible postings is asked after them. */
+const listUrls = (urls: string[]) =>
+  urls.filter((u) => !u.includes('by-posting'))
+
 function mount(entry: string, auth: AuthApi = fakeAuth(signedIn())) {
   return render(
     <AuthContext.Provider value={auth}>
@@ -175,8 +179,8 @@ describe('search and paging', () => {
     await userEvent.type(screen.getByLabelText('Search'), 'kotlin')
     await userEvent.click(screen.getByRole('button', { name: 'Search' }))
 
-    await waitFor(() => expect(urls.at(-1)).toContain('q=kotlin'))
-    expect(urls.at(-1)).toContain('page=0')
+    await waitFor(() => expect(listUrls(urls).at(-1)).toContain('q=kotlin'))
+    expect(listUrls(urls).at(-1)).toContain('page=0')
   })
 
   it('sends the canton filter', async () => {
@@ -186,7 +190,7 @@ describe('search and paging', () => {
 
     await userEvent.selectOptions(screen.getByLabelText('Canton'), 'ZH')
 
-    await waitFor(() => expect(urls.at(-1)).toContain('canton=ZH'))
+    await waitFor(() => expect(listUrls(urls).at(-1)).toContain('canton=ZH'))
   })
 
   it('pages forward and back; previous is off on the first page and next on a short page', async () => {
@@ -207,7 +211,7 @@ describe('search and paging', () => {
     expect(
       await screen.findByRole('link', { name: 'Last one' }),
     ).toBeInTheDocument()
-    expect(urls.at(-1)).toContain('page=1')
+    expect(listUrls(urls).at(-1)).toContain('page=1')
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
     expect(
@@ -259,5 +263,103 @@ describe('the detail page', () => {
         name: 'Back to the postings',
       }),
     ).toHaveAttribute('href', '/postings')
+  })
+})
+
+describe('the Interested action', () => {
+  const APP_ID = '0b6f2c1e-7d3a-4e8b-9f1a-2c3d4e5f6a7b'
+  const POSTING_ID = '11111111-1111-1111-1111-111111111111'
+  const summary = {
+    id: APP_ID,
+    postingId: POSTING_ID,
+    title: 'Backend Engineer',
+    company: 'Acme',
+    stage: 'INTERESTED',
+    appliedOn: null,
+    stageChangedAt: '2026-10-23T10:00:00Z',
+    liveStatus: 'OPEN',
+  }
+
+  /** Answers the stage lookup with `tracked` and the track call with `track`. */
+  function stubTracking(
+    tracked: unknown[],
+    track: () => Response = () => json(201, summary),
+  ) {
+    const methods: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        methods.push(init.method ?? 'GET')
+        if (url.startsWith('/api/applications/by-posting'))
+          return json(200, tracked)
+        if (init.method === 'POST') return track()
+        if (url.startsWith('/api/postings/'))
+          return json(200, { ...posting(), description: 'Invented text' })
+        return json(200, [posting()])
+      }),
+    )
+    return methods
+  }
+
+  it('marks a posting interested from the list and shows the stage with a link', async () => {
+    const methods = stubTracking([])
+    mount('/postings')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Interested' }),
+    )
+
+    expect(await screen.findByText(/Stage: Interested/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Open application' }),
+    ).toHaveAttribute('href', `/applications/${APP_ID}`)
+    expect(
+      screen.queryByRole('button', { name: 'Interested' }),
+    ).not.toBeInTheDocument()
+    expect(methods).toContain('POST')
+  })
+
+  it('marks a posting interested on its page', async () => {
+    stubTracking([])
+    mount(`/postings/${POSTING_ID}`)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Interested' }),
+    )
+
+    expect(await screen.findByText(/Stage: Interested/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Open application' }),
+    ).toHaveAttribute('href', `/applications/${APP_ID}`)
+  })
+
+  it('shows the stage of a posting that is already tracked from the start', async () => {
+    stubTracking([
+      { postingId: POSTING_ID, applicationId: APP_ID, stage: 'APPLIED' },
+    ])
+    mount('/postings')
+
+    expect(await screen.findByText(/Stage: Applied/)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Interested' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows a message and keeps the posting as it was when tracking fails', async () => {
+    stubTracking([], () => json(500, { secret: 'SECRET-BODY' }))
+    mount('/postings')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Interested' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The request failed (status 500).',
+    )
+    expect(screen.queryByText(/SECRET-BODY/)).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Interested' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Stage:/)).not.toBeInTheDocument()
   })
 })

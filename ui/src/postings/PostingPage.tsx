@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { InterestedButton } from '../applications/InterestedButton.tsx'
+import {
+  trackedOf,
+  useTrackedStages,
+} from '../applications/useTrackedStages.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPosting } from './postingsApi.ts'
@@ -36,6 +41,7 @@ type Load =
 function PostingView({ id }: { id: string }) {
   const auth = useAuth()
   const [load, setLoad] = useState<Load>({ state: 'loading' })
+  const tracked = useTrackedStages([id])
 
   const fetchPosting = useCallback(async () => {
     setLoad({ state: 'loading' })
@@ -92,6 +98,7 @@ function PostingView({ id }: { id: string }) {
         {p.firstSeen.slice(0, 10)} · last seen {p.lastSeen.slice(0, 10)}
       </p>
       <OriginalLinks links={p.links} />
+      <InterestedButton postingId={p.id} tracked={trackedOf(tracked, p.id)} />
       <pre className="description">{p.description}</pre>
     </main>
   )

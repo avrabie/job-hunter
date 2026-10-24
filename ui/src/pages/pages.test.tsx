@@ -75,6 +75,18 @@ describe('signed-in shell', () => {
     }
   })
 
+  it('links to the job tracking page', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('x', { status: 200 })),
+    )
+    mount(fakeAuth(signedIn()))
+    expect(screen.getByRole('link', { name: 'Job tracking' })).toHaveAttribute(
+      'href',
+      '/applications',
+    )
+  })
+
   it('shows the name when the token has no email', async () => {
     vi.stubGlobal(
       'fetch',
