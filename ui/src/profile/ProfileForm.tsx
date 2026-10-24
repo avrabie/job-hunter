@@ -10,6 +10,7 @@ import {
   blankPublication,
   blankSkill,
   type CodeProvider,
+  type OpenSourceProject,
   type Profile,
   type RemoteMode,
 } from './types.ts'
@@ -21,8 +22,10 @@ import {
   StringList,
   TextInput,
 } from './fields.tsx'
+import type { AnalysisResult } from './analysisApi.ts'
 import { OpenSourceSection } from './OpenSourceSection.tsx'
 import type { RepositoriesResult } from './repositoriesApi.ts'
+import { skillsAfterProjectChange, sourcesOf } from './skills.ts'
 import { TagInput } from './TagInput.tsx'
 
 /** The first server message for a list field or for one of its entries, such as `experience[0].technologies[1]`. */
@@ -54,6 +57,10 @@ interface Props {
     provider: CodeProvider,
     username: string,
   ) => Promise<RepositoriesResult>
+  /** The projects in the last loaded or saved profile; only these can be analysed. */
+  savedProjects: OpenSourceProject[]
+  /** Analyses one saved project; the page applies a success to the project and the skills. */
+  onAnalyze: (project: OpenSourceProject) => Promise<AnalysisResult>
 }
 
 export interface FillState {
@@ -71,6 +78,8 @@ export function ProfileForm({
   onFillSection,
   fillState,
   onLoadRepositories,
+  savedProjects,
+  onAnalyze,
 }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
@@ -362,7 +371,19 @@ export function ProfileForm({
         accounts={profile.codeAccounts}
         onAccountsChange={(v) => set('codeAccounts', v)}
         projects={profile.openSourceProjects}
-        onProjectsChange={(v) => set('openSourceProjects', v)}
+        onProjectsChange={(v) =>
+          onChange({
+            ...profile,
+            openSourceProjects: v,
+            skills: skillsAfterProjectChange(
+              profile.skills,
+              profile.openSourceProjects,
+              v,
+            ),
+          })
+        }
+        saved={savedProjects}
+        onAnalyze={onAnalyze}
         errors={errors}
         onLoad={onLoadRepositories}
       />
@@ -393,6 +414,33 @@ export function ProfileForm({
                 path={`skills[${i}].level`}
                 onChange={(level) => patch({ level })}
               />
+              {item.origin === 'ANALYSIS' && (
+                <p className="hint">from repository analysis</p>
+              )}
+              {sourcesOf(item).length > 0 && (
+                <ul aria-label={`Sources of Skill ${i + 1}`}>
+                  {sourcesOf(item).map((s, j) => (
+                    <li key={`${s.provider}:${s.fullName}`}>
+                      <a href={s.url} target="_blank" rel="noreferrer">
+                        {s.fullName}
+                      </a>{' '}
+                      <span className="hint">{s.evidence}</span>{' '}
+                      <button
+                        type="button"
+                        className="secondary"
+                        aria-label={`Remove source ${j + 1} of Skill ${i + 1}`}
+                        onClick={() =>
+                          patch({
+                            sources: sourcesOf(item).filter((_, k) => k !== j),
+                          })
+                        }
+                      >
+                        Remove source
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </>
           )}
         </Repeater>

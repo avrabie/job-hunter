@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import type { AnalysisResult } from './analysisApi.ts'
 import { Repeater, Select, TextInput } from './fields.tsx'
 import type { RepositoriesResult } from './repositoriesApi.ts'
 import { isValidUsername } from './rules.ts'
 import {
   CODE_PROVIDERS,
+  sameRepository,
   type CodeAccount,
   type CodeProvider,
   type OpenSourceProject,
@@ -14,12 +16,7 @@ const PROVIDER_LABELS: Record<CodeProvider, string> = { GITHUB: 'GitHub' }
 
 const blankAccount = (): CodeAccount => ({ provider: 'GITHUB', username: '' })
 
-const sameRepository = (
-  a: Pick<OpenSourceProject, 'provider' | 'fullName'>,
-  b: Pick<OpenSourceProject, 'provider' | 'fullName'>,
-) => a.provider === b.provider && a.fullName === b.fullName
-
-/** A picked repository copies the public facts of the listing; the note starts empty. */
+/** A picked repository copies the public facts of the listing; the note and the analysis start empty. */
 const pick = (repo: Repository): OpenSourceProject => ({
   provider: repo.provider,
   fullName: repo.fullName,
@@ -30,6 +27,7 @@ const pick = (repo: Repository): OpenSourceProject => ({
   topics: repo.topics,
   stars: repo.stars,
   note: null,
+  analysis: null,
 })
 
 type Listing =
@@ -43,6 +41,10 @@ interface Props {
   onAccountsChange: (accounts: CodeAccount[]) => void
   projects: OpenSourceProject[]
   onProjectsChange: (projects: OpenSourceProject[]) => void
+  /** The projects in the last loaded or saved profile; only these can be analysed. */
+  saved: OpenSourceProject[]
+  /** Analyses one saved project; the page puts a success on the project and in the skills. */
+  onAnalyze: (project: OpenSourceProject) => Promise<AnalysisResult>
   /** Server messages by field path, for example `openSourceProjects[0].note`. */
   errors: Record<string, string>
   /** Lists the repositories of one account; nothing is saved by it. */
@@ -54,19 +56,24 @@ interface Props {
 
 /**
  * The Open Source Projects section: the code accounts the user links, the repositories of an account the user picks
- * from a checklist, and the picked list with a note on each. Only the picked list is saved.
+ * from a checklist, and the picked list with a note and an analysis on each. Only the picked list is saved.
  */
 export function OpenSourceSection({
   accounts,
   onAccountsChange,
   projects,
   onProjectsChange,
+  saved,
+  onAnalyze,
   errors,
   onLoad,
 }: Props) {
   const [listing, setListing] = useState<Listing>({ state: 'idle' })
   // Set once the user ticks or unticks a repository in this visit; the page then says nothing is saved yet.
   const [picking, setPicking] = useState(false)
+  // The project being analysed (by its position in the list) and the fixed failure message per project.
+  const [analysing, setAnalysing] = useState<number | null>(null)
+  const [failures, setFailures] = useState<Record<number, string>>({})
 
   async function load(provider: CodeProvider, username: string) {
     setListing({ state: 'loading' })
@@ -76,6 +83,29 @@ export function OpenSourceSection({
     else if (result.kind === 'failed')
       setListing({ state: 'failed', message: result.message })
     else setListing({ state: 'idle' })
+  }
+
+  async function analyse(i: number) {
+    const project = projects[i]!
+    if (
+      project.analysis &&
+      !window.confirm(
+        `Replace the analysis of ${project.name}? Its skills from the earlier analysis are replaced too.`,
+      )
+    )
+      return
+    setAnalysing(i)
+    setFailures((current) => {
+      const next = { ...current }
+      delete next[i]
+      return next
+    })
+    const result = await onAnalyze(project)
+    setAnalysing(null)
+    if (result.kind === 'failed') {
+      const message = result.message
+      setFailures((current) => ({ ...current, [i]: message }))
+    }
   }
 
   function togglePick(repo: Repository, on: boolean) {
@@ -186,6 +216,8 @@ export function OpenSourceSection({
       )}
       {projects.map((p, i) => {
         const at = `openSourceProjects[${i}]`
+        const isSaved = saved.some((s) => sameRepository(s, p))
+        const busy = analysing !== null
         return (
           <fieldset key={`${p.provider}:${p.fullName}`}>
             <legend>{`Project ${i + 1}`}</legend>
@@ -213,6 +245,61 @@ export function OpenSourceSection({
                 setProject(i, { note: note === '' ? null : note })
               }
             />
+
+            <div className="analysis">
+              {!isSaved && (
+                <p className="hint">Save this project first to analyze it.</p>
+              )}
+              <div className="actions compact">
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-label={`Analyze Project ${i + 1}`}
+                  disabled={!isSaved || busy}
+                  onClick={() => void analyse(i)}
+                >
+                  {analysing === i ? 'Analyzing…' : 'Analyze'}
+                </button>
+                {p.analysis && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    aria-label={`Remove analysis of Project ${i + 1}`}
+                    disabled={busy}
+                    onClick={() => setProject(i, { analysis: null })}
+                  >
+                    Remove analysis
+                  </button>
+                )}
+              </div>
+              {analysing === i && (
+                <p role="status">
+                  Reading the repository. This can take a minute.
+                </p>
+              )}
+              {failures[i] && <p role="alert">{failures[i]}</p>}
+              {p.analysis && (
+                <div>
+                  <h4>Analysis</h4>
+                  <p>{p.analysis.summary}</p>
+                  <p>
+                    <span className="hint">Architecture: </span>
+                    {p.analysis.architecture}
+                  </p>
+                  <h5>Tech stack</h5>
+                  <ul>
+                    {p.analysis.techStack.map((t) => (
+                      <li key={t.name}>
+                        <strong>{t.name}</strong>{' '}
+                        <span className="hint">{t.category}</span>
+                        {` · ${t.evidencePath}: ${t.evidence}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             <div className="actions compact">
               <button
                 type="button"

@@ -6,7 +6,15 @@ import { AuthContext, type AuthApi } from '../auth/authContext.ts'
 import { fakeAuth, signedIn } from '../test/fakeAuth.ts'
 import fixture from './fixtures/full-profile.json'
 import { ProfilePage } from './ProfilePage.tsx'
-import { emptyProfile, type Profile } from './types.ts'
+import {
+  emptyProfile,
+  type OpenSourceProject,
+  type Profile,
+  type ProjectAnalysis,
+  type Skill,
+  type SkillSource,
+  type Technology,
+} from './types.ts'
 
 const full = fixture as unknown as Profile
 
@@ -968,5 +976,446 @@ describe('Technology tags', () => {
       'PostgreSQL',
       'Go',
     ])
+  })
+})
+
+describe('Analyze a picked project', () => {
+  const oss = () =>
+    within(screen.getByRole('region', { name: 'Open Source Projects' }))
+  const skillsSection = () =>
+    within(screen.getByRole('heading', { name: 'Skills' }).parentElement!)
+  const ANALYZE = '/api/profile/open-source-projects/analyze'
+
+  const PROJECT: OpenSourceProject = {
+    provider: 'GITHUB',
+    fullName: 'octocat/hello-world',
+    name: 'hello-world',
+    url: 'https://github.com/octocat/hello-world',
+    description: 'My first repository',
+    language: 'Kotlin',
+    topics: ['demo'],
+    stars: 42,
+    note: null,
+    analysis: null,
+  }
+  const REPO = {
+    provider: 'GITHUB',
+    fullName: 'octocat/hello-world',
+    name: 'hello-world',
+    url: 'https://github.com/octocat/hello-world',
+    description: 'My first repository',
+    language: 'Kotlin',
+    topics: ['demo'],
+    stars: 42,
+    pushedAt: null,
+  }
+  const KOTLIN: Skill = {
+    name: 'Kotlin',
+    level: 'EXPERT',
+    origin: 'MANUAL',
+    sources: [],
+  }
+  const SOURCE: SkillSource = {
+    provider: 'GITHUB',
+    fullName: 'octocat/hello-world',
+    url: 'https://github.com/octocat/hello-world',
+    evidence:
+      'build.gradle.kts: spring-boot gradle plugin and starter dependencies',
+  }
+  const SPRING_BOOT: Skill = {
+    name: 'Spring Boot',
+    level: null,
+    origin: 'ANALYSIS',
+    sources: [SOURCE],
+  }
+  const analysis = (techStack: Technology[]): ProjectAnalysis => ({
+    summary: 'A small service.',
+    architecture: 'One Gradle module.',
+    techStack,
+    files: ['README.md', 'build.gradle.kts'],
+    truncated: false,
+    analyzedAt: '2026-10-24T12:00:00Z',
+  })
+  const SPRING = analysis([
+    {
+      name: 'Spring Boot',
+      category: 'FRAMEWORK',
+      evidencePath: 'build.gradle.kts',
+      evidence: 'spring-boot gradle plugin and starter dependencies',
+    },
+  ])
+  const KOTLIN_ANALYSIS = analysis([
+    {
+      name: 'kotlin',
+      category: 'LANGUAGE',
+      evidencePath: 'build.gradle.kts',
+      evidence: 'kotlin jvm plugin',
+    },
+  ])
+
+  /** The profile answers with `stored`; the analysis answers with `analyze`. `calls` records each request. */
+  function stubAnalysis(
+    stored: Profile,
+    options: { analyze?: () => Response; listing?: () => Response } = {},
+  ) {
+    const calls: { url: string; method: string; body: unknown }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/files') return json(200, [])
+        if (url.startsWith('/api/files'))
+          return new Response('', { status: 404 })
+        const method = init?.method ?? 'GET'
+        const body = init?.body ? JSON.parse(init.body as string) : undefined
+        calls.push({ url, method, body })
+        if (url === ANALYZE) return options.analyze?.() ?? json(200, {})
+        if (url.startsWith('/api/profile/repositories'))
+          return options.listing?.() ?? json(200, { repositories: [] })
+        if (method === 'GET') return json(200, { version: 1, profile: stored })
+        return json(200, {
+          version: 2,
+          profile: (body as { profile: Profile }).profile,
+        })
+      }),
+    )
+    return calls
+  }
+
+  const storedWith = (over: Partial<Profile>): Profile => ({
+    ...emptyProfile(),
+    openSourceProjects: [PROJECT],
+    skills: [KOTLIN],
+    ...over,
+  })
+
+  const analyzeButton = () =>
+    oss().getByRole('button', { name: 'Analyze Project 1' })
+
+  it('analyzes a saved project: shows the analysis, adds the skill, and does not save', async () => {
+    const calls = stubAnalysis(storedWith({}), {
+      analyze: () => json(200, { analysis: SPRING }),
+    })
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(analyzeButton())
+
+    expect(await oss().findByText('A small service.')).toBeVisible()
+    expect(oss().getByText('One Gradle module.')).toBeVisible()
+    expect(oss().getByText('Spring Boot')).toBeVisible()
+    expect(oss().getByText('FRAMEWORK')).toBeVisible()
+    expect(
+      screen.getByText(/hello-world was analyzed\. .* Nothing is saved/),
+    ).toBeVisible()
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false)
+    expect(calls.find((c) => c.url === ANALYZE)!.body).toEqual({
+      provider: 'GITHUB',
+      fullName: 'octocat/hello-world',
+    })
+  })
+
+  it('disables Analyze for a project that is picked but not saved', async () => {
+    stubAnalysis(emptyProfile(), {
+      listing: () => json(200, { repositories: [REPO] }),
+    })
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Add code account' }),
+    )
+    await userEvent.type(oss().getByLabelText('Username'), 'octocat')
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Load repositories' }),
+    )
+    await userEvent.click(
+      await oss().findByRole('checkbox', { name: /hello-world/ }),
+    )
+
+    expect(analyzeButton()).toBeDisabled()
+    expect(
+      oss().getByText('Save this project first to analyze it.'),
+    ).toBeVisible()
+  })
+
+  it('shows the fixed message on a failure and changes nothing', async () => {
+    const calls = stubAnalysis(storedWith({}), {
+      analyze: () => json(429, { error: 'too_many_analyses' }),
+    })
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(analyzeButton())
+
+    expect(await oss().findByRole('alert')).toHaveTextContent(
+      'You have reached the limit of analyses for this hour.',
+    )
+    expect(oss().queryByText('A small service.')).toBeNull()
+    expect(skillsSection().getAllByLabelText('Skill name')).toHaveLength(1)
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false)
+  })
+
+  it('asks before replacing an existing analysis, and declining sends nothing', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const calls = stubAnalysis(
+      storedWith({
+        openSourceProjects: [{ ...PROJECT, analysis: SPRING }],
+        skills: [SPRING_BOOT],
+      }),
+      { analyze: () => json(200, { analysis: SPRING }) },
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(analyzeButton())
+
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(calls.some((c) => c.url === ANALYZE)).toBe(false)
+  })
+
+  it('replaces the analysis when the user confirms the re-analysis', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const calls = stubAnalysis(
+      storedWith({
+        openSourceProjects: [{ ...PROJECT, analysis: SPRING }],
+        skills: [SPRING_BOOT],
+      }),
+      { analyze: () => json(200, { analysis: KOTLIN_ANALYSIS }) },
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(analyzeButton())
+
+    expect(await oss().findByText('kotlin')).toBeVisible()
+    expect(calls.some((c) => c.url === ANALYZE)).toBe(true)
+  })
+})
+
+describe('Traceable skills from analysis', () => {
+  const oss = () =>
+    within(screen.getByRole('region', { name: 'Open Source Projects' }))
+  const skillsSection = () =>
+    within(screen.getByRole('heading', { name: 'Skills' }).parentElement!)
+  const ANALYZE = '/api/profile/open-source-projects/analyze'
+
+  const PROJECT: OpenSourceProject = {
+    provider: 'GITHUB',
+    fullName: 'octocat/hello-world',
+    name: 'hello-world',
+    url: 'https://github.com/octocat/hello-world',
+    description: null,
+    language: 'Kotlin',
+    topics: [],
+    stars: 42,
+    note: null,
+    analysis: null,
+  }
+  const SOURCE: SkillSource = {
+    provider: 'GITHUB',
+    fullName: 'octocat/hello-world',
+    url: 'https://github.com/octocat/hello-world',
+    evidence:
+      'build.gradle.kts: spring-boot gradle plugin and starter dependencies',
+  }
+  const SPRING_BOOT: Skill = {
+    name: 'Spring Boot',
+    level: null,
+    origin: 'ANALYSIS',
+    sources: [SOURCE],
+  }
+  const KOTLIN: Skill = {
+    name: 'Kotlin',
+    level: 'EXPERT',
+    origin: 'MANUAL',
+    sources: [],
+  }
+  const analysis = (name: string): ProjectAnalysis => ({
+    summary: 'A small service.',
+    architecture: 'One Gradle module.',
+    techStack: [
+      {
+        name,
+        category: 'FRAMEWORK',
+        evidencePath: 'build.gradle.kts',
+        evidence: 'spring-boot gradle plugin and starter dependencies',
+      },
+    ],
+    files: ['README.md', 'build.gradle.kts'],
+    truncated: false,
+    analyzedAt: '2026-10-24T12:00:00Z',
+  })
+
+  function stubAnalysis(stored: Profile, analyze?: () => Response) {
+    const calls: { url: string; method: string; body: unknown }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url === '/api/files') return json(200, [])
+        if (url.startsWith('/api/files'))
+          return new Response('', { status: 404 })
+        const method = init?.method ?? 'GET'
+        const body = init?.body ? JSON.parse(init.body as string) : undefined
+        calls.push({ url, method, body })
+        if (url === ANALYZE) return analyze?.() ?? json(200, {})
+        if (method === 'GET') return json(200, { version: 1, profile: stored })
+        return json(200, {
+          version: 2,
+          profile: (body as { profile: Profile }).profile,
+        })
+      }),
+    )
+    return calls
+  }
+
+  const storedWith = (over: Partial<Profile>): Profile => ({
+    ...emptyProfile(),
+    openSourceProjects: [PROJECT],
+    ...over,
+  })
+
+  const analyzeFirst = () =>
+    userEvent.click(oss().getByRole('button', { name: 'Analyze Project 1' }))
+
+  it('adds a new skill with origin analysis, no level and the repository as its source', async () => {
+    stubAnalysis(storedWith({ skills: [KOTLIN] }), () =>
+      json(200, { analysis: analysis('Spring Boot') }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await analyzeFirst()
+
+    const names = skillsSection().getAllByLabelText('Skill name')
+    expect(names).toHaveLength(2)
+    expect(names[1]).toHaveValue('Spring Boot')
+    expect(skillsSection().getAllByLabelText('Skill level')[1]).toHaveValue('')
+    expect(skillsSection().getByText('from repository analysis')).toBeVisible()
+    const link = skillsSection().getByRole('link', {
+      name: 'octocat/hello-world',
+    })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://github.com/octocat/hello-world',
+    )
+    expect(
+      skillsSection().getByText(
+        'build.gradle.kts: spring-boot gradle plugin and starter dependencies',
+      ),
+    ).toBeVisible()
+  })
+
+  it('gives an existing skill the source and keeps its level and origin', async () => {
+    stubAnalysis(storedWith({ skills: [KOTLIN] }), () =>
+      json(200, { analysis: analysis('kotlin') }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await analyzeFirst()
+
+    const names = skillsSection().getAllByLabelText('Skill name')
+    expect(names).toHaveLength(1)
+    expect(skillsSection().getByLabelText('Skill level')).toHaveValue('EXPERT')
+    expect(skillsSection().queryByText('from repository analysis')).toBeNull()
+    expect(
+      skillsSection().getByRole('link', { name: 'octocat/hello-world' }),
+    ).toBeVisible()
+  })
+
+  it('replaces the skills of an earlier analysis of the same repository', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    stubAnalysis(
+      storedWith({
+        openSourceProjects: [{ ...PROJECT, analysis: analysis('Spring Boot') }],
+        skills: [KOTLIN, SPRING_BOOT],
+      }),
+      () => json(200, { analysis: analysis('Kotlin') }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await analyzeFirst()
+
+    const names = skillsSection()
+      .getAllByLabelText('Skill name')
+      .map((el) => (el as HTMLInputElement).value)
+    expect(names).toEqual(['Kotlin'])
+  })
+
+  it('removes the skills of a project when the project is removed', async () => {
+    stubAnalysis(
+      storedWith({
+        openSourceProjects: [{ ...PROJECT, analysis: analysis('Spring Boot') }],
+        skills: [KOTLIN, SPRING_BOOT],
+      }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Remove Project 1' }),
+    )
+
+    expect(skillsSection().getAllByLabelText('Skill name')).toHaveLength(1)
+    expect(skillsSection().getByLabelText('Skill name')).toHaveValue('Kotlin')
+  })
+
+  it('removes the analysis skills of a project when its analysis is removed', async () => {
+    stubAnalysis(
+      storedWith({
+        openSourceProjects: [{ ...PROJECT, analysis: analysis('Spring Boot') }],
+        skills: [KOTLIN, SPRING_BOOT],
+      }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      oss().getByRole('button', { name: 'Remove analysis of Project 1' }),
+    )
+
+    expect(skillsSection().getAllByLabelText('Skill name')).toHaveLength(1)
+    expect(oss().queryByText('A small service.')).toBeNull()
+  })
+
+  it('lets the user remove a source, and a skill, with their own buttons', async () => {
+    stubAnalysis(storedWith({ skills: [KOTLIN, SPRING_BOOT] }))
+    mount()
+    await screen.findByLabelText('City')
+    await userEvent.click(
+      skillsSection().getByRole('button', {
+        name: 'Remove source 1 of Skill 2',
+      }),
+    )
+    expect(
+      skillsSection().queryByRole('link', { name: 'octocat/hello-world' }),
+    ).toBeNull()
+
+    await userEvent.click(
+      skillsSection().getByRole('button', { name: 'Remove Skill 2' }),
+    )
+    expect(skillsSection().getAllByLabelText('Skill name')).toHaveLength(1)
+  })
+
+  it('saves the analysis on the project and the origin and sources of the skills', async () => {
+    const calls = stubAnalysis(storedWith({ skills: [KOTLIN] }), () =>
+      json(200, { analysis: analysis('Spring Boot') }),
+    )
+    mount()
+    await screen.findByLabelText('City')
+    await analyzeFirst()
+    await oss().findByText('A small service.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const put = calls.find((c) => c.method === 'PUT')!
+    const sent = (put.body as { profile: Profile }).profile
+    expect(sent.openSourceProjects[0]!.analysis).toEqual(
+      analysis('Spring Boot'),
+    )
+    expect(sent.skills[1]).toEqual({
+      name: 'Spring Boot',
+      level: null,
+      origin: 'ANALYSIS',
+      sources: [
+        {
+          provider: 'GITHUB',
+          fullName: 'octocat/hello-world',
+          url: 'https://github.com/octocat/hello-world',
+          evidence:
+            'build.gradle.kts: spring-boot gradle plugin and starter dependencies',
+        },
+      ],
+    })
   })
 })
