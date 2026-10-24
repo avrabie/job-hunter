@@ -80,8 +80,6 @@ internal class KoogCvReader(
                 request<EducationSection>(text, EDUCATION_INSTRUCTION) { DraftMapper.toProfile(it) }
             ProfileSection.PUBLICATIONS ->
                 request<PublicationsSection>(text, PUBLICATIONS_INSTRUCTION) { DraftMapper.toProfile(it) }
-            ProfileSection.PROJECTS ->
-                request<ProjectsSection>(text, PROJECTS_INSTRUCTION) { DraftMapper.toProfile(it) }
         }
 
     /** One structured request for the draft type [T]; [map] turns the answer into a [Profile]. */
@@ -153,10 +151,6 @@ lists them, with every detail it states. Leave out everything else."""
 
         const val PUBLICATIONS_INSTRUCTION = """Only the publications section is wanted. List every publication the CV states, in the CV's
 order, with every detail it states. Leave out everything else."""
-
-        const val PROJECTS_INSTRUCTION = """Only the projects section is wanted. List every project the CV states: assignments, personal
-projects and open-source work, in the CV's order. For each, give every detail the CV states, including the technologies
-and the results it names. Leave out everything else."""
 
         fun modelFor(name: String): LLModel? =
             when (name) {
