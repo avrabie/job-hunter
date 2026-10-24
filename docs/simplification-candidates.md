@@ -31,7 +31,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - Change: confirm on prod that `cv_document` is empty, then delete the runner and its test (and later the table by a Liquibase change). Nothing outside the code (OpenAPI, specs, k8s) refers to it (grep of `k8s`, `openspec/specs`: not checked in the specs, **unverified**).
 - Effort S, risk medium (data must be moved first), value: removes a start-up side effect and 243 lines.
 
-### C9 Spike test and empty modules
+### C9 Spike test and empty modules (handled)
 - `backend/src/test/kotlin/net/s4v3/backend/llm/KoogSpikeTests.kt`: its own header says "First contact with Koog ... Nothing here is production code". `docs/koog-notes.md:12` points to it as the "runnable example". It overlaps `KoogCvReaderTests` / `KoogProjectAnalystTests` (both use `FakePromptExecutor`). Unique coverage: shows `executeStructured` with a fake model and the `@LLMDescription` schema. Propose: keep only if the doc still needs it, else delete and edit the doc line.
 - `backend/src/main/java/net/s4v3/backend/applications/` and `.../notifications/` contain only `package-info.java` (and `internal/package-info.java`). They are asserted by `ModularityTests.kt:17` ("exactly the eleven planned modules"). Not dead in the Modulith sense, but they are placeholders for roadmap items (PLAN.md). Propose: keep or drop them as an owner decision; if dropped, edit that test.
 - Done (decision, nothing deleted): `KoogSpikeTests` is kept as the runnable example for `docs/koog-notes.md`. The empty `applications`/`notifications` modules are deliberate roadmap placeholders (see `PLAN.md`, modules table), so `ModularityTests` keeps the eleven names.
@@ -44,7 +44,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - `LlmSettings.kt:19` default `model = "Sonnet_5"` while `application.yaml` sets `Haiku_4_5` (and README says default `Haiku_4_5`). The yaml wins at runtime, so the Kotlin default is only seen in tests. Proposal: align the default (or drop it) so one value exists. This is a naming/consistency fix, not a behaviour change in production. Effort S, risk low.
 - Other settings fields (`repairs`, `timeout`, `pause`, `minInterval`, `maxListBytes`, ...) each have at least one use in main code (grep per field, counts 1 to 7). I did not find an unused property.
 
-### C13 Unused dependencies
+### C13 Unused dependencies (handled: test dependency removed)
 - Not proven unused, only unreferenced in source: `spring-modulith-observability-api` (backend `build.gradle.kts:34`) and the runtime-only `spring-modulith-observability-core` / `spring-modulith-actuator` (`:48-49`). `grep -rn "observability\|Observation\|micrometer" backend/src` gives nothing. They may be needed for Modulith event metrics at runtime **(unverified)**. Check with `./gradlew dependencies` and a start-up trial by the owner before removal.
 - Test-only: `archunit-junit5` is used (`ModuleViolationTests`, `KoogBoundaryTests`, `TokenAccessBoundaryTests`). `kotlin-test-junit5` and `kotlin("test")` (lines 58 and 64) both declared: probably redundant (**unverified**, same library family). Effort S, risk low.
 - Done: `kotlin-test-junit5` removed; `kotlin("test")` resolves the JUnit 5 variant and `./gradlew test integrationTest` passes. The spring-modulith observability/actuator dependencies stay until verified at runtime.
@@ -87,7 +87,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - Change: one `FakeHttpServer` (path to response, request log). Effort M, risk low, value: tests read as behaviour, not plumbing.
 
 ### C15 Other repeats (smaller)
-- `DefaultExportService` `contentType` and `fileName` both `when (options.format)` over the same three cases: could be one enum property on `CvFormat`. S, low.
+- **Handled.** `DefaultExportService` `contentType` and `fileName` both `when (options.format)` over the same three cases: could be one enum property on `CvFormat`. S, low.
 - `ProfileController` / `PostingsController` / `MatchesController` each compute `currentUser.id()`; fine, no action.
 
 ## 3. Layers that only forward
@@ -110,7 +110,7 @@ UI (non-test): `profile/ProfileForm.tsx` 567 (the whole profile form: contact, l
 
 ## 5. Misleading or inconsistent names
 
-### C16 Module placement and names
+### C16 Module placement and names (handled: documented, no move)
 - `web` module holds `ProfileController`, `PostingsController`, `RepositoriesController`, `ProjectAnalysisController`, `AnalysisLimiter`, `AnalysisSettings`, `OpenApiConfig` (all in `web/internal/`), while `matching`, `cv`, `files`, `sources` own their controllers. So "web" means "controllers of profile and postings", and `ProjectAnalysisController` sits in `web` but is about the profile's open source projects and uses `analysis` settings. A reader looking for the analysis rules finds them under `web`.
 - Proposal: no move now (module moves change package names and `ModularityTests`); instead describe it in `docs/architecture.md` and the module README. If moved later: M, medium.
 - `cv` module name covers two things (`cv/internal` extraction controller and `cv/export`); `ExtractionLimiter` and `ExportLimiter` live in `cv.internal`, `CvSettings` vs `ExportSettings` (`jobhunter.cv` vs `jobhunter.cv-export`). Acceptable, but `ExtractionLimiter` reads `CvSettings.extractionsPerHour` while the other two read `perHour`: cosmetic, disappears with C1.
