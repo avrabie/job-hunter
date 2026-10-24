@@ -121,7 +121,7 @@ activate their own `test` profile and need no flag.
 | What | Command (in `backend/`) | Needs Docker | About |
 |---|---|---|---|
 | Fast tier: unit tests (no Spring context) | `./gradlew build` or `./gradlew test` | no | 25 s from clean, 294 tests |
-| Integration tier: Spring + Postgres container | `./gradlew integrationTest` | yes | 50 s, 280 tests |
+| Integration tier: Spring + Postgres container | `./gradlew integrationTest` | yes | about 1 min, 280 tests |
 | Everything (run before every deploy) | `./gradlew verify` | yes | 75 s, 574 tests |
 | One class | `./gradlew test --tests "ProfileValidatorTests"` (use `integrationTest` for integration classes) | depends | seconds |
 | Clean everything first | add `clean`, for example `./gradlew clean verify` | | |
