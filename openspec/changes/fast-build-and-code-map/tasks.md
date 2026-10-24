@@ -11,7 +11,7 @@ Groups 1 and 2 are read-only investigations and can run in parallel; group 3 nee
 
 ## 2. Deprecation inventory (read-only)
 
-- [ ] 2.1 Collect every deprecation as described in `design.md` decision 5 for `backend/`, `auth/`, `gateway/` and `ui/` (compiler with `--rerun-tasks`, `--warning-mode all`, startup logs of each app, IDE inspections through the IDE MCP tools if available, dependency notes, UI test and build output). Write `docs/deprecations.md`: a table (file:line, API or setting, replacement, risk, fix now or leave and why). Do not edit code.
+- [x] 2.1 Collect every deprecation as described in `design.md` decision 5 for `backend/`, `auth/`, `gateway/` and `ui/` (compiler with `--rerun-tasks`, `--warning-mode all`, startup logs of each app, IDE inspections through the IDE MCP tools if available, dependency notes, UI test and build output). Write `docs/deprecations.md`: a table (file:line, API or setting, replacement, risk, fix now or leave and why). Do not edit code.
 
 ## 3. Test tiers and speed (after 1 and 2)
 
@@ -21,13 +21,13 @@ Groups 1 and 2 are read-only investigations and can run in parallel; group 3 nee
 
 ## 4. Deprecation fixes (after 2)
 
-- [ ] 4.1 Fix every item of `docs/deprecations.md` marked "fix now", one item per commit-sized step, each with the tests of the touched code passing; for the items marked "leave", add a `@Suppress("DEPRECATION")` with a one-line reason naming the library version only where a warning would otherwise remain. Verify: `./gradlew compileKotlin compileTestKotlin --rerun-tasks` prints no `w:` line (or only listed, justified ones), and `./gradlew verify` passes.
+- [x] 4.1 Fix every item of `docs/deprecations.md` marked "fix now", one item per commit-sized step, each with the tests of the touched code passing; for the items marked "leave", add a `@Suppress("DEPRECATION")` with a one-line reason naming the library version only where a warning would otherwise remain. Verify: `./gradlew compileKotlin compileTestKotlin --rerun-tasks` prints no `w:` line (or only listed, justified ones), and `./gradlew verify` passes.
 
 ## 5. Code map (read-only analysis plus docs)
 
-- [ ] 5.1 Write `docs/architecture.md` and `docs/glossary.md` for the backend as described in `design.md` decision 6 (diagram in Mermaid or ASCII, module map, flows with class names and file paths, data model from the Liquibase changelogs, security model from the specs and config, configuration index of every `jobhunter.*` and `app.*` property with default and meaning, where the tests live). Every statement cites a file path; unverified ones are labelled. Verify: a second reader (the lead) spot-checks 10 statements against the code.
-- [ ] 5.2 Write a `README.md` of at most 40 lines in each backend module package (`accounts`, `cv`, `files`, `llm`, `matching`, `postings`, `profile`, `sources`, `web` under `backend/src/main/kotlin/net/s4v3/backend/`) and one each for `auth/`, `gateway/` and `ui/src/` folders that lack one: purpose, public API, internal parts, events published and consumed, tables, tests, and the date and files it was read from.
-- [ ] 5.3 Write `docs/simplification-candidates.md`: ranked candidates (dead or unused code found by searching for unreferenced symbols, duplicated patterns, forwarding-only layers, long classes, misleading names, tests that duplicate each other), each with file paths, proposed change, effort (S/M/L) and risk, and for tests the coverage they add that others do not. Verify: every candidate names real files and a grep showing why it is dead or duplicated.
+- [x] 5.1 Write `docs/architecture.md` and `docs/glossary.md` for the backend as described in `design.md` decision 6 (diagram in Mermaid or ASCII, module map, flows with class names and file paths, data model from the Liquibase changelogs, security model from the specs and config, configuration index of every `jobhunter.*` and `app.*` property with default and meaning, where the tests live). Every statement cites a file path; unverified ones are labelled. Verify: a second reader (the lead) spot-checks 10 statements against the code.
+- [x] 5.2 Write a `README.md` of at most 40 lines in each backend module package (`accounts`, `cv`, `files`, `llm`, `matching`, `postings`, `profile`, `sources`, `web` under `backend/src/main/kotlin/net/s4v3/backend/`) and one each for `auth/`, `gateway/` and `ui/src/` folders that lack one: purpose, public API, internal parts, events published and consumed, tables, tests, and the date and files it was read from.
+- [x] 5.3 Write `docs/simplification-candidates.md`: ranked candidates (dead or unused code found by searching for unreferenced symbols, duplicated patterns, forwarding-only layers, long classes, misleading names, tests that duplicate each other), each with file paths, proposed change, effort (S/M/L) and risk, and for tests the coverage they add that others do not. Verify: every candidate names real files and a grep showing why it is dead or duplicated.
 
 ## 6. Owner choices and root README (after 4, 5 and the owner reading the candidates)
 

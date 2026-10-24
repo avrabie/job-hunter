@@ -67,7 +67,7 @@ internal class ProfileController(
                 responseCode = "409", description = "The stored version differs from `version`",
                 content = [Content(schema = Schema(implementation = ErrorBody::class))],
             ),
-            ApiResponse(responseCode = "413", description = "The body is larger than 128 KiB", content = [Content()]),
+            ApiResponse(responseCode = "413", description = "The body is larger than 256 KiB", content = [Content()]),
         ],
     )
     fun put(request: HttpServletRequest): ResponseEntity<Any> {
