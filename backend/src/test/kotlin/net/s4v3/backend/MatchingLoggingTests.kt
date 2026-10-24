@@ -1,12 +1,9 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.matching.internal.MatchEvaluator
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.profile.ProfileService
 import org.junit.jupiter.api.Test
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import kotlin.test.assertFalse
@@ -27,24 +24,17 @@ internal class MatchingLoggingTests(
 
     @Test
     fun `profile and posting text never reach the logs and no user id sits next to a score`() {
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val capture = LogCapture(root)
-        val previous = root.level
-        root.level = Level.TRACE
         val user = support.newUser()
-        try {
+        val events = capture {
             support.saveProfile(user, role = roleMarker, skills = listOf(skillMarker))
             val posting = support.newPosting(title = "$titleMarker $roleMarker")
             MatchingTestSupport.await("the result") { support.match(user, posting) != null }
             evaluator.evaluateProfile(user)
             evaluator.evaluatePosting(posting)
-        } finally {
-            capture.close()
-            root.level = previous
         }
 
         val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-        val relevant = capture.events().filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
+        val relevant = events.filter { e -> frameworkBodyPrinters.none { e.loggerName.startsWith(it) } }
         val logged = relevant.joinToString("\n") { e ->
             e.fullText()
         }

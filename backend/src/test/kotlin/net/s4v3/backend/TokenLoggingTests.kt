@@ -1,9 +1,6 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import org.junit.jupiter.api.Test
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -24,24 +21,17 @@ class TokenLoggingTests(@Autowired private val mvc: MockMvc) {
         val malformed = "this-is-not-a-jwt-but-looks-secret-12345"
         val rejected = listOf(wrongIssuer, expired, tampered, malformed)
 
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val capture = LogCapture(root)
-        val previousLevel = root.level
-        root.level = Level.TRACE
-        try {
+        val events = capture {
             rejected.forEach { token ->
                 mvc.perform(get("/api/test/ping").header("Authorization", "Bearer $token"))
                     .andExpect(status().isUnauthorized)
             }
-        } finally {
-            capture.close()
-            root.level = previousLevel
         }
 
-        val logged = capture.events().joinToString("\n") { event ->
+        val logged = events.joinToString("\n") { event ->
             event.fullText()
         }
-        assertTrue(capture.events().isNotEmpty(), "the capture saw no log events at all, so it proves nothing")
+        assertTrue(events.isNotEmpty(),"the capture saw no log events at all, so it proves nothing")
         rejected.forEach { token ->
             assertTrue(token !in logged, "a rejected token appears in the logs")
             // Also the signature part, in case only a fragment is logged.

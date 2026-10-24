@@ -1,9 +1,7 @@
 package net.s4v3.backend.llm
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.IntegrationTest
-import net.s4v3.backend.LogCapture
+import net.s4v3.backend.captureAppLogs
 import net.s4v3.backend.fullText
 import net.s4v3.backend.llm.internal.ExecutorSource
 import org.junit.jupiter.api.Test
@@ -37,25 +35,13 @@ class LlmLoggingTests(@Autowired private val reader: CvReader) {
 
     @Test
     fun `neither the CV text nor the model's answer reaches the logs`() {
-        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-        val capture = LogCapture(root)
-        val previous = root.level
-        val ours = LoggerFactory.getLogger("net.s4v3") as Logger
-        val ourPrevious = ours.level
-        // The level the application runs at; our own code is captured at TRACE. The logger `ai.koog` keeps the level the
-        // application configures, which is what must hold.
-        root.level = Level.INFO
-        ours.level = Level.TRACE
-        try {
+        // The logger `ai.koog` keeps the level the application configures, which is what must hold.
+        val events = captureAppLogs {
             LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
             assertFailsWith<LlmFailure> { reader.profileFrom("Jane Doe worked at CVMARKER4417 as an engineer") }
-        } finally {
-            capture.close()
-            root.level = previous
-            ours.level = ourPrevious
         }
 
-        val logged = capture.events().joinToString("\n") { e ->
+        val logged = events.joinToString("\n") { e ->
             e.fullText()
         }
         assertTrue("capture alive" in logged, "the capture does not work, so it proves nothing")

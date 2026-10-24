@@ -1,6 +1,5 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import net.s4v3.backend.sources.AtsCrawl
 import net.s4v3.backend.sources.CrawlResult
@@ -136,19 +135,12 @@ internal class CrawlScheduleApiTests(
 
     @Test
     fun `a change is logged with enabled and cron only, never an identity`() {
-        val logger = LoggerFactory.getLogger("net.s4v3.backend") as Logger
-        val capture = LogCapture(logger)
-        val previous = logger.level
-        logger.level = Level.TRACE
         val sub = "admin-SUBMARKER-" + UUID.randomUUID()
-        try {
+        val events = capture(LoggerFactory.getLogger("net.s4v3.backend") as Logger) {
             postJson(yearly, admin(sub)).andExpect(status().isOk)
-        } finally {
-            capture.close()
-            logger.level = previous
         }
 
-        val logged = capture.events().joinToString("\n") { it.formattedMessage }
+        val logged = events.joinToString("\n") { it.formattedMessage }
         assertTrue("enabled=true" in logged && "cron=0 0 3 1 1 *" in logged, logged)
         assertFalse("SUBMARKER" in logged, "the administrator's id appears in the logs")
     }

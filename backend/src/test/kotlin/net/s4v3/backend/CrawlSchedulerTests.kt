@@ -2,6 +2,7 @@ package net.s4v3.backend
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
 import net.s4v3.backend.sources.AtsCrawl
 import net.s4v3.backend.sources.BoardOutcome
 import net.s4v3.backend.sources.BoardResult
@@ -9,8 +10,6 @@ import net.s4v3.backend.sources.CrawlResult
 import net.s4v3.backend.sources.internal.CrawlSchedule
 import net.s4v3.backend.sources.internal.CrawlScheduler
 import net.s4v3.backend.sources.internal.ScheduleSource
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -39,17 +38,9 @@ internal class CrawlSchedulerTests {
     // Work is queued, not run, so a test can decide when the "background" crawl finishes.
     private val scheduler = CrawlScheduler(source, crawl) { queued += it }
 
-    private val logger = LoggerFactory.getLogger(CrawlScheduler::class.java) as Logger
-    private val capture = LogCapture(logger)
-    private fun logged() = capture.events().joinToString("\n") { it.formattedMessage }
-
-    @BeforeEach
-    fun setLevel() {
-        logger.level = Level.INFO
-    }
-
-    @AfterEach
-    fun release() { capture.close() }
+    // The scheduler's own log lines, at the level the application runs at.
+    private val schedulerLogger = LoggerFactory.getLogger(CrawlScheduler::class.java) as Logger
+    private fun logged(events: List<ILoggingEvent>) = events.joinToString("\n") { it.formattedMessage }
 
     private fun at(time: String) = Instant.parse("2026-10-22T${time}Z")
     private fun runQueued() { queued.toList().forEach { it.run() }; queued.clear() }
@@ -72,12 +63,14 @@ internal class CrawlSchedulerTests {
 
     @Test
     fun `a fire while the previous crawl still runs is skipped and logged`() {
-        scheduler.tick(at("10:20:00"))
-        scheduler.tick(at("11:00:10"))
-        scheduler.tick(at("12:00:10"))
+        val events = capture(schedulerLogger, mapOf(schedulerLogger to Level.INFO)) {
+            scheduler.tick(at("10:20:00"))
+            scheduler.tick(at("11:00:10"))
+            scheduler.tick(at("12:00:10"))
+        }
 
         assertEquals(1, queued.size)
-        assertTrue("skipped" in logged(), logged())
+        assertTrue("skipped" in logged(events), logged(events))
     }
 
     @Test
@@ -94,16 +87,18 @@ internal class CrawlSchedulerTests {
     @Test
     fun `a throwing crawl is logged by type only and the next fire still runs`() {
         crawl.failWith = IllegalStateException("response body SECRET-MARKER")
-        scheduler.tick(at("10:20:00"))
-        scheduler.tick(at("11:00:10"))
-        runQueued()
-        crawl.failWith = null
-        scheduler.tick(at("12:00:10"))
-        runQueued()
+        val events = capture(schedulerLogger, mapOf(schedulerLogger to Level.INFO)) {
+            scheduler.tick(at("10:20:00"))
+            scheduler.tick(at("11:00:10"))
+            runQueued()
+            crawl.failWith = null
+            scheduler.tick(at("12:00:10"))
+            runQueued()
+        }
 
         assertEquals(2, crawl.calls)
-        assertTrue("IllegalStateException" in logged())
-        assertFalse("SECRET-MARKER" in logged())
+        assertTrue("IllegalStateException" in logged(events))
+        assertFalse("SECRET-MARKER" in logged(events))
     }
 
     @Test

@@ -1,7 +1,5 @@
 package net.s4v3.backend
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import net.s4v3.backend.FakeGreenhouse.Job
 import net.s4v3.backend.postings.PostingIngest
 import net.s4v3.backend.sources.internal.FetchStateStore
@@ -9,7 +7,6 @@ import net.s4v3.backend.sources.internal.GreenhouseCrawl
 import net.s4v3.backend.sources.internal.PoliteHttp
 import net.s4v3.backend.sources.internal.SourcesSettings
 import org.junit.jupiter.api.Test
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.Duration
 import java.util.UUID
@@ -45,11 +42,7 @@ internal class SourcesLoggingTests(
             )
             val crawl = GreenhouseCrawl(settings, PoliteHttp(settings), state, ingest, dataSource)
 
-            val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-            val capture = LogCapture(root)
-            val previousLevel = root.level
-            root.level = Level.TRACE
-            try {
+            val events = capture {
                 crawl.run()
                 server.listStatus = 500
                 server.listBody = "FAIL $marker"
@@ -58,13 +51,10 @@ internal class SourcesLoggingTests(
                 server.listBody = "<html>$marker</html>"
                 server.listContentType = "text/html"
                 crawl.run()
-            } finally {
-                capture.close()
-                root.level = previousLevel
             }
 
             val frameworkBodyPrinters = listOf("org.springframework.jdbc.core.", "org.postgresql.")
-            val relevant = capture.events().filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
+            val relevant = events.filter { event -> frameworkBodyPrinters.none { event.loggerName.startsWith(it) } }
             val logged = relevant.joinToString("\n") { event ->
                 event.fullText()
             }
