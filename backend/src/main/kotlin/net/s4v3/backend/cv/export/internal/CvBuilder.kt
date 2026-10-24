@@ -5,12 +5,18 @@ import net.s4v3.backend.cv.export.CvDocument
 import net.s4v3.backend.cv.export.CvEntry
 import net.s4v3.backend.cv.export.CvLanguage
 import net.s4v3.backend.cv.export.CvLink
+import net.s4v3.backend.cv.export.CvPhoto
 import net.s4v3.backend.cv.export.CvSection
 import net.s4v3.backend.cv.export.CvSectionKind
+import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.EntrySection
 import net.s4v3.backend.cv.export.ExportOptions
+import net.s4v3.backend.cv.export.GroupedTagSection
 import net.s4v3.backend.cv.export.LineSection
 import net.s4v3.backend.cv.export.ProseSection
+import net.s4v3.backend.cv.export.SkillGroup
+import net.s4v3.backend.cv.export.SkillGroups
+import net.s4v3.backend.cv.export.TagGroup
 import net.s4v3.backend.cv.export.TagSection
 import net.s4v3.backend.profile.CodeAccount
 import net.s4v3.backend.profile.CodeProvider
@@ -38,7 +44,11 @@ internal object CvBuilder {
         CvSectionKind.PUBLICATIONS,
     )
 
-    fun build(profile: Profile, options: ExportOptions): CvDocument {
+    /**
+     * [photo] is the already processed photo (see `PhotoProcessor`); the builder stays pure and never reads files.
+     * It is used only for the PROFESSIONAL template.
+     */
+    fun build(profile: Profile, options: ExportOptions, photo: ByteArray? = null): CvDocument {
         val language = options.language
         val order = (options.sections ?: defaultOrder).distinct()
         return CvDocument(
@@ -48,6 +58,7 @@ internal object CvBuilder {
             contactLines = contactLines(profile, options.contact),
             facts = facts(profile, options),
             sections = order.mapNotNull { section(it, profile, options) },
+            photo = if (options.template == CvTemplate.PROFESSIONAL) photo?.let { CvPhoto(it) } else null,
         )
     }
 
@@ -89,9 +100,13 @@ internal object CvBuilder {
                 entries(title, profile.education.map { education(it, language) })
 
             CvSectionKind.SKILLS ->
-                profile.skills.mapNotNull { skillTag(it, language) }
-                    .ifEmpty { null }
-                    ?.let { TagSection(title, it) }
+                if (options.template == CvTemplate.PROFESSIONAL) {
+                    groupedSkills(title, profile, language)
+                } else {
+                    profile.skills.mapNotNull { skillTag(it, language) }
+                        .ifEmpty { null }
+                        ?.let { TagSection(title, it) }
+                }
 
             CvSectionKind.LANGUAGES ->
                 profile.languages
@@ -145,6 +160,15 @@ internal object CvBuilder {
         place = clean(publication.venue),
         link = clean(publication.url)?.let { CvLink(it, it) },
     )
+
+    /** Each skill goes under exactly one group, in the order typed; groups print in [SkillGroup] order, empty ones are dropped. */
+    private fun groupedSkills(title: String, profile: Profile, language: CvLanguage): GroupedTagSection? {
+        val byGroup = profile.skills.mapNotNull { skill -> clean(skill.name)?.let { SkillGroups.group(it) to skillTag(skill, language)!! } }
+            .groupBy({ it.first }, { it.second })
+        return SkillGroup.entries.mapNotNull { group ->
+            byGroup[group]?.let { TagGroup(Labels.skillGroup(group, language), it) }
+        }.ifEmpty { null }?.let { GroupedTagSection(title, it) }
+    }
 
     private fun skillTag(skill: Skill, language: CvLanguage): String? {
         val name = clean(skill.name) ?: return null

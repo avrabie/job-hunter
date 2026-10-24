@@ -56,5 +56,6 @@ ul { margin-top: 1pt; }
         CvTemplate.CLASSIC -> CLASSIC
         CvTemplate.MODERN -> MODERN
         CvTemplate.COMPACT -> COMPACT
+        CvTemplate.PROFESSIONAL -> CLASSIC
     }
 }

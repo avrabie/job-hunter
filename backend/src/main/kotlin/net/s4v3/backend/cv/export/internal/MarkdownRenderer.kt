@@ -9,6 +9,7 @@ import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.EntrySection
 import net.s4v3.backend.cv.export.LineSection
 import net.s4v3.backend.cv.export.ProseSection
+import net.s4v3.backend.cv.export.GroupedTagSection
 import net.s4v3.backend.cv.export.TagSection
 
 /**
@@ -36,6 +37,7 @@ internal class MarkdownRenderer : CvRenderer {
             is ProseSection -> section.paragraphs.forEach { add(escapeMarkdown(it)) }
             is EntrySection -> section.entries.forEach { addAll(entry(it)) }
             is TagSection -> add(section.tags.joinToString(", ") { escapeMarkdown(it) })
+            is GroupedTagSection -> add(section.groups.flatMap { it.tags }.joinToString(", ") { escapeMarkdown(it) })
             is LineSection -> add(bullets(section.lines))
         }
     }

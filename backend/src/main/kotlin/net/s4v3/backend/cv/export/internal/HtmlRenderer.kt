@@ -7,6 +7,7 @@ import net.s4v3.backend.cv.export.CvRenderer
 import net.s4v3.backend.cv.export.CvSection
 import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.EntrySection
+import net.s4v3.backend.cv.export.GroupedTagSection
 import net.s4v3.backend.cv.export.LineSection
 import net.s4v3.backend.cv.export.ProseSection
 import net.s4v3.backend.cv.export.TagSection
@@ -59,6 +60,7 @@ internal class HtmlRenderer : CvRenderer {
         when (s) {
             is ProseSection -> s.paragraphs.forEach { append("<p>${esc(it)}</p>\n") }
             is TagSection -> append("<p>${esc(s.tags.joinToString(", "))}</p>\n")
+            is GroupedTagSection -> append("<p>${esc(s.groups.flatMap { it.tags }.joinToString(", "))}</p>\n")
             is LineSection -> s.lines.forEach { append("<p>${esc(it)}</p>\n") }
             is EntrySection -> s.entries.forEach { entry(it) }
         }

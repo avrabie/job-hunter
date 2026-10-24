@@ -1,5 +1,7 @@
 package net.s4v3.backend.cv.export
 
+import java.util.UUID
+
 /** The file format of an export, with the content type and file extension it is served under. */
 enum class CvFormat(val contentType: String, val extension: String) {
     MARKDOWN("text/markdown; charset=utf-8", "md"),
@@ -7,8 +9,8 @@ enum class CvFormat(val contentType: String, val extension: String) {
     PDF("application/pdf", "pdf"),
 }
 
-/** The layout of an export. Markdown has one structure for all templates. */
-enum class CvTemplate { CLASSIC, MODERN, COMPACT }
+/** The layout of an export. Markdown has one structure for all templates. [CvTemplate.PROFESSIONAL] adds grouped skills and an optional photo. */
+enum class CvTemplate { CLASSIC, MODERN, COMPACT, PROFESSIONAL }
 
 /** The language of the labels and wording. The user's own text is never translated. */
 enum class CvLanguage { EN, DE }
@@ -29,6 +31,7 @@ data class ExportOptions(
     val includeAnalysis: Boolean = false,
     val includeWorkAuthorisation: Boolean = true,
     val contact: ContactVisibility = ContactVisibility.ALL,
+    val photoFileId: UUID? = null,
 )
 
 /**
