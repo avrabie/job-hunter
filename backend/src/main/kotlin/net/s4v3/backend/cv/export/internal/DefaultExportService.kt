@@ -1,13 +1,19 @@
 package net.s4v3.backend.cv.export.internal
 
+import net.s4v3.backend.cv.export.CvDocument
 import net.s4v3.backend.cv.export.CvFormat
+import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.ExportBusyException
 import net.s4v3.backend.cv.export.ExportFailedException
 import net.s4v3.backend.cv.export.ExportOptions
 import net.s4v3.backend.cv.export.ExportService
 import net.s4v3.backend.cv.export.ExportedCv
+import net.s4v3.backend.cv.export.InvalidPhotoException
 import net.s4v3.backend.cv.export.NameRequiredException
+import net.s4v3.backend.cv.export.PhotoProcessor
 import net.s4v3.backend.cv.internal.ExportSettings
+import net.s4v3.backend.files.FileCabinet
+import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -33,25 +39,32 @@ internal class RenderGuard(settings: ExportSettings) {
 internal class DefaultExportService(
     private val profiles: ProfileService,
     private val guard: RenderGuard,
+    private val cabinet: FileCabinet,
 ) : ExportService {
 
     private val log = LoggerFactory.getLogger(DefaultExportService::class.java)
     private val markdown = MarkdownRenderer()
     private val html = HtmlRenderer()
     private val pdf = PdfRenderer(html)
+    private val photos = PhotoProcessor()
 
     override fun export(sub: String, options: ExportOptions): ExportedCv {
         val profile = profiles.get(sub).profile
         if (profile.contact.fullName.isNullOrBlank()) throw NameRequiredException()
         val started = System.nanoTime()
-        val document = CvBuilder.build(profile, options)
+        val wantsPhoto = options.template == CvTemplate.PROFESSIONAL && options.format != CvFormat.MARKDOWN &&
+            options.photoFileId != null
         val bytes = try {
             when (options.format) {
-                CvFormat.MARKDOWN -> markdown.render(document, options.template)
-                CvFormat.HTML -> html.render(document, options.template)
-                CvFormat.PDF -> renderPdf { pdf.render(document, options.template) }
+                CvFormat.MARKDOWN -> markdown.render(CvBuilder.build(profile, options), options.template)
+                CvFormat.HTML ->
+                    if (wantsPhoto) guarded { html.render(documentWithPhoto(sub, profile, options), options.template) }
+                    else html.render(CvBuilder.build(profile, options), options.template)
+                CvFormat.PDF -> guarded { pdf.render(documentWithPhoto(sub, profile, options, wantsPhoto), options.template) }
             }
         } catch (e: ExportBusyException) {
+            throw e
+        } catch (e: InvalidPhotoException) {
             throw e
         } catch (e: Throwable) {
             // Errors too (for example a missing native library in the image). The cause is dropped on purpose: library
@@ -65,10 +78,22 @@ internal class DefaultExportService(
             "CV exported: format {}, template {}, {} bytes, {} ms",
             options.format, options.template, bytes.size, (System.nanoTime() - started) / 1_000_000,
         )
-        return ExportedCv(bytes, options.format.contentType, fileName(document.name, options))
+        return ExportedCv(bytes, options.format.contentType, fileName(profile.contact.fullName.orEmpty(), options))
     }
 
-    private fun renderPdf(render: () -> ByteArray): ByteArray {
+    /**
+     * Builds the document; for a requested photo it reads the caller's own JPEG and re-encodes it. A missing, foreign or
+     * invalid file is one [InvalidPhotoException]. Neither the file id nor the photo is ever logged.
+     */
+    private fun documentWithPhoto(sub: String, profile: Profile, options: ExportOptions, wantsPhoto: Boolean = true): CvDocument {
+        val id = options.photoFileId
+        if (!wantsPhoto || id == null) return CvBuilder.build(profile, options)
+        val file = cabinet.image(sub, id) ?: throw InvalidPhotoException()
+        return CvBuilder.build(profile, options, photos.process(file))
+    }
+
+    /** Runs [render] under one of the two shared permits (photo decoding and PDF rendering are the heavy steps). */
+    private fun <T> guarded(render: () -> T): T {
         if (!guard.permits.tryAcquire(guard.wait.toMillis(), TimeUnit.MILLISECONDS)) throw ExportBusyException()
         try {
             return render()
