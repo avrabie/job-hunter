@@ -158,6 +158,18 @@ class ProfessionalTemplateTests {
     }
 
     @Test
+    fun `contact lines are inline with middle dots and headline and footer css follow the rules`() {
+        val out = html.html(doc(), CvTemplate.PROFESSIONAL)
+        assertEquals(1, Regex("<p class=\"contact\">").findAll(out).count())
+        val contact = out.substringAfter("<p class=\"contact\">").substringBefore("</p>")
+        assertTrue(contact.contains(" · "), contact)
+        val css = out.substringAfter("<style>").substringBefore("</style>")
+        assertTrue(Regex("\\.headline \\{[^}]*font-weight: bold;[^}]*text-transform: uppercase").containsMatchIn(css))
+        assertTrue(css.contains("@bottom-right"))
+        assertFalse(css.contains("@bottom-center"))
+    }
+
+    @Test
     fun `german labels reach the html`() {
         val d = doc(CvLanguage.DE).copy(
             sections = listOf(GroupedTagSection("Kenntnisse", listOf(TagGroup("Programmiersprachen", listOf("Kotlin"))))),

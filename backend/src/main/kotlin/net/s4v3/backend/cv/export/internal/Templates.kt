@@ -56,8 +56,8 @@ ul { margin-top: 1pt; }
 @page { margin: 16mm 18mm 22mm 18mm; }
 body { font-size: 10pt; line-height: 1.3; color: #222222; }
 h1 { font-size: 24pt; line-height: 1.1; color: #1f3a68; text-transform: uppercase; }
-.headline { font-size: 13pt; color: #c0792a; margin-top: 3pt; }
-.contact { font-size: 9.5pt; margin-top: 1pt; }
+.headline { font-size: 13pt; color: #c0792a; margin-top: 3pt; font-weight: bold; text-transform: uppercase; }
+.contact { font-size: 9.5pt; margin-top: 2pt; color: #444444; }
 .facts { font-size: 9.5pt; }
 table.top { width: 100%; border-collapse: collapse; }
 td.who { vertical-align: top; }
@@ -99,6 +99,6 @@ td.group { width: 34%; font-weight: bold; color: #1f3a68; padding-right: 10pt; }
                 if (cp < 128 && (Character.isLetterOrDigit(cp) || cp == ' '.code)) append(cp.toChar()) else append("\\").append(Integer.toHexString(cp)).append(' ')
             }
         }
-        return "@page { @bottom-center { content: \"$escaped\"; font-family: \"Source Sans 3\", Arial, sans-serif; font-size: 8pt; color: #666666; } }\n"
+        return "@page { @bottom-right { content: \"$escaped\"; font-family: \"Source Sans 3\", Arial, sans-serif; font-size: 8pt; color: #777777; } }\n"
     }
 }
