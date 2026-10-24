@@ -4,8 +4,6 @@ import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.RepositoryCatalog
 import net.s4v3.backend.profile.RepositoryListing
 import org.springframework.stereotype.Component
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 
 /**
  * Checks the username, picks the provider by its value and caches successful listings for five minutes per
@@ -16,11 +14,7 @@ internal class DefaultRepositoryCatalog(providers: List<RepositoryProvider>) : R
 
     private val byProvider: Map<CodeProvider, RepositoryProvider>
 
-    private data class CacheKey(val provider: CodeProvider, val username: String)
-
-    private class Cached(val listing: RepositoryListing.Found, val expiresAt: Long)
-
-    private val cache = ConcurrentHashMap<CacheKey, Cached>()
+    private val cache = ProviderCache<RepositoryListing.Found>(ttlMinutes = TTL_MINUTES, maxEntries = MAX_ENTRIES)
 
     init {
         require(providers.map { it.provider }.toSet().size == providers.size) { "one repository provider per value" }
@@ -30,21 +24,12 @@ internal class DefaultRepositoryCatalog(providers: List<RepositoryProvider>) : R
     override fun list(provider: CodeProvider, username: String): RepositoryListing {
         if (!isValidUsername(provider, username)) return RepositoryListing.InvalidUsername
 
-        val key = CacheKey(provider, username.lowercase())
-        cache[key]?.let { hit ->
-            if (System.nanoTime() < hit.expiresAt) return hit.listing
-            cache.remove(key, hit)
-        }
+        cache.get(provider, username)?.let { return it }
 
         val source = byProvider[provider] ?: return RepositoryListing.Unavailable
         val answer = source.list(username)
-        if (answer is RepositoryListing.Found) store(key, answer)
+        if (answer is RepositoryListing.Found) cache.put(provider, username, answer)
         return answer
-    }
-
-    private fun store(key: CacheKey, listing: RepositoryListing.Found) {
-        if (cache.size >= MAX_ENTRIES) cache.entries.removeIf { System.nanoTime() >= it.value.expiresAt }
-        cache[key] = Cached(listing, System.nanoTime() + TimeUnit.MINUTES.toNanos(TTL_MINUTES))
     }
 
     private companion object {
