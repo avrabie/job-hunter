@@ -16,7 +16,7 @@ internal class FileCabinetService(
 
     override fun masterCv(sub: String): CabinetFile? {
         val master = files.master(sub) ?: return null
-        return CabinetFile(master.id, master.name, master.contentType, master.sizeBytes, storage.open(master.storageKey))
+        return CabinetFile(master.id, master.name, master.contentType, master.sizeBytes, master.sha256, storage.open(master.storageKey))
     }
 
     override fun image(sub: String, id: UUID): CabinetFile? {
@@ -24,7 +24,7 @@ internal class FileCabinetService(
         if (file.sizeBytes > MAX_IMAGE_BYTES) return null
         val path = storage.open(file.storageKey)
         if (!startsWithJpegMarker(path)) return null
-        return CabinetFile(file.id, file.name, file.contentType, file.sizeBytes, path)
+        return CabinetFile(file.id, file.name, file.contentType, file.sizeBytes, file.sha256, path)
     }
 
     /** Reads the first three bytes only. A missing or unreadable file is not a JPEG. */

@@ -38,6 +38,16 @@ later option; it is not built.
 
 The page is not cached in a way that outlives a pause: a paused, removed or locked page is answered as not found on the next request.
 
+## Photo (Professional template)
+
+With the template `PROFESSIONAL` the owner may pick one of their own JPEG files as a photo (`photoFileId` in the settings; null = off, the default). The file is re-encoded to a 320 x 320 round JPEG without metadata (the same processing as the export) and embedded in the page as a data URI. The same image is served at `GET|HEAD /api/public/cv/<handle>/photo` as `image/jpeg` (`nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, `Content-Disposition: inline`, `Cache-Control: no-cache` with an ETag).
+
+- Saving a `photoFileId` that is not the caller's JPEG answers `400 {"error":"photo_invalid"}` and saves nothing.
+- The photo route answers the exact same uniform 404 (same headers, same body, same per-IP 404 limit) for an unknown handle, a paused or locked page, no photo chosen, a template other than PROFESSIONAL, and a file that is deleted or no longer the owner's JPEG. Per-IP and per-handle limits are shared with the page.
+- The id is kept when the template changes (switching back restores the photo) but is unused with other templates. A deleted file removes the photo from the page on the next request, without an error.
+- The render cache key holds the file id with its stored size and SHA-256, so a replaced file shows the new photo.
+- The audit trail records only the flag `photo`; the file id, name and bytes never reach logs or audit.
+
 ### Handle policy
 
 - 3 to 30 characters: lower-case letters and digits, with single hyphens between them. Not only digits. Not starting or ending

@@ -33,6 +33,7 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
 import java.time.Instant
+import java.util.UUID
 import kotlin.math.max
 
 /**
@@ -67,7 +68,7 @@ internal class PublicCvController(
         responses = [
             ApiResponse(responseCode = "200", description = "The saved state", content = [Content(schema = Schema(implementation = PublicCvStateBody::class))]),
             ApiResponse(
-                responseCode = "400", description = "`validation_failed` with `fields`, or `invalid_request`",
+                responseCode = "400", description = "`validation_failed` with `fields`, `invalid_request`, or `photo_invalid` (`photoFileId` is not one of the caller's JPEG files)",
                 content = [Content(schema = Schema(implementation = PublicCvErrorBody::class))],
             ),
             ApiResponse(responseCode = "401", description = "No valid access token", content = [Content()]),
@@ -97,6 +98,7 @@ internal class PublicCvController(
             is SaveResult.ChangeTooSoon -> codeError(HttpStatus.CONFLICT, "handle_change_too_soon")
             SaveResult.NameRequired -> codeError(HttpStatus.CONFLICT, "name_required")
             SaveResult.Locked -> codeError(HttpStatus.CONFLICT, "locked")
+            SaveResult.PhotoInvalid -> codeError(HttpStatus.BAD_REQUEST, "photo_invalid")
         }
     }
 
@@ -236,13 +238,14 @@ internal data class SettingsRequest(
     val location: Boolean = false,
     val contact: ContactRequest = ContactRequest(),
     val indexable: Boolean = false,
+    val photoFileId: UUID? = null,
 ) {
     /** Null when a section is null. A repeated section is kept once, at its first position. */
     fun toSettings(): PublicCvSettings? {
         if (sections.any { it == null }) return null
         return PublicCvSettings(
             template, language, sections.filterNotNull().distinct(), headline, analysis, workAuthorisation, location,
-            PublicCvContact(contact.email, contact.phone, contact.website, contact.linkedin, contact.codeAccounts), indexable,
+            PublicCvContact(contact.email, contact.phone, contact.website, contact.linkedin, contact.codeAccounts), indexable, photoFileId,
         )
     }
 }

@@ -49,3 +49,5 @@ native tools are needed; the container's root filesystem stays read-only).
 
 Render a profile with the three templates and both languages in a throwaway test, then convert page 1 to an image to look at it
 (on macOS `sips -s format png file.pdf --out file.png`; this is only a local inspection aid, not part of the app).
+
+The same photo can be shown on the public page and served at `/api/public/cv/<handle>/photo`; see `docs/cv-public.md` (section Photo).

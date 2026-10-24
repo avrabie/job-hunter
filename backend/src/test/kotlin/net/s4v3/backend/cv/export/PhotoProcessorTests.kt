@@ -29,7 +29,7 @@ class PhotoProcessorTests {
     private fun file(bytes: ByteArray, size: Long = bytes.size.toLong()): CabinetFile {
         val p = Files.createTempFile(dir, "p", ".bin")
         Files.write(p, bytes)
-        return CabinetFile(UUID.randomUUID(), "x.jpg", "image/jpeg", size, p)
+        return CabinetFile(UUID.randomUUID(), "x.jpg", "image/jpeg", size, "0".repeat(64), p)
     }
 
     private fun drawn(w: Int, h: Int, type: Int = BufferedImage.TYPE_INT_RGB): BufferedImage {

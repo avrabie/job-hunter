@@ -3,7 +3,7 @@
 Purpose: the user's file cabinet. Any number of files per user; bytes on the files volume, metadata in Postgres; at most one master CV; single-use download tickets.
 
 ## Public API (this package)
-- `FileCabinet.masterCv(sub)` returns a `CabinetFile` (id, name, content type, size, `Path` of the bytes) or null. Callers read the file, never write it.
+- `FileCabinet.masterCv(sub)` returns a `CabinetFile` (id, name, content type, size, SHA-256 hex, `Path` of the bytes) or null. Callers read the file, never write it.
 - `FileCabinet.image(sub, id)` returns the same for the user's own file when it is a JPEG (`FF D8 FF`) of at most 6 MB, else null (no reason given).
 
 ## Internal (`internal/`)

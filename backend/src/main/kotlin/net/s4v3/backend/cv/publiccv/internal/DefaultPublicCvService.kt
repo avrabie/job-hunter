@@ -1,6 +1,15 @@
 package net.s4v3.backend.cv.publiccv.internal
 
 import net.s4v3.backend.cv.export.CvFormat
+import net.s4v3.backend.cv.export.CvPhoto
+import net.s4v3.backend.cv.export.CvTemplate
+import net.s4v3.backend.cv.export.InvalidPhotoException
+import net.s4v3.backend.cv.export.PhotoProcessor
+import net.s4v3.backend.cv.export.internal.RenderGuard
+import net.s4v3.backend.cv.publiccv.PublicPhoto
+import net.s4v3.backend.files.CabinetFile
+import net.s4v3.backend.files.FileCabinet
+import java.util.concurrent.TimeUnit
 import net.s4v3.backend.cv.export.CvSectionKind
 import net.s4v3.backend.cv.export.ContactVisibility
 import net.s4v3.backend.cv.export.ExportOptions
@@ -33,10 +42,13 @@ internal class DefaultPublicCvService(
     private val profiles: ProfileService,
     private val tickets: PreviewTickets,
     private val cache: RenderCache,
+    private val cabinet: FileCabinet,
+    private val guard: RenderGuard,
     private val clock: Clock = Clock.systemUTC(),
 ) : PublicCvService {
 
     private val html = HtmlRenderer()
+    private val photos = PhotoProcessor()
 
     override fun state(sub: String): PublicCvState? = repo.find(sub)?.let { state(it) }
 
@@ -61,6 +73,8 @@ internal class DefaultPublicCvService(
             HandleProblem.RESERVED -> return SaveResult.Reserved
             null -> Unit
         }
+        // Nothing is saved for a photo that is not the caller's own JPEG; the answer never says which case it was.
+        if (settings.photoFileId != null && cabinet.image(sub, settings.photoFileId) == null) return SaveResult.PhotoInvalid
         val normal = HandleRules.normalize(handle)
         val existing = repo.find(sub)
         if (existing?.locked == true && published) return SaveResult.Locked
@@ -135,15 +149,28 @@ internal class DefaultPublicCvService(
         return RemoveResult.REMOVED
     }
 
-    override fun renderPublic(handle: String): RenderedPage? {
+    override fun renderPublic(handle: String): RenderedPage? = renderServed(handle)
+
+    override fun renderPhoto(handle: String): PublicPhoto? = renderServed(handle)?.photo
+
+    private fun renderServed(handle: String): RenderedPage? {
         if (HandleRules.validate(handle) != null) return null
         val row = repo.findByHandle(HandleRules.normalize(handle)) ?: return null
         if (!row.published || row.locked) return null
         val stored = profiles.get(row.ownerSub)
         if (stored.profile.contact.fullName.isNullOrBlank()) return null
-        val key = RenderKey(row.ownerSub, stored.version, settingsHash(row.settings, row.published), row.settings.template, row.settings.language)
+        // The file is read by the owner's sub on every request, so a deleted or replaced file changes the key at once.
+        val file = photoFile(row.ownerSub, row.settings)
+        val key = RenderKey(
+            row.ownerSub, stored.version, settingsHash(row.settings, row.published), row.settings.template, row.settings.language,
+            if (file == null) "" else "${file.id}:${file.sizeBytes}:${file.sha256}",
+        )
         cache.get(key)?.let { return it }
-        return render(stored.profile, row.settings).also { cache.put(key, it) }
+        val made = file?.let { processPhoto(it) }
+        val page = render(stored.profile, row.settings, made?.photo)
+        // A photo that could not be made now (busy) is not remembered, so the next request tries again.
+        if (made == null || made.final) cache.put(key, page)
+        return page
     }
 
     override fun preview(sub: String, settings: PublicCvSettings): PreviewTicket = PreviewTicket(tickets.issue(sub, settings))
@@ -153,7 +180,27 @@ internal class DefaultPublicCvService(
         val profile = profiles.get(bound.sub).profile
         if (profile.contact.fullName.isNullOrBlank()) return null
         // A preview is never indexable, whatever the settings say, and is not cached.
-        return render(profile, bound.settings.copy(indexable = false))
+        val photo = photoFile(bound.sub, bound.settings)?.let { processPhoto(it) }?.photo
+        return render(profile, bound.settings.copy(indexable = false), photo)
+    }
+
+    /** The owner's JPEG for the photo, only with the PROFESSIONAL template and a file that is still theirs; else null. */
+    private fun photoFile(sub: String, s: PublicCvSettings): CabinetFile? {
+        val id = s.photoFileId ?: return null
+        if (s.template != CvTemplate.PROFESSIONAL) return null
+        return cabinet.image(sub, id)
+    }
+
+    /** The processed photo, or null when it cannot be made (an unreadable file or no render permit); never logs the file. */
+    private fun processPhoto(file: CabinetFile): MadePhoto {
+        if (!guard.permits.tryAcquire(guard.wait.toMillis(), TimeUnit.MILLISECONDS)) return MadePhoto(null, final = false)
+        try {
+            return MadePhoto(CvPhoto(photos.process(file)), final = true)
+        } catch (_: InvalidPhotoException) {
+            return MadePhoto(null, final = true)
+        } finally {
+            guard.permits.release()
+        }
     }
 
     override fun takeDown(handle: String): Boolean {
@@ -178,7 +225,7 @@ internal class DefaultPublicCvService(
         return PublicCvState(row.handle, row.published, row.locked, row.settings, changeable, row.updatedAt)
     }
 
-    private fun render(profile: Profile, settings: PublicCvSettings): RenderedPage {
+    private fun render(profile: Profile, settings: PublicCvSettings, photo: CvPhoto? = null): RenderedPage {
         val options = ExportOptions(
             format = CvFormat.HTML,
             template = settings.template,
@@ -200,10 +247,10 @@ internal class DefaultPublicCvService(
         val robots = if (settings.indexable) "index, follow" else "noindex, nofollow, noarchive, nosnippet"
         val head = "<meta name=\"robots\" content=\"$robots\"/>\n<meta name=\"referrer\" content=\"no-referrer\"/>\n"
         // Every anchor comes from HtmlRenderer.link, whose text and address are escaped, so nothing else can match here.
-        val page = html.html(CvBuilder.build(profile, options), settings.template, head)
+        val page = html.html(CvBuilder.build(profile, options, photo?.bytes), settings.template, head)
             .replace("<a href=\"", "<a rel=\"noopener noreferrer nofollow\" href=\"")
         val bytes = page.toByteArray(Charsets.UTF_8)
-        return RenderedPage(bytes, sha256(bytes), settings.indexable)
+        return RenderedPage(bytes, sha256(bytes), settings.indexable, photo?.let { PublicPhoto(it.bytes, sha256(it.bytes)) })
     }
 
     /** SHA-256 of every setting that shapes the page, in a fixed order, so a page is never found for other settings. */
@@ -232,8 +279,12 @@ internal class DefaultPublicCvService(
         put("contact.linkedin", s.contact.linkedin)
         put("contact.codeAccounts", s.contact.codeAccounts)
         put("indexable", s.indexable)
+        put("photo", s.photoFileId != null)
         CvSectionKind.entries.forEach { put("section.${it.name}", it in s.sections) }
     }
+
+    /** [final] is false when the photo was not tried (no permit), so the page must not be cached. */
+    private class MadePhoto(val photo: CvPhoto?, val final: Boolean)
 
     internal companion object {
         /** True only for a violation of the unique handle index; the name is in the database error text. */

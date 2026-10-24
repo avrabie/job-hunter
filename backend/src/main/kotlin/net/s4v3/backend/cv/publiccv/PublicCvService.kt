@@ -3,7 +3,10 @@ package net.s4v3.backend.cv.publiccv
 import java.time.Instant
 
 /** A rendered public page. [etag] is the SHA-256 of [html] as hex; [indexable] says which robots header goes with it. */
-data class RenderedPage(val html: ByteArray, val etag: String, val indexable: Boolean)
+data class RenderedPage(val html: ByteArray, val etag: String, val indexable: Boolean, val photo: PublicPhoto? = null)
+
+/** The processed photo (JPEG) of a public page; [etag] is the SHA-256 of [bytes] as hex. */
+class PublicPhoto(val bytes: ByteArray, val etag: String)
 
 /** The handle of a one-use preview. A credential: never log it. */
 data class PreviewTicket(val value: String)
@@ -22,6 +25,9 @@ sealed interface SaveResult {
     data class ChangeTooSoon(val at: Instant) : SaveResult
     data object NameRequired : SaveResult
     data object Locked : SaveResult
+
+    /** The photo is not one of the caller's JPEG files; nothing was saved. */
+    data object PhotoInvalid : SaveResult
 }
 
 /** The answer to removing the owner's page. */
@@ -49,6 +55,9 @@ interface PublicCvService {
 
     /** The page for a handle, or null in every state that is not served (the caller answers one uniform 404). */
     fun renderPublic(handle: String): RenderedPage?
+
+    /** The processed photo of a served page, or null in every state where the page or its photo is not served (one uniform 404). */
+    fun renderPhoto(handle: String): PublicPhoto?
 
     /** A one-use, 60-second ticket for the owner to see the page with [settings]. */
     fun preview(sub: String, settings: PublicCvSettings): PreviewTicket

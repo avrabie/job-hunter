@@ -4,6 +4,7 @@ import net.s4v3.backend.cv.export.CvLanguage
 import net.s4v3.backend.cv.export.CvSectionKind
 import net.s4v3.backend.cv.export.CvTemplate
 import java.time.Instant
+import java.util.UUID
 
 /**
  * What the owner made public. Every flag defaults to off and [sections] to empty, so only the full name is public until
@@ -19,6 +20,8 @@ data class PublicCvSettings(
     val location: Boolean = false,
     val contact: PublicCvContact = PublicCvContact(),
     val indexable: Boolean = false,
+    /** One of the owner's JPEG files, shown only with the PROFESSIONAL template. Null (off) by default. */
+    val photoFileId: UUID? = null,
 )
 
 /** The contact items that may be public. Each is off by default. */

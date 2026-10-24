@@ -19,5 +19,7 @@ data class CabinetFile(
     val name: String,
     val contentType: String,
     val sizeBytes: Long,
+    /** SHA-256 of the stored bytes as lower-case hex, as recorded at upload. */
+    val sha256: String,
     val path: Path,
 )
