@@ -25,8 +25,8 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 
 ## 4. UI: tracking (can start after the Contract is fixed)
 
-- [ ] 4.1 `ui/src/applications/applicationsApi.ts` (+ tests, same style as `ui/src/files/filesApi.ts`), `ApplicationsPage.tsx` (grouped by stage, stage change from the row, warning mark), `InterestedButton.tsx` and its use in `ui/src/postings/PostingsPage.tsx` and `PostingPage.tsx` (stages loaded with `by-posting`), routes in `App.tsx`, nav entry in `Shell.tsx`. Tests for each scenario of `ui-applications` (Job Tracking page) and `ui-postings`.
-- [ ] 4.2 `ApplicationPage.tsx`: frozen description, link, notice, stage, dates, notes save, remove with confirmation. Tests.
+- [x] 4.1 `ui/src/applications/applicationsApi.ts` (+ tests, same style as `ui/src/files/filesApi.ts`), `ApplicationsPage.tsx` (grouped by stage, stage change from the row, warning mark), `InterestedButton.tsx` and its use in `ui/src/postings/PostingsPage.tsx` and `PostingPage.tsx` (stages loaded with `by-posting`), routes in `App.tsx`, nav entry in `Shell.tsx`. Tests for each scenario of `ui-applications` (Job Tracking page) and `ui-postings`.
+- [x] 4.2 `ApplicationPage.tsx`: frozen description, link, notice, stage, dates, notes save, remove with confirmation. Tests.
 
 ## 5. UI: letter workspace (needs the endpoint shapes of the Contract)
 

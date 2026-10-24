@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { InterestedButton } from '../applications/InterestedButton.tsx'
+import {
+  trackedOf,
+  useTrackedStages,
+} from '../applications/useTrackedStages.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPostings } from './postingsApi.ts'
@@ -115,6 +120,7 @@ function PostingsList() {
   }
 
   const postings = load.state === 'ready' ? load.postings : []
+  const tracked = useTrackedStages(postings.map((p) => p.id))
   const sourceChoices = [...new Set([...sources, query.source].filter(Boolean))]
 
   return (
@@ -190,6 +196,10 @@ function PostingsList() {
                 {p.firstSeen.slice(0, 10)}
               </p>
               <OriginalLinks links={p.links} />
+              <InterestedButton
+                postingId={p.id}
+                tracked={trackedOf(tracked, p.id)}
+              />
             </li>
           ))}
         </ul>
