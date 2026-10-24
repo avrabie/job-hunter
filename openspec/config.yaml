@@ -11,7 +11,8 @@ context: |
     Anthropic SDK and crawling libraries are blocking.
   - PostgreSQL with pgvector, Liquibase migrations. No Kafka.
   - Modules (top-level packages): sources, postings, accounts, profile, matching,
-    applications, llm, web, notifications. One OpenSpec capability per module.
+    cv, files, llm, web, plus the placeholders applications and notifications (empty
+    until built). One OpenSpec capability per module.
     Modules interact only through their public API or events; ApplicationModules.verify()
     must pass.
   - Koog (JetBrains) is the LLM framework, with Claude as provider. Only the llm module

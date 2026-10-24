@@ -58,8 +58,9 @@ auth service is needed.
 
 ## Structure
 
-Nine modules, one top-level package each under `net.s4v3.backend`: `sources`, `postings`, `accounts`,
-`profile`, `matching`, `applications`, `llm`, `web`, `notifications`.
+Eleven modules, one top-level package each under `net.s4v3.backend`: `sources`, `postings`, `accounts`,
+`profile`, `matching`, `cv`, `files`, `llm`, `web`, and the placeholders `applications` and `notifications` (an empty
+`package-info.java` each, until they are built).
 
 - A module's **root package is its public API**; everything in its `internal` subpackage is private to it.
 - Modules talk to each other only through that API or through events. `ModularityTests` runs
