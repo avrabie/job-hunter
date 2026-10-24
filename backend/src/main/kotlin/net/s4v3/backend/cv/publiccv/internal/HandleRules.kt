@@ -20,7 +20,7 @@ internal object HandleRules {
     /** Names that a handle must not take: routes of the apps, system names and common words that imply an official page. */
     val RESERVED: Set<String> = setOf(
         "admin", "administrator", "api", "auth", "login", "logout", "register", "callback", "cv", "cvs", "export",
-        "profile", "files", "file", "matches", "postings", "posting", "publish", "public", "settings", "setting",
+        "profile", "files", "file", "matches", "postings", "posting", "applications", "application", "letters", "letter", "publish", "public", "settings", "setting",
         "account", "accounts", "user", "users", "me", "root", "support", "help", "about", "contact", "terms", "privacy",
         "legal", "imprint", "www", "mail", "static", "assets", "health", "actuator", "docs", "swagger", "openapi", "new",
         "edit", "null", "undefined", "s4v3",
