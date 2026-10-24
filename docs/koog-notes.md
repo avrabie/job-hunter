@@ -10,7 +10,8 @@ module's small public interface.
 ## Part 1: the pieces (task 1.1)
 
 Runnable example: `backend/src/test/kotlin/net/s4v3/backend/llm/KoogSpikeTests.kt`. It uses a fake model, so it needs no
-network and no key.
+network and no key. It is kept on purpose as the runnable example for this document, even though the other Koog tests
+overlap with it.
 
 ### A prompt is data
 ```kotlin

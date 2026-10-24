@@ -34,6 +34,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 ### C9 Spike test and empty modules
 - `backend/src/test/kotlin/net/s4v3/backend/llm/KoogSpikeTests.kt`: its own header says "First contact with Koog ... Nothing here is production code". `docs/koog-notes.md:12` points to it as the "runnable example". It overlaps `KoogCvReaderTests` / `KoogProjectAnalystTests` (both use `FakePromptExecutor`). Unique coverage: shows `executeStructured` with a fake model and the `@LLMDescription` schema. Propose: keep only if the doc still needs it, else delete and edit the doc line.
 - `backend/src/main/java/net/s4v3/backend/applications/` and `.../notifications/` contain only `package-info.java` (and `internal/package-info.java`). They are asserted by `ModularityTests.kt:17` ("exactly the eleven planned modules"). Not dead in the Modulith sense, but they are placeholders for roadmap items (PLAN.md). Propose: keep or drop them as an owner decision; if dropped, edit that test.
+- Done (decision, nothing deleted): `KoogSpikeTests` is kept as the runnable example for `docs/koog-notes.md`. The empty `applications`/`notifications` modules are deliberate roadmap placeholders (see `PLAN.md`, modules table), so `ModularityTests` keeps the eleven names.
 - Effort S, risk low.
 
 ### C11 Test-only code in `ui/src`
