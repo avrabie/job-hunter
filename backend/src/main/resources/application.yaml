@@ -57,6 +57,15 @@ jobhunter:
   analysis:
     # Maximum number of open source project analyses per user per hour; each one is one model call.
     per-hour: 10
+  public-cv:
+    # Public CV page limits. Per client IP and minute: page requests, and the stricter limit for answers that are 404.
+    page-per-ip-per-minute: 60
+    not-found-per-ip-per-minute: 10
+    # Per handle and minute, in total, so a spoofed or shared IP cannot turn the page into a DoS tool.
+    page-per-handle-per-minute: 600
+    # Per user and hour: handle availability checks and previews.
+    handle-checks-per-hour: 60
+    previews-per-hour: 30
   api-docs:
     # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
     enabled: true

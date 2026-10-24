@@ -17,12 +17,14 @@ internal class HtmlRenderer : CvRenderer {
     override fun render(document: CvDocument, template: CvTemplate): ByteArray =
         html(document, template).toByteArray(Charsets.UTF_8)
 
-    fun html(document: CvDocument, template: CvTemplate): String = buildString {
+    /** [extraHead] is added to `<head>` after the title; the default adds nothing, so every existing output stays as it was. */
+    fun html(document: CvDocument, template: CvTemplate, extraHead: String = ""): String = buildString {
         append("<!DOCTYPE html>\n")
         append("<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"${document.language.name.lowercase()}\">\n<head>\n")
         append("<meta charset=\"UTF-8\"/>\n")
         append("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\"/>\n")
         append("<title>${esc(document.name)}</title>\n")
+        append(extraHead)
         append("<style>${Templates.css(template)}</style>\n</head>\n<body>\n")
         header(document)
         if (template == CvTemplate.MODERN) modernBody(document) else document.sections.forEach { section(it) }
