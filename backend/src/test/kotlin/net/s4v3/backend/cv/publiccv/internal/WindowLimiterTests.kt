@@ -71,4 +71,39 @@ internal class WindowLimiterTests {
         repeat(10_050) { limiter.tryAcquire("k$it") }
         assertFalse(limiter.tryAcquire("real"))
     }
+
+    @Test
+    fun `100000 distinct keys do not grow the map beyond the cap and stay fast`() {
+        val big = WindowLimiter(3, Duration.ofMinutes(1), clock)
+        val started = System.nanoTime()
+        repeat(100_000) { big.tryAcquire("k$it") }
+        val millis = (System.nanoTime() - started) / 1_000_000
+
+        assertTrue(big.size() <= 20_000, "size ${big.size()}")
+        assertTrue(millis < 5_000, "took $millis ms")
+    }
+
+    @Test
+    fun `a full map refuses a new key but keeps serving known keys, and idle keys make room later`() {
+        val small = WindowLimiter(3, Duration.ofMinutes(1), clock, maxKeys = 100)
+        repeat(100) { assertTrue(small.tryAcquire("k$it")) }
+
+        assertFalse(small.tryAcquire("new"))
+        assertTrue(small.tryAcquire("k0"))
+        clock.advance(Duration.ofMinutes(1))
+        assertTrue(small.tryAcquire("new"))
+        assertTrue(small.size() <= 100)
+    }
+
+    @Test
+    fun `the sweep runs once per window, not on every call`() {
+        val small = WindowLimiter(3, Duration.ofMinutes(1), clock, maxKeys = 100)
+        repeat(100) { small.tryAcquire("k$it") }
+        clock.advance(Duration.ofSeconds(61))
+        small.tryAcquire("a")
+        assertEquals(1, small.size())
+        repeat(150) { small.tryAcquire("b$it") }
+        // Within the same window the sweep does not run again, so the live keys stay counted.
+        assertEquals(100, small.size())
+    }
 }

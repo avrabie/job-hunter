@@ -66,6 +66,9 @@ jobhunter:
     # Per user and hour: handle availability checks and previews.
     handle-checks-per-hour: 60
     previews-per-hour: 30
+    # Per user and hour: saves (PUT) and removals (DELETE) of the page, together. Owners can probe handle availability through the
+    # 409 answers of a save, so this and the 60 checks per hour are the limit of that probing.
+    saves-per-hour: 30
   api-docs:
     # The OpenAPI document and the browsable page, both under /api so the gateway forwards them.
     enabled: true

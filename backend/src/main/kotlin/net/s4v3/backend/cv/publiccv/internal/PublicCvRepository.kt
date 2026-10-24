@@ -12,7 +12,7 @@ import java.time.Duration
 import java.time.Instant
 
 /** The events of `public_cv_audit`. The audit keeps these names and the flags only, never values. */
-internal enum class PublicCvEvent { PUBLISHED, PAUSED, SETTINGS_CHANGED, HANDLE_CHANGED, REMOVED, TAKEN_DOWN, UNLOCKED }
+internal enum class PublicCvEvent { PUBLISHED, PAUSED, SETTINGS_CHANGED, HANDLE_CHANGED, HANDLE_CLAIMED, REMOVED, TAKEN_DOWN, UNLOCKED }
 
 /** One `public_cv` row. `handle` is lower-case. */
 internal data class PublicCvRow(
@@ -136,6 +136,22 @@ internal class PublicCvRepository(private val jdbc: JdbcTemplate) {
         jdbc.query(
             "select max(occurred_at) as at from public_cv_audit where owner_sub = ? and event = 'HANDLE_CHANGED'",
             { rs, _ -> rs.getTimestamp("at")?.toInstant() },
+            sub,
+        ).firstOrNull()
+
+    /** When the owner last claimed a handle (first claim, change or re-claim), from the audit; null when never. */
+    fun lastHandleClaim(sub: String): Instant? =
+        jdbc.query(
+            "select max(occurred_at) as at from public_cv_audit where owner_sub = ? and event in ('HANDLE_CLAIMED', 'HANDLE_CHANGED')",
+            { rs, _ -> rs.getTimestamp("at")?.toInstant() },
+            sub,
+        ).firstOrNull()
+
+    /** The handle the owner released last (the one with the latest hold), or null when the owner holds none. */
+    fun latestHeldHandle(sub: String): String? =
+        jdbc.query(
+            "select handle from public_cv_handle_hold where owner_sub = ? order by held_until desc limit 1",
+            { rs, _ -> rs.getString("handle") },
             sub,
         ).firstOrNull()
 

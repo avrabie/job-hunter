@@ -409,7 +409,7 @@ internal class PublicCvServiceTests(
         val handle = publish(a)
         assertNull(service.state(a)!!.handleChangeableAt)
         assertTrue(service.save(a, handle, true, PublicCvSettings(headline = true)) is SaveResult.Saved)
-        assertEquals(listOf("PUBLISHED", "SETTINGS_CHANGED"), events(a))
+        assertEquals(listOf("HANDLE_CLAIMED", "PUBLISHED", "SETTINGS_CHANGED"), events(a))
     }
 
     // Remove
@@ -430,15 +430,149 @@ internal class PublicCvServiceTests(
     }
 
     @Test
-    fun `removing and claiming a different handle does not reset the 30 day rule`() {
+    fun `removing and claiming a different handle within 30 days is too soon, after 30 days it is allowed`() {
         val a = newUser()
-        publish(a)
-        service.save(a, newHandle(), true, PublicCvSettings())
+        val first = publish(a)
         service.remove(a)
 
-        // A fresh page after removal is a first claim; but a handle change right after it is blocked by the audit.
-        publish(a)
+        val result = service.save(a, newHandle(), true, PublicCvSettings())
+        assertTrue(result is SaveResult.ChangeTooSoon, "was $result")
+        assertNull(service.state(a))
+
+        clock.advance(Duration.ofDays(31))
+        assertTrue(service.save(a, newHandle(), true, PublicCvSettings()) is SaveResult.Saved)
+        assertNotNull(repo.activeHold(first, clock.instant()))
+    }
+
+    @Test
+    fun `removing and claiming the same handle is always allowed, even again and again`() {
+        val a = newUser()
+        val handle = publish(a)
+        repeat(3) {
+            service.remove(a)
+            assertTrue(service.save(a, handle, true, PublicCvSettings()) is SaveResult.Saved)
+        }
+        // The window now runs from the last claim: a different handle is still too soon.
+        service.remove(a)
         assertTrue(service.save(a, newHandle(), true, PublicCvSettings()) is SaveResult.ChangeTooSoon)
+    }
+
+    @Test
+    fun `after a change and a removal only the most recent handle can be claimed back within 30 days`() {
+        val a = newUser()
+        val first = publish(a)
+        val second = newHandle()
+        service.save(a, second, true, PublicCvSettings())
+        clock.advance(Duration.ofMinutes(5))
+        service.remove(a)
+
+        assertTrue(service.save(a, first, true, PublicCvSettings()) is SaveResult.ChangeTooSoon)
+        assertTrue(service.save(a, second, true, PublicCvSettings()) is SaveResult.Saved)
+    }
+
+    @Test
+    fun `one owner holds at most two handles at once however often they delete and claim`() {
+        val a = newUser()
+        val handles = listOf(publish(a)) + List(5) { newHandle() }
+        service.save(a, newHandle(), true, PublicCvSettings())
+        service.remove(a)
+        var held = 0
+        repeat(10) {
+            val outcome = service.save(a, handles[it % handles.size], true, PublicCvSettings())
+            if (outcome is SaveResult.Saved) service.remove(a)
+            held = maxOf(held, jdbc.queryForObject("select count(*) from public_cv_handle_hold where owner_sub = ?", Int::class.java, a)!!)
+        }
+        assertTrue(held <= 2, "held $held")
+    }
+
+    @Test
+    fun `the first claim is recorded so that a delete and a different claim is caught`() {
+        val a = newUser()
+        publish(a)
+        assertEquals(listOf("HANDLE_CLAIMED", "PUBLISHED"), events(a))
+    }
+
+    @Test
+    fun `only a violation of the handle index is taken, any other is rethrown`() {
+        val handle = org.springframework.dao.DataIntegrityViolationException(
+            "x", RuntimeException("ERROR: duplicate key value violates unique constraint \"public_cv_handle_lower_idx\""),
+        )
+        val other = org.springframework.dao.DataIntegrityViolationException(
+            "x", RuntimeException("ERROR: null value in column \"settings\" violates not-null constraint"),
+        )
+        assertTrue(DefaultPublicCvService.isHandleConflict(handle))
+        assertFalse(DefaultPublicCvService.isHandleConflict(other))
+    }
+
+    @Test
+    fun `handles are lower-cased with the root locale`() {
+        val saved = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr"))
+            assertEquals("ida-x", net.s4v3.backend.cv.publiccv.internal.HandleRules.normalize("IDA-X"))
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
+    }
+
+    // Cache never shows older settings
+
+    @Test
+    fun `delete and publish again with the email off never shows the email from the cache`() {
+        val sub = newUser()
+        val handle = publish(sub, settings = PublicCvSettings(contact = PublicCvContact(email = true)))
+        assertTrue("ada@example.org" in page(handle))
+
+        service.remove(sub)
+        publish(sub, handle, PublicCvSettings(contact = PublicCvContact(email = false)))
+
+        assertFalse("ada@example.org" in page(handle))
+    }
+
+    @Test
+    fun `two saves in a row with the email switched off never show the email`() {
+        val sub = newUser()
+        val handle = publish(sub, settings = PublicCvSettings(contact = PublicCvContact(email = true)))
+        assertTrue("ada@example.org" in page(handle))
+
+        service.save(sub, handle, true, PublicCvSettings(headline = true, contact = PublicCvContact(email = true)))
+        service.save(sub, handle, true, PublicCvSettings(headline = true))
+
+        assertFalse("ada@example.org" in page(handle))
+    }
+
+    @Test
+    fun `a profile edit after the email was switched off in the cache does not bring it back`() {
+        val sub = newUser()
+        val handle = publish(sub, settings = PublicCvSettings(contact = PublicCvContact(email = true)))
+        assertTrue("ada@example.org" in page(handle))
+        service.remove(sub)
+        publish(sub, handle, PublicCvSettings())
+        store(sub, baseProfile().copy(summary = "Edited."))
+
+        assertFalse("ada@example.org" in page(handle))
+    }
+
+    @Test
+    fun `take down and unlock drop the cached page`() {
+        val sub = newUser()
+        val handle = publish(sub, settings = PublicCvSettings(contact = PublicCvContact(email = true)))
+        page(handle)
+
+        service.takeDown(handle)
+        assertNull(service.renderPublic(handle))
+        service.unlock(handle)
+        service.save(sub, handle, true, PublicCvSettings())
+        assertFalse("ada@example.org" in page(handle))
+    }
+
+    @Test
+    fun `a preview for an owner whose account is gone answers null`() {
+        val sub = newUser()
+        val ticket = service.preview(sub, PublicCvSettings())
+        jdbc.update("delete from app_user where sub = ?", sub)
+
+        assertNull(service.renderPreview(ticket))
     }
 
     // Audit
@@ -450,7 +584,7 @@ internal class PublicCvServiceTests(
         service.save(a, newHandle(), true, PublicCvSettings(headline = true, contact = PublicCvContact(email = true)))
         service.save(a, service.state(a)!!.handle, false, PublicCvSettings(headline = true, contact = PublicCvContact(email = true)))
 
-        assertEquals(listOf("PUBLISHED", "HANDLE_CHANGED", "PAUSED"), events(a))
+        assertEquals(listOf("HANDLE_CLAIMED", "PUBLISHED", "HANDLE_CHANGED", "PAUSED"), events(a))
         val flags = jdbc.queryForObject(
             "select flags::text from public_cv_audit where owner_sub = ? and event = 'PUBLISHED'", String::class.java, a,
         )!!
@@ -466,7 +600,7 @@ internal class PublicCvServiceTests(
         service.unlock(handle)
         service.remove(a)
 
-        assertEquals(listOf("PUBLISHED", "TAKEN_DOWN", "UNLOCKED", "REMOVED"), events(a))
+        assertEquals(listOf("HANDLE_CLAIMED", "PUBLISHED", "TAKEN_DOWN", "UNLOCKED", "REMOVED"), events(a))
     }
 
     // Preview

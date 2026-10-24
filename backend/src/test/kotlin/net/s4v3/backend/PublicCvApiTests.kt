@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
@@ -526,6 +527,102 @@ internal class PublicCvApiTests(
         mvc.perform(get("/api/public/cv/$handle").header("X-Forwarded-For", "$first,10.8.8.8")).andExpect(status().isTooManyRequests)
         // A header that is too long is ignored: the socket address counts instead.
         mvc.perform(get("/api/public/cv/$handle").header("X-Forwarded-For", "1".repeat(46))).andExpect(status().isOk)
+    }
+
+    // ---- Review fixes ----
+
+    private fun deleteCv(sub: String): ResultActions = mvc.perform(delete("/api/cv/public").header("Authorization", bearer(sub)))
+
+    @Test
+    fun `delete and save again with the email off never shows the email from the cache`() {
+        val sub = user()
+        val handle = newHandle()
+        putCv(sub, handle, settings = settings(""""contact":{"email":true}""")).andExpect(status().isOk)
+        assertTrue("ada@example.org" in html(page(handle).andExpect(status().isOk)))
+
+        deleteCv(sub).andExpect(status().isNoContent)
+        putCv(sub, handle, settings = settings(""""contact":{"email":false}""")).andExpect(status().isOk)
+
+        assertFalse("ada@example.org" in html(page(handle).andExpect(status().isOk)))
+    }
+
+    @Test
+    fun `two saves in a row and a profile edit never bring the email back`() {
+        val sub = user()
+        val handle = newHandle()
+        putCv(sub, handle, settings = settings(""""contact":{"email":true}""")).andExpect(status().isOk)
+        assertTrue("ada@example.org" in html(page(handle)))
+
+        putCv(sub, handle, settings = settings(""""headline":true,"contact":{"email":true}""")).andExpect(status().isOk)
+        putCv(sub, handle, settings = settings(""""headline":true""")).andExpect(status().isOk)
+        assertFalse("ada@example.org" in html(page(handle)))
+
+        saveProfile(sub, profileJson(summary = "Edited summary."))
+        assertFalse("ada@example.org" in html(page(handle)))
+    }
+
+    @Test
+    fun `the 31st save of one user in an hour is 429 and a delete counts too`() {
+        val sub = user()
+        val handle = newHandle()
+        repeat(30) { putCv(sub, handle, settings = settings(""""headline":${it % 2 == 0}""")).andExpect(status().isOk) }
+
+        putCv(sub, handle).andExpect(status().isTooManyRequests).andExpect(header().exists("Retry-After"))
+            .andExpect(jsonPath("$.error").value("rate_limited"))
+        deleteCv(sub).andExpect(status().isTooManyRequests)
+        putCv(user(), newHandle()).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `a taken handle is still told to the owner while saves are not limited`() {
+        val (_, taken) = publish()
+        putCv(user(), taken).andExpect(status().isConflict).andExpect(jsonPath("$.error").value("handle_taken"))
+    }
+
+    @Test
+    fun `delete then a different handle within 30 days is 409 handle_change_too_soon`() {
+        val sub = user()
+        putCv(sub, newHandle()).andExpect(status().isOk)
+        deleteCv(sub).andExpect(status().isNoContent)
+
+        putCv(sub, newHandle()).andExpect(status().isConflict).andExpect(jsonPath("$.error").value("handle_change_too_soon"))
+    }
+
+    @Test
+    fun `forged X-Forwarded-For values fall back to the socket address`() {
+        val socket = newIp()
+        fun call(forwarded: String) = mvc.perform(
+            get("/api/public/cv/" + newHandle()).header("X-Forwarded-For", forwarded).with { it.remoteAddr = socket; it },
+        )
+        listOf("junk-1", "evil.example.com", "999.1.1.1", "1.2.3", "::zz", "a b c", "1.2.3.4.5", "<script>", "-1.2.3.4", "0x7f.0.0.1")
+            .forEach { call(it).andExpect(status().isNotFound) }
+
+        call("junk-last").andExpect(status().isTooManyRequests)
+    }
+
+    @Test
+    fun `valid IPv4 and IPv6 forwarded addresses are used as the client`() {
+        val v6 = "2001:db8::" + ipCounter.getAndIncrement().toString(16)
+        repeat(10) {
+            mvc.perform(get("/api/public/cv/" + newHandle()).header("X-Forwarded-For", v6)).andExpect(status().isNotFound)
+        }
+        mvc.perform(get("/api/public/cv/" + newHandle()).header("X-Forwarded-For", v6)).andExpect(status().isTooManyRequests)
+    }
+
+    @Test
+    fun `HEAD on a public page answers like GET without a body and a missing page is 404`() {
+        val (_, handle) = publish()
+        val get = page(handle).andReturn().response
+        val head = mvc.perform(head("/api/public/cv/$handle").header("X-Forwarded-For", newIp())).andExpect(status().isOk)
+            .andReturn().response
+
+        assertEquals(0, head.contentAsByteArray.size)
+        assertEquals(get.getHeader("ETag"), head.getHeader("ETag"))
+        assertEquals(get.getHeader("Content-Security-Policy"), head.getHeader("Content-Security-Policy"))
+        mvc.perform(head("/api/public/cv/" + newHandle()).header("X-Forwarded-For", newIp())).andExpect(status().isNotFound)
+        // Nothing broader: HEAD elsewhere still needs a token.
+        mvc.perform(head("/api/cv/public")).andExpect(status().isUnauthorized)
+        mvc.perform(head("/api/cv/public/preview/" + "0".repeat(32))).andExpect(status().isUnauthorized)
     }
 
     // ---- Preview ----

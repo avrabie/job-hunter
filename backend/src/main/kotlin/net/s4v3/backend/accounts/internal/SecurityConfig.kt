@@ -48,6 +48,8 @@ internal class SecurityConfig {
                 // The public CV page and the owner's one-use preview need no token. Explicit single-segment patterns only:
                 // nothing else under /api/public or /api/cv/public is open.
                 it.requestMatchers(HttpMethod.GET, "/api/public/cv/*", "/api/cv/public/preview/*").permitAll()
+                // Link previews and crawlers send HEAD; only the page itself, nothing broader.
+                it.requestMatchers(HttpMethod.HEAD, "/api/public/cv/*").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }

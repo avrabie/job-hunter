@@ -25,4 +25,4 @@ The edge SHALL send requests for `/` to `ui`, requests for `/api` and `/auth` to
 
 #### Scenario: Only the handle is rewritten
 - **WHEN** a client requests `/cv/` with nothing after it, or `/cv/a/b`
-- **THEN** the answer is a 404 from `backend` and no other backend path is reachable through `/cv/`
+- **THEN** the answer is a 4xx with no content (the backend does not serve it) and no other backend path is reachable through `/cv/`

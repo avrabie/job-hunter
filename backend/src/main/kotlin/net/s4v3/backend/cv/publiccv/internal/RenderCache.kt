@@ -7,11 +7,11 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 
-/** What a rendered page depends on. A saved profile or settings change moves a version, so a stale page is never found. */
+/** What a rendered page depends on. The settings hash covers every setting that shapes the page and the profile version moves on each edit, so an older page is never found; an owner's entries are also dropped on save, remove, takedown and unlock. */
 internal data class RenderKey(
     val sub: String,
     val profileVersion: Long,
-    val settingsVersion: Int,
+    val settingsHash: String,
     val template: CvTemplate,
     val language: CvLanguage,
 )
@@ -45,6 +45,11 @@ internal class RenderCache(
         if (entries.size >= maxEntries) entries.values.removeIf { !now.isBefore(it.expiresAt) }
         while (entries.size >= maxEntries) entries.remove(entries.keys.first())
         entries[key] = Entry(page, now.plus(ttl))
+    }
+
+    @Synchronized
+    fun invalidate(sub: String) {
+        entries.keys.removeIf { it.sub == sub }
     }
 
     @Synchronized

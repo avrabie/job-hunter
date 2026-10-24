@@ -48,3 +48,12 @@ Groups 1, 2, 5, 6 and 7 are independent and can run in parallel; group 3 needs 1
 ## Workflow follow-up
 
 - The lead reviews each diff, merges, runs `./gradlew clean verify` and the UI checks, runs the 0.x checks, deploys backend, UI and the route together (`kubectl diff` first), tests on s4v3.net with a real account and an incognito window (published page, pause, handle change, 404s, headers with `curl -I`), then archives the change. Follow-ups: `public-cv-extras` (PDF download, Open Graph, snapshot mode), the inline-preview/stylesheet fix if 0.2 shows it is needed.
+
+## 9. Review fixes
+
+- [x] 9.1 M1: render cache keyed by owner, profile version and a hash of the settings; entries of the owner dropped on save, remove, takedown and unlock. Verify: `PublicCvServiceTests`, `PublicCvApiTests`, `RenderCacheTests`.
+- [x] 9.2 M2: removing and claiming a different handle within 30 days of the last claim is `handle_change_too_soon`; every claim is audited (`HANDLE_CLAIMED`, changeset `moldo:015`). Verify: `PublicCvServiceTests`, `PublicCvSchemaTests`, `PublicCvApiTests`.
+- [x] 9.3 M3: `saves` limiter (30 per user and hour, `jobhunter.public-cv.saves-per-hour`) on PUT and DELETE; threat model updated. Verify: `PublicCvApiTests`.
+- [x] 9.4 M4: `WindowLimiter` sweeps once per window and caps its keys at 20,000; client IP only from IPv4/IPv6 literals. Verify: `WindowLimiterTests`, `PublicCvApiTests`.
+- [x] 9.5 Quick wins: `@Transactional` on save and remove, `Taken` only for the handle index, `Locale.ROOT`, HEAD on `/api/public/cv/*`, ticket sweep on issue only, preview for a deleted owner is null. Verify: `PublicCvServiceTests`, `PublicCvSchemaTests`, `PreviewTicketsTests`, `PublicCvApiTests`.
+- [x] 9.6 Edge comment and `edge-routing` scenario corrected (`/cv/a/b` and `/cv/` are 401 with no content).

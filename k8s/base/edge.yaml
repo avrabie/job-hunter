@@ -56,7 +56,7 @@ spec:
         - name: gateway
           port: 8080
     # Public CV page: `/cv/<handle>` is served by backend as `/api/public/cv/<handle>`. Only the handle is passed on; it is the
-    # only thing after `/cv/` that the backend accepts, so `/cv/a/b` and `/cv/` get the backend's 404, never the UI.
+    # only thing after `/cv/` that the backend accepts, so `/cv/a/b` and `/cv/` serve no content (the backend answers 401: `/api/public/cv/<one segment>` is the only open path), never the UI.
     - matches:
         - path:
             type: PathPrefix

@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RestController
+import java.net.InetAddress
+import java.net.UnknownHostException
 import kotlin.math.max
 
 /**
@@ -73,7 +75,8 @@ internal class PublicCvPageController(
             }
         }
         record(answer, started)
-        return answer
+        // HEAD answers like GET, without a body.
+        return if (request.method == "HEAD") ResponseEntity.status(answer.statusCode).headers(answer.headers).build() else answer
     }
 
     @GetMapping("/api/cv/public/preview/{ticket}")
@@ -140,15 +143,30 @@ internal class PublicCvPageController(
     private fun matches(header: String?, quoted: String): Boolean =
         header != null && header.split(',').map { it.trim().removePrefix("W/") }.any { it == quoted || it == "*" }
 
-    /** The first address of `X-Forwarded-For` (set by the edge) when it is usable, else the socket address. */
+    /** The first address of `X-Forwarded-For` (set by the edge) when it is a valid IPv4 or IPv6 literal, else the socket address. */
     private fun clientIp(request: HttpServletRequest): String {
         val first = request.getHeader("X-Forwarded-For")?.substringBefore(',')?.trim()
-        return if (!first.isNullOrEmpty() && first.length <= MAX_IP) first else request.remoteAddr.orEmpty()
+        return (if (first == null) null else literalIp(first)) ?: request.remoteAddr.orEmpty()
+    }
+
+    /** The address when [text] is an IP literal, else null. Never resolves a name: only digits, hex and `:` `.` reach the parser. */
+    private fun literalIp(text: String): String? {
+        if (text.isEmpty() || text.length > MAX_IP) return null
+        if (IPV4.matches(text)) return text
+        if (':' !in text || !IPV6_CHARS.matches(text)) return null
+        return try {
+            InetAddress.getByName(text).hostAddress
+        } catch (_: UnknownHostException) {
+            null
+        }
     }
 
     private companion object {
         val PLAUSIBLE = Regex("[a-z0-9-]{3,30}")
         val TICKET = Regex("[0-9a-f]{32}")
+        private const val OCTET = "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])"
+        val IPV4 = Regex("$OCTET(\\.$OCTET){3}")
+        val IPV6_CHARS = Regex("[0-9a-fA-F:.]+")
         const val MAX_IP = 45
         const val NOINDEX = "noindex, nofollow, noarchive, nosnippet"
         const val CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; " +

@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/008-files.sql
   - include:
       file: db/changelog/009-public-cv.sql
+  - include:
+      file: db/changelog/010-public-cv-claim.sql

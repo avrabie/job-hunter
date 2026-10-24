@@ -56,6 +56,8 @@ Kotlin (package `net.s4v3.backend.cv.publiccv`): `data class PublicCvSettings(..
 | DoS through rendering | Cache keyed by version, per-handle cap, shared PDF semaphore not used (HTML only) |
 | Handle or content in logs | No path or content logging, Traefik access log is disabled, only status and duration are logged |
 | Spoofed `X-Forwarded-For` evades the IP limit | Per-handle cap and 404 limit as backstop; the edge sets the header |
+| Owners probe handle availability (409 answers of a save, the handle check) | Accepted: the UX needs a taken signal; authenticated owners can probe handle availability, limited to 60 checks and 30 saves per hour per user |
+| Delete and re-claim to squat handles or to bypass the 30-day rule | Every claim is audited; a claim of a different handle within 30 days of the last claim is refused, also after a removal |
 | Account deleted but page stays | Foreign keys cascade; test deletes the user and expects 404 |
 
 ## Risks / Trade-offs

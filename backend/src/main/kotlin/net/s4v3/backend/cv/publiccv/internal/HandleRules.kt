@@ -1,5 +1,7 @@
 package net.s4v3.backend.cv.publiccv.internal
 
+import java.util.Locale
+
 /** Why a handle may not be claimed. Availability answers map these to `invalid` and `reserved`. */
 internal enum class HandleProblem { INVALID, RESERVED }
 
@@ -25,7 +27,7 @@ internal object HandleRules {
     )
 
     /** Lower-cases the input. Every check and every stored value uses this form. */
-    fun normalize(raw: String): String = raw.lowercase()
+    fun normalize(raw: String): String = raw.lowercase(Locale.ROOT)
 
     /** Null when [raw] may be claimed by its form; the input is lower-cased first. */
     fun validate(raw: String): HandleProblem? {
