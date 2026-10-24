@@ -124,7 +124,7 @@ public CV page of the `cv-public` spec. Code: `ui/src/publiccv/` (`PublicCvPage.
 - **Buttons.** **Publish** (when not live), **Pause** (saves with `published: false`; the address answers 404 and the settings are
   kept), **Save**, **Preview** and **Remove** (after an inline confirmation; the handle is kept for 90 days).
 - **Preview** asks the backend for a one-use ticket and opens `/api/cv/public/preview/<ticket>` in a new tab (`window.open(…, '_blank',
-  'noopener')`). It is not shown inline: the app's Content-Security-Policy (`style-src 'self'`) would block the page's styles in a frame.
+'noopener')`). It is not shown inline: the app's Content-Security-Policy (`style-src 'self'`) would block the page's styles in a frame.
   The page never reads or stores the HTML.
 - **Profile page notice.** `ui/src/profile/publicCvNotice.ts` reads the state with the shared client. When the page is live the profile
   page says "Your public CV is live at <address>" (`ProfileForm.tsx`). A failed read shows nothing.
