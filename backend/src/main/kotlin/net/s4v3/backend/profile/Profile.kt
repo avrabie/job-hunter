@@ -26,9 +26,6 @@ enum class WorkAuthorisation { SWISS_CITIZEN, PERMIT_C, PERMIT_B, PERMIT_L, PERM
 
 enum class LanguageLevel { A1, A2, B1, B2, C1, C2, NATIVE }
 
-/** A code-hosting provider. Stand-in for the group 1 type; the lead resolves the overlap at merge. */
-enum class CodeProvider { GITHUB }
-
 data class LanguageSkill(val code: String, val level: LanguageLevel)
 
 data class Experience(
