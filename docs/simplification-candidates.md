@@ -37,7 +37,7 @@ gains are in duplication, stale text and a few oversized files, not in deleting 
 - Effort S, risk low.
 
 ### C11 Test-only code in `ui/src`
-- `ui/src/files/fakeXhr.ts` is a test helper but lives next to production code; `grep -rl fakeXhr ui/src` gives only `FileCabinet.test.tsx` and `filesApi.test.ts`. The other test helpers are in `ui/src/test/`. Proposal: move to `ui/src/test/`. Effort S, risk low, value: production folders hold only production code.
+- `ui/src/test/fakeXhr.ts` is a test helper but lives next to production code; `grep -rl fakeXhr ui/src` gives only `FileCabinet.test.tsx` and `filesApi.test.ts`. The other test helpers are in `ui/src/test/`. Proposal: move to `ui/src/test/`. Effort S, risk low, value: production folders hold only production code.
 
 ### C12 Settings defaults that disagree with `application.yaml`
 - `LlmSettings.kt:19` default `model = "Sonnet_5"` while `application.yaml` sets `Haiku_4_5` (and README says default `Haiku_4_5`). The yaml wins at runtime, so the Kotlin default is only seen in tests. Proposal: align the default (or drop it) so one value exists. This is a naming/consistency fix, not a behaviour change in production. Effort S, risk low.
