@@ -49,7 +49,9 @@ internal class HtmlRenderer : CvRenderer {
     private fun StringBuilder.professionalHeader(d: CvDocument, photo: CvPhoto?) {
         append("<table class=\"top\"><tr>\n<td class=\"who\">\n<h1>${esc(d.name)}</h1>\n")
         d.headline?.let { append("<p class=\"headline\">${esc(it)}</p>\n") }
-        d.contactLines.forEach { append("<p class=\"contact\">${link(it)}</p>\n") }
+        if (d.contactLines.isNotEmpty()) {
+            append("<p class=\"contact\">${d.contactLines.joinToString(" · ") { link(it) }}</p>\n")
+        }
         d.facts.forEach { append("<p class=\"facts\">${esc(it)}</p>\n") }
         append("</td>\n")
         if (photo != null) {
