@@ -1,12 +1,12 @@
 package net.s4v3.backend.profile.internal
 
+import net.s4v3.backend.profile.CodeAccount
+import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.Experience
+import net.s4v3.backend.profile.OpenSourceProject
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
-import net.s4v3.backend.profile.Project
-import net.s4v3.backend.profile.ProjectLink
-import net.s4v3.backend.profile.ProjectType
 import net.s4v3.backend.profile.Publication
 import java.time.LocalDate
 import java.time.YearMonth
@@ -110,9 +110,6 @@ class ProfileValidatorTests {
     private fun experienceWith(vararg technologies: String) =
         Profile(experience = listOf(Experience("Example AG", "Engineer", YearMonth.of(2020, 1), technologies = technologies.toList())))
 
-    private fun projectWith(vararg links: ProjectLink) =
-        Profile(projects = listOf(Project("Store", ProjectType.ASSIGNMENT, links = links.toList())))
-
     @Test
     fun `technologies are kept as sent, any casing`() {
         validateProfile(experienceWith("Kotlin", "Spring Boot", "kotlin"))
@@ -134,76 +131,131 @@ class ProfileValidatorTests {
         assertTrue("experience[0].technologies" in profileFields(experienceWith(*Array(31) { "T$it" })))
     }
 
+    private fun accounts(vararg accounts: CodeAccount) = Profile(codeAccounts = accounts.toList())
+
+    private fun repository(
+        fullName: String = "octocat/hello-world",
+        url: String = "https://github.com/octocat/hello-world",
+        provider: CodeProvider = CodeProvider.GITHUB,
+    ) = OpenSourceProject(provider = provider, fullName = fullName, name = fullName.substringAfter('/'), url = url)
+
+    private fun repositories(vararg projects: OpenSourceProject) = Profile(openSourceProjects = projects.toList())
+
+    @Test
+    fun `a valid GitHub account passes`() {
+        validateProfile(accounts(CodeAccount(CodeProvider.GITHUB, "octocat")))
+    }
+
+    @Test
+    fun `usernames at the edges of the GitHub rule pass`() {
+        validateProfile(accounts(CodeAccount(CodeProvider.GITHUB, "a".repeat(39))))
+        validateProfile(accounts(CodeAccount(CodeProvider.GITHUB, "a-b-C9")))
+    }
+
+    @Test
+    fun `bad GitHub usernames are rejected by path`() {
+        listOf("-bad-", "a--b", "", "a".repeat(40), "under_score", "dot.name", "sp ace").forEach { username ->
+            assertTrue(
+                "codeAccounts[0].username" in profileFields(accounts(CodeAccount(CodeProvider.GITHUB, username))),
+                "username of length ${username.length} should be rejected",
+            )
+        }
+    }
+
+    @Test
+    fun `a rejected username never echoes the submitted value`() {
+        val marker = "SECRET-MARKER"
+        val fields = profileFields(accounts(CodeAccount(CodeProvider.GITHUB, "$marker-$marker-")))
+
+        assertTrue(fields.values.none { marker in it })
+    }
+
+    @Test
+    fun `two accounts for one provider are rejected at the second provider`() {
+        val fields = profileFields(accounts(CodeAccount(CodeProvider.GITHUB, "octocat"), CodeAccount(CodeProvider.GITHUB, "hubot")))
+
+        assertTrue("codeAccounts[1].provider" in fields)
+    }
+
     @Test
     fun `a valid project with every field passes`() {
         validateProfile(
-            Profile(
-                projects = listOf(
-                    Project(
-                        name = "Distributed key-value store",
-                        type = ProjectType.ASSIGNMENT,
-                        context = "ETH Zurich, Distributed Systems",
-                        start = YearMonth.of(2023, 2),
-                        end = YearMonth.of(2023, 6),
-                        description = "Raft-based store with snapshots.",
-                        technologies = listOf("Kotlin", "gRPC"),
-                        results = listOf("Grade 6.0", "Handled 20k writes/s in the benchmark"),
-                        links = listOf(ProjectLink("Repository", "https://github.com/example/kv-store")),
-                        highlight = true,
-                    ),
+            repositories(
+                OpenSourceProject(
+                    provider = CodeProvider.GITHUB,
+                    fullName = "octocat/hello-world",
+                    name = "hello-world",
+                    url = "https://github.com/octocat/hello-world",
+                    description = "My first repository",
+                    language = "Kotlin",
+                    topics = listOf("demo", "kotlin"),
+                    stars = 42,
+                    note = "Maintainer since 2022",
                 ),
             ),
         )
     }
 
     @Test
-    fun `a project with only a name and a type passes`() {
-        validateProfile(Profile(projects = listOf(Project("Notes app", ProjectType.PERSONAL))))
+    fun `a project with only provider, full name, name and url passes`() {
+        validateProfile(repositories(repository()))
     }
 
     @Test
-    fun `a blank project name is reported by path`() {
-        assertEquals("must not be blank", profileFields(Profile(projects = listOf(Project(" ", ProjectType.WORK)))).getValue("projects[0].name"))
+    fun `javascript and plain http project addresses are rejected by path`() {
+        assertTrue("openSourceProjects[0].url" in profileFields(repositories(repository(url = "javascript:alert(1)"))))
+        assertTrue("openSourceProjects[0].url" in profileFields(repositories(repository(url = "http://github.com/x/y"))))
     }
 
     @Test
-    fun `a project that starts after it ends is reported at its end`() {
-        val project = Project("Late", ProjectType.OPEN_SOURCE, start = YearMonth.of(2024, 5), end = YearMonth.of(2024, 1))
+    fun `a duplicate repository is rejected at its full name`() {
+        val fields = profileFields(repositories(repository(), repository()))
 
-        assertTrue("projects[0].end" in profileFields(Profile(projects = listOf(project))))
+        assertTrue("openSourceProjects[1].fullName" in fields)
     }
 
     @Test
-    fun `a javascript project link is rejected by path`() {
-        assertTrue("projects[0].links[0].url" in profileFields(projectWith(ProjectLink("Demo", "javascript:alert(1)"))))
+    fun `30 open source projects pass and 31 are rejected`() {
+        val entry = repository()
+        validateProfile(Profile(openSourceProjects = List(30) { repository("octocat/r$it") }))
+        assertTrue("openSourceProjects" in profileFields(Profile(openSourceProjects = List(31) { entry })))
     }
 
     @Test
-    fun `a project link without a label is rejected`() {
-        assertTrue("projects[0].links[0].label" in profileFields(projectWith(ProjectLink(" ", "https://example.org"))))
+    fun `description of 500 characters passes and 501 is rejected`() {
+        validateProfile(repositories(repository().copy(description = "d".repeat(500))))
+        assertTrue("openSourceProjects[0].description" in profileFields(repositories(repository().copy(description = "d".repeat(501)))))
     }
 
     @Test
-    fun `51 projects are rejected and 50 are accepted`() {
-        val project = Project("P", ProjectType.WORK)
-
-        validateProfile(Profile(projects = List(50) { project }))
-        assertTrue("projects" in profileFields(Profile(projects = List(51) { project })))
+    fun `language of 61 characters is rejected`() {
+        assertTrue("openSourceProjects[0].language" in profileFields(repositories(repository().copy(language = "l".repeat(61)))))
     }
 
     @Test
-    fun `6 links on a project are rejected and 5 are accepted`() {
-        val link = ProjectLink("Repository", "https://example.org/x")
-
-        validateProfile(projectWith(*Array(5) { link }))
-        assertTrue("projects[0].links" in profileFields(projectWith(*Array(6) { link })))
+    fun `topics are limited to 20 and each to 60 characters`() {
+        validateProfile(repositories(repository().copy(topics = List(20) { "t$it" })))
+        assertTrue("openSourceProjects[0].topics" in profileFields(repositories(repository().copy(topics = List(21) { "t$it" }))))
+        assertTrue("openSourceProjects[0].topics[0]" in profileFields(repositories(repository().copy(topics = listOf("t".repeat(61))))))
     }
 
     @Test
-    fun `a failing project field never echoes the submitted value`() {
+    fun `negative stars are rejected and zero passes`() {
+        validateProfile(repositories(repository().copy(stars = 0)))
+        assertTrue("openSourceProjects[0].stars" in profileFields(repositories(repository().copy(stars = -1))))
+    }
+
+    @Test
+    fun `a note of 2000 characters passes and 2001 is rejected`() {
+        validateProfile(repositories(repository().copy(note = "n".repeat(2000))))
+        assertTrue("openSourceProjects[0].note" in profileFields(repositories(repository().copy(note = "n".repeat(2001)))))
+    }
+
+    @Test
+    fun `a failing repository field never echoes the submitted value`() {
         val marker = "SECRET-MARKER"
         val fields = profileFields(
-            Profile(projects = listOf(Project(" ", ProjectType.WORK, context = marker.repeat(50), links = listOf(ProjectLink("L", "javascript:$marker"))))),
+            repositories(repository(url = "javascript:$marker").copy(description = marker.repeat(200), stars = -1, note = " ")),
         )
 
         assertTrue(fields.isNotEmpty())

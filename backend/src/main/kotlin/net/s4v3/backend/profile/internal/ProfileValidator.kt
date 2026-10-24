@@ -1,5 +1,6 @@
 package net.s4v3.backend.profile.internal
 
+import net.s4v3.backend.profile.CodeProvider
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileInvalidException
 import net.s4v3.backend.profile.ProfileUpdate
@@ -27,17 +28,17 @@ internal object ProfileValidator {
     const val PUBLICATIONS_MAX = 100
     const val URL_MAX = 500
     const val AUTHORS_MAX = 500
-    const val PROJECTS_MAX = 50
-    const val PROJECT_CONTEXT_MAX = 200
-    const val PROJECT_DESCRIPTION_MAX = 2000
-    const val PROJECT_RESULTS_MAX = 20
-    const val PROJECT_LINKS_MAX = 5
-    const val LINK_LABEL_MAX = 60
+    const val OPEN_SOURCE_PROJECTS_MAX = 30
+    const val REPOSITORY_DESCRIPTION_MAX = 500
+    const val REPOSITORY_LANGUAGE_MAX = 60
+    const val REPOSITORY_TOPICS_MAX = 20
+    const val REPOSITORY_NOTE_MAX = 2000
     const val TAG_MAX = 60
     const val TAGS_MAX = 30
 
     private val languageCode = Regex("[a-z]{2}")
     private val cantonCode = Regex("[A-Z]{2}")
+    private val httpSchemes = setOf("http", "https")
 
     fun validate(update: ProfileUpdate) {
         val problems = linkedMapOf<String, String>()
@@ -89,21 +90,29 @@ internal object ProfileValidator {
             publication.url?.let { httpUrl("$at.url", it, problems) }
         }
 
-        limit("projects", profile.projects.size, PROJECTS_MAX, problems)
-        profile.projects.forEachIndexed { i, project ->
-            val at = "projects[$i]"
-            requiredText("$at.name", project.name, NAME_MAX, problems)
-            optionalText("$at.context", project.context, PROJECT_CONTEXT_MAX, problems)
-            order("$at.end", project.start, project.end, problems)
-            optionalText("$at.description", project.description, PROJECT_DESCRIPTION_MAX, problems)
-            tags("$at.technologies", project.technologies, problems)
-            limit("$at.results", project.results.size, PROJECT_RESULTS_MAX, problems)
-            project.results.forEachIndexed { j, text -> requiredText("$at.results[$j]", text, ACHIEVEMENT_MAX, problems) }
-            limit("$at.links", project.links.size, PROJECT_LINKS_MAX, problems)
-            project.links.forEachIndexed { j, link ->
-                requiredText("$at.links[$j].label", link.label, LINK_LABEL_MAX, problems)
-                httpUrl("$at.links[$j].url", link.url, problems)
+        val providers = mutableSetOf<CodeProvider>()
+        profile.codeAccounts.forEachIndexed { i, account ->
+            val at = "codeAccounts[$i]"
+            if (!providers.add(account.provider)) problems["$at.provider"] = "must appear once per provider"
+            if (!isValidUsername(account.provider, account.username)) {
+                problems["$at.username"] = "must follow the username rule of the provider"
             }
+        }
+
+        limit("openSourceProjects", profile.openSourceProjects.size, OPEN_SOURCE_PROJECTS_MAX, problems)
+        val repositories = mutableSetOf<Pair<CodeProvider, String>>()
+        profile.openSourceProjects.forEachIndexed { i, project ->
+            val at = "openSourceProjects[$i]"
+            requiredText("$at.fullName", project.fullName, NAME_MAX, problems)
+            if (!repositories.add(project.provider to project.fullName)) problems["$at.fullName"] = "must appear once per provider"
+            requiredText("$at.name", project.name, NAME_MAX, problems)
+            httpUrl("$at.url", project.url, problems, setOf("https"))
+            optionalText("$at.description", project.description, REPOSITORY_DESCRIPTION_MAX, problems)
+            optionalText("$at.language", project.language, REPOSITORY_LANGUAGE_MAX, problems)
+            limit("$at.topics", project.topics.size, REPOSITORY_TOPICS_MAX, problems)
+            project.topics.forEachIndexed { j, topic -> requiredText("$at.topics[$j]", topic, TAG_MAX, problems) }
+            project.stars?.let { if (it < 0) problems["$at.stars"] = "must not be negative" }
+            optionalText("$at.note", project.note, REPOSITORY_NOTE_MAX, problems)
         }
 
         limit("skills", profile.skills.size, SKILLS_MAX, problems)
@@ -144,17 +153,17 @@ internal object ProfileValidator {
         values.forEachIndexed { i, tag -> requiredText("$path[$i]", tag, TAG_MAX, problems) }
     }
 
-    private fun httpUrl(path: String, value: String, problems: MutableMap<String, String>) {
+    private fun httpUrl(path: String, value: String, problems: MutableMap<String, String>, schemes: Set<String> = httpSchemes) {
         when {
             value.length > URL_MAX -> problems[path] = "must be at most $URL_MAX characters"
-            !isHttpUrl(value) -> problems[path] = "must be an absolute http or https address"
+            !isAbsoluteUrl(value, schemes) -> problems[path] = "must be an absolute ${schemes.joinToString(" or ")} address"
         }
     }
 
-    private fun isHttpUrl(value: String): Boolean =
+    private fun isAbsoluteUrl(value: String, schemes: Set<String>): Boolean =
         try {
             val uri = URI(value)
-            uri.isAbsolute && uri.scheme.lowercase() in setOf("http", "https") && !uri.host.isNullOrEmpty()
+            uri.isAbsolute && uri.scheme.lowercase() in schemes && !uri.host.isNullOrEmpty()
         } catch (_: URISyntaxException) {
             false
         }

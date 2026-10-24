@@ -92,6 +92,22 @@ class ProfileApiTests(@Autowired private val mvc: MockMvc) {
     }
 
     @Test
+    fun `sending projects is rejected and nothing is stored`() {
+        val sub = user()
+        save(sub, body(0, """{"projects":[{"name":"P","type":"WORK"}]}""")).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.fields.projects").exists())
+        read(sub).andExpect(jsonPath("$.version").value(0))
+    }
+
+    @Test
+    fun `an unknown code provider is 400 and nothing is stored`() {
+        val sub = user()
+        save(sub, body(0, """{"codeAccounts":[{"provider":"BITBUCKET","username":"octocat"}]}""")).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.fields['codeAccounts[0].provider']").exists())
+        read(sub).andExpect(jsonPath("$.version").value(0))
+    }
+
+    @Test
     fun `an error response does not repeat the submitted text`() {
         val marker = "RECOGNISABLE-MARKER-" + "m".repeat(4100)
         val response = save(user(), body(0, """{"summary":"$marker"}""")).andExpect(status().isBadRequest)

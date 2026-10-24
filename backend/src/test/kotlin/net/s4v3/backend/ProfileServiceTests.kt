@@ -88,7 +88,7 @@ class ProfileServiceTests(
     }
 
     @Test
-    fun `a profile stored before projects and technologies existed reads with the defaults`() {
+    fun `a profile stored before technologies existed reads with the defaults`() {
         val sub = newUser()
         jdbc.update(
             "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 4)",
@@ -99,8 +99,39 @@ class ProfileServiceTests(
         val stored = profiles.get(sub)
 
         assertEquals(4, stored.version)
-        assertEquals(emptyList(), stored.profile.projects)
         assertEquals(emptyList(), stored.profile.experience.single().technologies)
+    }
+
+    @Test
+    fun `a profile stored before open source projects existed reads with empty lists and ignores legacy projects`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 2)",
+            sub,
+            """{"summary":"Stored before code accounts","projects":[{"name":"Old","type":"WORK"}]}""",
+        )
+
+        val stored = profiles.get(sub)
+
+        assertEquals("Stored before code accounts", stored.profile.summary)
+        assertEquals(emptyList(), stored.profile.codeAccounts)
+        assertEquals(emptyList(), stored.profile.openSourceProjects)
+    }
+
+    @Test
+    fun `legacy projects are dropped on the next save`() {
+        val sub = newUser()
+        jdbc.update(
+            "insert into profile (owner_sub, document, schema_version, version) values (?, CAST(? AS jsonb), 1, 5)",
+            sub,
+            """{"summary":"Before","projects":[{"name":"Old","type":"WORK"}]}""",
+        )
+
+        profiles.replace(sub, ProfileUpdate(5, profiles.get(sub).profile.copy(summary = "After")))
+
+        val document = jdbc.queryForObject("select document::text from profile where owner_sub = ?", String::class.java, sub)!!
+        assertTrue("projects" !in document, document)
+        assertEquals("After", profiles.get(sub).profile.summary)
     }
 
     @Test
@@ -205,7 +236,8 @@ class ProfileServiceTests(
 
         assertEquals(setOf("surprise"), fields("""{"version":0,"profile":{},"surprise":"SECRET-MARKER"}""").keys)
         assertEquals(setOf("workAuthorisation"), fields("""{"version":0,"profile":{"workAuthorisation":"CITIZEN"}}""").keys)
-        assertEquals(setOf("projects[0].type"), fields("""{"version":0,"profile":{"projects":[{"name":"P","type":"HOBBY"}]}}""").keys)
+        assertEquals(setOf("codeAccounts[0].provider"), fields("""{"version":0,"profile":{"codeAccounts":[{"provider":"BITBUCKET","username":"octocat"}]}}""").keys)
+        assertEquals(setOf("projects"), fields("""{"version":0,"profile":{"projects":[]}}""").keys)
         assertEquals(setOf("experience[0].start"), fields("""{"version":0,"profile":{"experience":[{"employer":"E","title":"T","start":"May 2020"}]}}""").keys)
         assertEquals(setOf("version"), fields("""{"version":"SECRET-MARKER","profile":{}}""").keys)
         assertEquals(setOf("body"), fields("""{"version": SECRET-MARKER"""").keys)

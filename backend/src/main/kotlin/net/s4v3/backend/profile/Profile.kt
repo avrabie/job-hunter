@@ -14,7 +14,8 @@ data class Profile(
     val experience: List<Experience> = emptyList(),
     val education: List<Education> = emptyList(),
     val publications: List<Publication> = emptyList(),
-    val projects: List<Project> = emptyList(),
+    val codeAccounts: List<CodeAccount> = emptyList(),
+    val openSourceProjects: List<OpenSourceProject> = emptyList(),
     val skills: List<Skill> = emptyList(),
     val preferences: Preferences = Preferences(),
 )
@@ -56,28 +57,28 @@ data class Publication(
     val url: String? = null,
 )
 
-/** What kind of work a project was: a paid assignment, a personal project, open-source work or other work. */
-enum class ProjectType { ASSIGNMENT, PERSONAL, OPEN_SOURCE, WORK }
+/** A code-hosting provider. Only GITHUB for now; a new provider is one value and one username rule. */
+enum class CodeProvider { GITHUB }
+
+/** A code-hosting account the user links. [username] follows the provider's rules. */
+data class CodeAccount(val provider: CodeProvider, val username: String)
 
 /**
- * A project worth showing: an assignment, a personal or open-source project. [results] are short lines of stated
- * outcomes; [highlight] is set by the user only, never by the CV reader.
+ * An open-source repository the user picked from a linked account. It is a snapshot of the repository's facts when
+ * picked; [note] is the user's own text.
  */
-data class Project(
+data class OpenSourceProject(
+    val provider: CodeProvider,
+    /** Owner and name, as "owner/repo". Unique per provider within a profile. */
+    val fullName: String,
     val name: String,
-    val type: ProjectType,
-    val context: String? = null,
-    val start: YearMonth? = null,
-    val end: YearMonth? = null,
+    val url: String,
     val description: String? = null,
-    val technologies: List<String> = emptyList(),
-    val results: List<String> = emptyList(),
-    val links: List<ProjectLink> = emptyList(),
-    val highlight: Boolean = false,
+    val language: String? = null,
+    val topics: List<String> = emptyList(),
+    val stars: Int? = null,
+    val note: String? = null,
 )
-
-/** A labelled link of a project, for example its repository. [url] is an absolute http or https address. */
-data class ProjectLink(val label: String, val url: String)
 
 enum class SkillLevel { BEGINNER, INTERMEDIATE, ADVANCED, EXPERT }
 
