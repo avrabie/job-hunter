@@ -24,4 +24,32 @@ data class ExportOptions(
     val includeOpenSource: Boolean = true,
     val includeAnalysis: Boolean = false,
     val includeWorkAuthorisation: Boolean = true,
+    val contact: ContactVisibility = ContactVisibility.ALL,
 )
+
+/**
+ * Which contact items the CV prints. An item that is off appears nowhere in the document. The full name is always
+ * printed; work authorisation is controlled by [ExportOptions.includeWorkAuthorisation].
+ */
+data class ContactVisibility(
+    val email: Boolean = true,
+    val phone: Boolean = true,
+    val website: Boolean = true,
+    val linkedin: Boolean = true,
+    val codeAccounts: Boolean = true,
+    val location: Boolean = true,
+    val headline: Boolean = true,
+) {
+    companion object {
+        val ALL = ContactVisibility()
+        val NONE = ContactVisibility(
+            email = false,
+            phone = false,
+            website = false,
+            linkedin = false,
+            codeAccounts = false,
+            location = false,
+            headline = false,
+        )
+    }
+}

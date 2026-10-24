@@ -1,5 +1,6 @@
 package net.s4v3.backend.cv.export.internal
 
+import net.s4v3.backend.cv.export.ContactVisibility
 import net.s4v3.backend.cv.export.CvDocument
 import net.s4v3.backend.cv.export.CvEntry
 import net.s4v3.backend.cv.export.CvLanguage
@@ -43,21 +44,21 @@ internal object CvBuilder {
         return CvDocument(
             language = language,
             name = clean(profile.contact.fullName).orEmpty(),
-            headline = clean(profile.contact.headline),
-            contactLines = contactLines(profile),
+            headline = if (options.contact.headline) clean(profile.contact.headline) else null,
+            contactLines = contactLines(profile, options.contact),
             facts = facts(profile, options),
             sections = order.mapNotNull { section(it, profile, options) },
         )
     }
 
-    private fun contactLines(profile: Profile): List<CvLink> = buildList {
+    private fun contactLines(profile: Profile, visibility: ContactVisibility): List<CvLink> = buildList {
         val contact = profile.contact
-        clean(contact.email)?.let { add(CvLink(it)) }
-        clean(contact.phone)?.let { add(CvLink(it)) }
-        location(profile.location)?.let { add(CvLink(it)) }
-        clean(contact.website)?.let { add(CvLink(it, it)) }
-        clean(contact.linkedin)?.let { add(CvLink(it, it)) }
-        profile.codeAccounts.forEach { add(codeAccountLink(it)) }
+        if (visibility.email) clean(contact.email)?.let { add(CvLink(it)) }
+        if (visibility.phone) clean(contact.phone)?.let { add(CvLink(it)) }
+        if (visibility.location) location(profile.location)?.let { add(CvLink(it)) }
+        if (visibility.website) clean(contact.website)?.let { add(CvLink(it, it)) }
+        if (visibility.linkedin) clean(contact.linkedin)?.let { add(CvLink(it, it)) }
+        if (visibility.codeAccounts) profile.codeAccounts.forEach { add(codeAccountLink(it)) }
     }
 
     private fun facts(profile: Profile, options: ExportOptions): List<String> {
