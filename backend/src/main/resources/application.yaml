@@ -52,6 +52,8 @@ jobhunter:
   cv-export:
     # Maximum number of CV exports per user per hour.
     per-hour: 30
+    # How long a third parallel PDF render waits for a free slot before the answer is 503 busy.
+    render-wait: 5s
   analysis:
     # Maximum number of open source project analyses per user per hour; each one is one model call.
     per-hour: 10

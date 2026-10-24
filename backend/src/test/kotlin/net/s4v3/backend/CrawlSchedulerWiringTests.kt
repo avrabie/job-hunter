@@ -4,7 +4,10 @@ import net.s4v3.backend.FakeGreenhouse.Job
 import net.s4v3.backend.sources.internal.CrawlScheduler
 import net.s4v3.backend.sources.internal.ScheduleStore
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.jdbc.core.JdbcTemplate
@@ -15,6 +18,7 @@ import kotlin.test.assertTrue
 
 /** The real scheduler, ticking every second, against a stored schedule and a local fake Greenhouse. */
 @IntegrationTest
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 internal class CrawlSchedulerWiringTests(
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val store: ScheduleStore,
@@ -27,26 +31,28 @@ internal class CrawlSchedulerWiringTests(
     }
 
     @Test
+    @Order(1)
     fun `the scheduler is wired and nothing crawls while the schedule is off`() {
         assertEquals(1, context.getBeanNamesForType(CrawlScheduler::class.java).size)
         assertEquals(false, store.current().enabled)
-        // A crawl left over from the other test may still be arriving; only requests after this point count.
-        Thread.sleep(2500)
+        // Runs first (see @Order), so no crawl from the other test can still be arriving. The window is one and a
+        // half ticks (tick PT1S): the scheduler reads the schedule at least once inside it.
         server.requests.clear()
-        Thread.sleep(2500)
+        Thread.sleep(1500)
 
         assertEquals(0, server.listRequests(BOARD), server.requests.toString())
     }
 
     @Test
+    @Order(2)
     fun `a stored schedule starts a crawl without a restart`() {
         // Written straight into the table: the API would refuse a cron this fast.
         jdbc.update(
-            "insert into crawl_schedule (id, enabled, cron, zone, updated_at, updated_by) values (1, true, '*/3 * * * * *', 'UTC', now(), 'test')",
+            "insert into crawl_schedule (id, enabled, cron, zone, updated_at, updated_by) values (1, true, '* * * * * *', 'UTC', now(), 'test')",
         )
 
-        val deadline = System.currentTimeMillis() + 20_000
-        while (server.listRequests(BOARD) == 0 && System.currentTimeMillis() < deadline) Thread.sleep(100)
+        val deadline = System.currentTimeMillis() + 10_000
+        while (server.listRequests(BOARD) == 0 && System.currentTimeMillis() < deadline) Thread.sleep(10)
 
         assertTrue(server.listRequests(BOARD) >= 1, "no crawl request arrived")
     }

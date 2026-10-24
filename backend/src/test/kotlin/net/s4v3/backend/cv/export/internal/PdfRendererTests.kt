@@ -79,7 +79,7 @@ class PdfRendererTests {
             )
             val pdf = renderer.render(doc, CvTemplate.MODERN)
             assertTrue(text(pdf).contains("Ada Example"))
-            Thread.sleep(300)
+            // render() is synchronous: a fetch would have been answered (and counted) before it returned.
             assertEquals(0, hits.get())
         } finally {
             server.stop(0)

@@ -25,13 +25,31 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.boot.test.context.TestConfiguration
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.assertNotEquals
+
+/** A clock the test moves by hand, so a ticket expires without waiting. */
+class TestClock : Clock() {
+    private val now = AtomicReference(Instant.now())
+    fun advance(by: Duration) { now.updateAndGet { it.plus(by) } }
+    override fun instant(): Instant = now.get()
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+    override fun withZone(zone: ZoneId): Clock = this
+}
 
 /** A fresh files volume for each test context, so a test can count what is on disk. */
 class FilesVolumeInitializer : ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -44,13 +62,21 @@ class FilesVolumeInitializer : ApplicationContextInitializer<ConfigurableApplica
 /** The files API over MockMvc with a real token, a temporary volume and the database. The other-file limit is 1 MB here. */
 @ApiTest
 @ContextConfiguration(initializers = [MockIssuerInitializer::class, FilesVolumeInitializer::class])
-@TestPropertySource(properties = ["jobhunter.files.max-other-bytes=1048576", "jobhunter.files.ticket-seconds=2"])
+@TestPropertySource(properties = ["jobhunter.files.max-other-bytes=1048576"])
+@Import(FilesApiTests.TestClockConfig::class)
 internal class FilesApiTests(
     @Autowired private val mvc: MockMvc,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val storage: FileStorage,
     @Autowired private val settings: FilesSettings,
+    @Autowired private val clock: TestClock,
 ) {
+
+    @TestConfiguration
+    class TestClockConfig {
+        @Bean
+        fun testClock() = TestClock()
+    }
 
     private val issuer get() = SharedMockIssuer.instance
     private fun bearer(sub: String) = "Bearer " + issuer.token(sub)
@@ -474,7 +500,7 @@ internal class FilesApiTests(
         plain("/api/files/$a/content?ticket=$forA").andExpect(status().isUnauthorized)
 
         val expiring = ticketOf(sub, a)
-        Thread.sleep(2_100)
+        clock.advance(Duration.ofSeconds(settings.ticketSeconds + 1))
         plain("/api/files/$a/content?ticket=$expiring").andExpect(status().isUnauthorized)
 
         plain("/api/files/$a/content?ticket=" + "0".repeat(64)).andExpect(status().isUnauthorized)

@@ -2,6 +2,7 @@ package net.s4v3.backend.files.internal
 
 import org.springframework.stereotype.Component
 import java.security.SecureRandom
+import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -13,7 +14,10 @@ import java.util.concurrent.ConcurrentHashMap
  * A ticket is a credential and is never logged.
  */
 @Component
-internal class DownloadTickets(private val settings: FilesSettings) {
+internal class DownloadTickets(
+    private val settings: FilesSettings,
+    private val clock: Clock = Clock.systemUTC(),
+) {
 
     private val tickets = ConcurrentHashMap<String, Ticket>()
     private val random = SecureRandom()
@@ -24,7 +28,7 @@ internal class DownloadTickets(private val settings: FilesSettings) {
         removeExpired()
         val bytes = ByteArray(TICKET_BYTES).also { random.nextBytes(it) }
         val value = bytes.joinToString("") { "%02x".format(it) }
-        tickets[value] = Ticket(sub, fileId, Instant.now().plusSeconds(settings.ticketSeconds))
+        tickets[value] = Ticket(sub, fileId, clock.instant().plusSeconds(settings.ticketSeconds))
         return value
     }
 
@@ -35,12 +39,12 @@ internal class DownloadTickets(private val settings: FilesSettings) {
     fun redeem(value: String, fileId: UUID): String? {
         removeExpired()
         val ticket = tickets.remove(value) ?: return null
-        if (ticket.fileId != fileId || Instant.now().isAfter(ticket.expiresAt)) return null
+        if (ticket.fileId != fileId || clock.instant().isAfter(ticket.expiresAt)) return null
         return ticket.sub
     }
 
     private fun removeExpired() {
-        val now = Instant.now()
+        val now = clock.instant()
         tickets.values.removeIf { now.isAfter(it.expiresAt) }
     }
 

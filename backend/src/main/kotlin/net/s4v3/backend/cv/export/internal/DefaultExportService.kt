@@ -7,6 +7,7 @@ import net.s4v3.backend.cv.export.ExportOptions
 import net.s4v3.backend.cv.export.ExportService
 import net.s4v3.backend.cv.export.ExportedCv
 import net.s4v3.backend.cv.export.NameRequiredException
+import net.s4v3.backend.cv.internal.ExportSettings
 import net.s4v3.backend.profile.ProfileService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -16,11 +17,11 @@ import java.time.Duration
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
-/** At most 2 PDF renders at a time; a third waits up to 5 seconds. Only PDF rendering is guarded. */
+/** At most 2 PDF renders at a time; a third waits `render-wait` (5 seconds by default). Only PDF rendering is guarded. */
 @Component
-internal class RenderGuard {
+internal class RenderGuard(settings: ExportSettings) {
     val permits = Semaphore(MAX_PARALLEL)
-    val wait: Duration = Duration.ofSeconds(5)
+    val wait: Duration = settings.renderWait
 
     private companion object {
         const val MAX_PARALLEL = 2
