@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
-import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
 import org.springframework.test.web.servlet.ResultActions
@@ -26,7 +25,6 @@ import kotlin.test.assertTrue
 
 /** The export endpoint end to end with synthetic profiles (an invented person). */
 @ApiTest
-@TestPropertySource(properties = ["jobhunter.cv-export.per-hour=6", "jobhunter.cv-export.render-wait=200ms"])
 internal class CvExportApiTests(
     @Autowired private val mvc: MockMvc,
     @Autowired private val guard: RenderGuard,

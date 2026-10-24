@@ -1,11 +1,13 @@
 package net.s4v3.backend
 
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.builder.SpringApplicationBuilder
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@Tag("integration")
 class FailingMigrationTests {
 
     @Test

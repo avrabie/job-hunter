@@ -1,19 +1,20 @@
 package net.s4v3.backend
 
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestClient
-import org.testcontainers.postgresql.PostgreSQLContainer
-import org.testcontainers.utility.DockerImageName
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
+/** Stops its database, so it keeps a container of its own (the only one besides SharedPostgres). */
+@Tag("integration")
 class DatabaseOutageHealthTests {
 
     @Test
     fun `when the database goes away readiness is 503 and liveness stays 200`() {
-        val postgres = PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16")).also { it.start() }
+        val postgres = SharedPostgres.newContainer().also { it.start(); SharedPostgres.awaitConnection(it) }
         try {
             SpringApplicationBuilder(BackendApplication::class.java)
                 .profiles("test")

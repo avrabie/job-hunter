@@ -62,7 +62,6 @@ class FilesVolumeInitializer : ApplicationContextInitializer<ConfigurableApplica
 /** The files API over MockMvc with a real token, a temporary volume and the database. The other-file limit is 1 MB here. */
 @ApiTest
 @ContextConfiguration(initializers = [MockIssuerInitializer::class, FilesVolumeInitializer::class])
-@TestPropertySource(properties = ["jobhunter.files.max-other-bytes=1048576"])
 @Import(FilesApiTests.TestClockConfig::class)
 internal class FilesApiTests(
     @Autowired private val mvc: MockMvc,

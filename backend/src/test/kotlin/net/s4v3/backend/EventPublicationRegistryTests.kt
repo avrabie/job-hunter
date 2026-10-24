@@ -1,7 +1,7 @@
 package net.s4v3.backend
 
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.builder.SpringApplicationBuilder
@@ -11,8 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.modulith.events.ApplicationModuleListener
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.transaction.support.TransactionTemplate
-import org.testcontainers.postgresql.PostgreSQLContainer
-import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -32,6 +30,7 @@ class ProbeListeners {
 }
 
 /** Starts the application twice against the same database, as a restart would. */
+@Tag("integration")
 class EventPublicationRegistryTests {
 
     private fun start(): ConfigurableApplicationContext =
@@ -83,11 +82,5 @@ class EventPublicationRegistryTests {
         }
     }
 
-    companion object {
-        private val postgres = PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:pg16")).also { it.start() }
-
-        @JvmStatic
-        @AfterAll
-        fun stopDatabase() = postgres.stop()
-    }
+    private val postgres get() = SharedPostgres.instance
 }
