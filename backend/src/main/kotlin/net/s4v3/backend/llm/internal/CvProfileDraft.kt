@@ -38,10 +38,6 @@ internal data class CvProfileDraft(
     val publications: List<PublicationDraft> = emptyList(),
     @property:LLMDescription("Technical and professional skills named in the CV.")
     val skills: List<SkillDraft> = emptyList(),
-    @property:LLMDescription(
-        "Projects named in the CV: assignments, personal projects and open-source work. Empty if the CV names none.",
-    )
-    val projects: List<ProjectDraft> = emptyList(),
 )
 
 @Serializable
@@ -97,41 +93,6 @@ internal data class ExperienceDraft(
     val achievements: List<String> = emptyList(),
     @property:LLMDescription("Technologies the CV names for this position, as short tags, e.g. Kotlin, PostgreSQL. Empty if none.")
     val technologies: List<String> = emptyList(),
-)
-
-@Serializable
-@SerialName("ProjectDraft")
-internal data class ProjectDraft(
-    @property:LLMDescription("Name of the project or assignment as the CV gives it.")
-    val name: String? = null,
-    @property:LLMDescription(
-        "One of ASSIGNMENT (a client or contract assignment), PERSONAL (a private project), OPEN_SOURCE (open-source " +
-            "work) or WORK (other project work). Null if unclear.",
-    )
-    val type: String? = null,
-    @property:LLMDescription("Where or for whom the project was done, e.g. a university, client or employer, if stated.")
-    val context: String? = null,
-    @property:LLMDescription("Start month as YYYY-MM, or null.")
-    val start: String? = null,
-    @property:LLMDescription("End month as YYYY-MM, or null if the project is current or the CV does not say.")
-    val end: String? = null,
-    @property:LLMDescription("What the project is, in the CV's own words, if stated.")
-    val description: String? = null,
-    @property:LLMDescription("Technologies the CV names for this project, as short tags, e.g. Kotlin, gRPC. Empty if none.")
-    val technologies: List<String> = emptyList(),
-    @property:LLMDescription("Outcomes the CV states for this project, one short line each. Empty if none.")
-    val results: List<String> = emptyList(),
-    @property:LLMDescription("Links the CV gives for this project, e.g. a repository. Only full web addresses.")
-    val links: List<ProjectLinkDraft> = emptyList(),
-)
-
-@Serializable
-@SerialName("ProjectLinkDraft")
-internal data class ProjectLinkDraft(
-    @property:LLMDescription("Short name of the link, e.g. Repository or Demo.")
-    val label: String? = null,
-    @property:LLMDescription("The full http or https address as written in the CV; null if the CV gives none.")
-    val url: String? = null,
 )
 
 @Serializable

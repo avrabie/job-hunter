@@ -100,23 +100,25 @@ class KoogCvReaderTests {
     }
 
     @Test
-    fun `a projects answer gives only the projects, with technologies, results and links`() {
-        val answer = """{"projects":[{"name":"Key-value store","type":"ASSIGNMENT","start":"2023-02","end":"2023-06",
-            "technologies":["Kotlin","gRPC"],"results":["Grade 6.0"],
-            "links":[{"label":"Repository","url":"https://github.com/example/kv-store"}]}]}"""
+    fun `a stray projects list in the answer is ignored`() {
+        val answer = """{"experience":[{"employer":"Acme","title":"Engineer","start":"2022-03","technologies":["Kotlin"]}],
+            "projects":[{"name":"Key-value store","type":"ASSIGNMENT"}]}"""
 
-        val profile = reader(FakePromptExecutor(answer)).sectionFrom("cv", ProfileSection.PROJECTS)
+        val profile = reader(FakePromptExecutor(answer)).profileFrom("cv")
 
-        val project = profile.projects.single()
-        assertEquals("Key-value store", project.name)
-        assertEquals(listOf("Kotlin", "gRPC"), project.technologies)
-        assertEquals(listOf("Grade 6.0"), project.results)
-        assertEquals("https://github.com/example/kv-store", project.links.single().url)
-        assertFalse(project.highlight)
-        assertTrue(profile.experience.isEmpty())
-        assertTrue(profile.education.isEmpty())
-        assertTrue(profile.publications.isEmpty())
+        assertEquals("Acme", profile.experience.single().employer)
+        assertEquals(listOf("Kotlin"), profile.experience.single().technologies)
         assertTrue(profile.skills.isEmpty())
+    }
+
+    @Test
+    fun `a stray projects list in a section answer is ignored`() {
+        val answer = """{"education":[{"institution":"ETH Zurich","degree":"MSc"}],"projects":[{"name":"Key-value store"}]}"""
+
+        val profile = reader(FakePromptExecutor(answer)).sectionFrom("cv", ProfileSection.EDUCATION)
+
+        assertEquals("ETH Zurich", profile.education.single().institution)
+        assertTrue(profile.experience.isEmpty())
     }
 
     @Test

@@ -14,7 +14,6 @@ data class Profile(
     val experience: List<Experience> = emptyList(),
     val education: List<Education> = emptyList(),
     val publications: List<Publication> = emptyList(),
-    val projects: List<Project> = emptyList(),
     val skills: List<Skill> = emptyList(),
     val preferences: Preferences = Preferences(),
 )
@@ -55,29 +54,6 @@ data class Publication(
     val authors: String? = null,
     val url: String? = null,
 )
-
-/** What kind of work a project was: a paid assignment, a personal project, open-source work or other work. */
-enum class ProjectType { ASSIGNMENT, PERSONAL, OPEN_SOURCE, WORK }
-
-/**
- * A project worth showing: an assignment, a personal or open-source project. [results] are short lines of stated
- * outcomes; [highlight] is set by the user only, never by the CV reader.
- */
-data class Project(
-    val name: String,
-    val type: ProjectType,
-    val context: String? = null,
-    val start: YearMonth? = null,
-    val end: YearMonth? = null,
-    val description: String? = null,
-    val technologies: List<String> = emptyList(),
-    val results: List<String> = emptyList(),
-    val links: List<ProjectLink> = emptyList(),
-    val highlight: Boolean = false,
-)
-
-/** A labelled link of a project, for example its repository. [url] is an absolute http or https address. */
-data class ProjectLink(val label: String, val url: String)
 
 enum class SkillLevel { BEGINNER, INTERMEDIATE, ADVANCED, EXPERT }
 

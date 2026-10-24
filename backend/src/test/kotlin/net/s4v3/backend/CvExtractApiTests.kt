@@ -11,8 +11,6 @@ import net.s4v3.backend.llm.LlmFailureKind
 import net.s4v3.backend.llm.ProfileSection
 import net.s4v3.backend.profile.Education
 import net.s4v3.backend.profile.Profile
-import net.s4v3.backend.profile.Project
-import net.s4v3.backend.profile.ProjectType
 import net.s4v3.backend.profile.Skill
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
@@ -284,16 +282,14 @@ internal class CvExtractApiTests(
     }
 
     @Test
-    fun `a projects section is answered and the reader receives PROJECTS`() {
+    fun `a projects section is 400 and the model is not called`() {
         val sub = newSub()
         upload(sub, "cv.txt", "Jane Doe, open-source work".toByteArray())
-        reader.sectionAnswer = { _, _ -> Profile(projects = listOf(Project("Key-value store", ProjectType.OPEN_SOURCE))) }
 
-        extractSection(sub, "projects").andExpect(status().isOk)
-            .andExpect(jsonPath("$.projects[0].name").value("Key-value store"))
-            .andExpect(jsonPath("$.experience.length()").value(0))
+        extractSection(sub, "projects").andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("That section cannot be read."))
 
-        assertEquals(listOf(ProfileSection.PROJECTS), reader.sections)
+        assertTrue(reader.received.isEmpty())
     }
 
     @Test

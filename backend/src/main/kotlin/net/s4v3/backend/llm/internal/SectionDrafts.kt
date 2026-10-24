@@ -38,12 +38,3 @@ internal data class PublicationsSection(
     val publications: List<PublicationDraft> = emptyList(),
 )
 
-@Serializable
-@SerialName("ProjectsSection")
-@LLMDescription(
-    "The projects the CV states. Use only what the CV text says. Never guess or infer missing facts.",
-)
-internal data class ProjectsSection(
-    @property:LLMDescription("Every project the CV states: assignments, personal and open-source projects, in the CV's order.")
-    val projects: List<ProjectDraft> = emptyList(),
-)
