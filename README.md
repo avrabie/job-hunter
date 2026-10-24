@@ -108,10 +108,27 @@ open http://localhost:8080/auth/login. API docs: http://localhost:8081/api/docs 
 
 | Part | Directory | Command | Notes |
 |---|---|---|---|
-| backend | `backend/` | `./gradlew test`, `./gradlew build` | needs Docker (pgvector containers); no auth service needed |
+| backend | `backend/` | `./gradlew build` (fast tier), `./gradlew verify` (everything) | see the backend commands below; `verify` needs Docker |
 | auth | `auth/` | `./gradlew test`, `./gradlew build` | needs Docker |
 | gateway | `gateway/` | `./gradlew test`, `./gradlew build` | no Docker, no network |
 | ui | `ui/` | `pnpm lint && pnpm typecheck && pnpm test && pnpm build` | output in `ui/dist/` |
+
+### Backend commands
+
+The backend tests are split in two tiers. The profile you may remember is Spring's `dev` profile for **running** the app; tests
+activate their own `test` profile and need no flag.
+
+| What | Command (in `backend/`) | Needs Docker | About |
+|---|---|---|---|
+| Fast tier: unit tests (no Spring context) | `./gradlew build` or `./gradlew test` | no | 25 s from clean, 294 tests |
+| Integration tier: Spring + Postgres container | `./gradlew integrationTest` | yes | 50 s, 280 tests |
+| Everything (run before every deploy) | `./gradlew verify` | yes | 75 s, 574 tests |
+| One class | `./gradlew test --tests "ProfileValidatorTests"` (use `integrationTest` for integration classes) | depends | seconds |
+| Clean everything first | add `clean`, for example `./gradlew clean verify` | | |
+| Run the app locally | `ISSUER_URI=http://localhost:5173/auth ./gradlew bootRun --args='--spring.profiles.active=dev'` | yes (compose) | see "Run everything locally" |
+
+Integration tests are the classes tagged `integration` (the `@IntegrationTest` and `@ApiTest` annotations carry the tag). They share
+one Postgres container for the whole run.
 
 ## Troubleshooting
 
@@ -136,3 +153,5 @@ sections); these also need a master CV.
 - [`openspec/`](openspec): requirements (`specs/`) and changes (`changes/`), managed with the OpenSpec workflow (`/opsx:propose`, `/opsx:apply`, `/opsx:archive` in Claude Code).
 - [`k8s/README.md`](k8s/README.md): production deployment on https://s4v3.net (Kubernetes, image builds, secrets from `k8s/*.yaml.example`); `k8s/overlays/local` is a kind-cluster variant on http://localhost:8080.
 - [`docs/koog-notes.md`](docs/koog-notes.md): notes on the Koog LLM library.
+- [`docs/architecture.md`](docs/architecture.md) (backend), [`docs/architecture-auth-gateway-ui.md`](docs/architecture-auth-gateway-ui.md), [`docs/glossary.md`](docs/glossary.md): how the code fits together; each backend module also has a short `README.md` in its package.
+- [`docs/deprecations.md`](docs/deprecations.md), [`docs/simplification-candidates.md`](docs/simplification-candidates.md), [`docs/cv-export.md`](docs/cv-export.md): maintenance notes.

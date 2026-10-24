@@ -15,8 +15,8 @@ Groups 1 and 2 are read-only investigations and can run in parallel; group 3 nee
 
 ## 3. Test tiers and speed (after 1 and 2)
 
-- [ ] 3.1 In `backend/src/test/kotlin/net/s4v3/backend/IntegrationTest.kt` add `@Tag("integration")` to the meta-annotation, and add the tag to every other test class that starts a Spring context or a container by hand (list them in the report). In `backend/build.gradle.kts` define `test` (excludes the tag), `integrationTest` (includes it, `shouldRunAfter(test)`, one fork) and `verify` (depends on both); `build` depends on `test` only. Verify: `./gradlew clean build` runs only the fast tier and passes; `./gradlew integrationTest` passes; `./gradlew verify` runs the sum (the counts add up to 573 or more); report the three durations.
-- [ ] 3.2 Fix each flaky test of `handoff/flaky.report.md` at its root cause (one task per test, named in the report), each verified by running that class 10 times (`./gradlew test --tests "<Class>" --rerun` in a loop). Verify: five consecutive `./gradlew clean verify` runs have no failure.
+- [x] 3.1 In `backend/src/test/kotlin/net/s4v3/backend/IntegrationTest.kt` add `@Tag("integration")` to the meta-annotation, and add the tag to every other test class that starts a Spring context or a container by hand (list them in the report). In `backend/build.gradle.kts` define `test` (excludes the tag), `integrationTest` (includes it, `shouldRunAfter(test)`, one fork) and `verify` (depends on both); `build` depends on `test` only. Verify: `./gradlew clean build` runs only the fast tier and passes; `./gradlew integrationTest` passes; `./gradlew verify` runs the sum (the counts add up to 573 or more); report the three durations.
+- [x] 3.2 Fix each flaky test of `handoff/flaky.report.md` at its root cause (one task per test, named in the report), each verified by running that class 10 times (`./gradlew test --tests "<Class>" --rerun` in a loop). Verify: five consecutive `./gradlew clean verify` runs have no failure.
 - [ ] 3.3 Apply the fixes of `handoff/slow.report.md` in order of saving: injectable durations (the CV export busy wait first), shared contexts, one container. Verify per fix: the class passes and its time drops as predicted; at the end `./gradlew build` is under 20 s of test time and `./gradlew verify` under 90 s (report real numbers).
 
 ## 4. Deprecation fixes (after 2)
@@ -31,7 +31,7 @@ Groups 1 and 2 are read-only investigations and can run in parallel; group 3 nee
 
 ## 6. Owner choices and root README (after 4, 5 and the owner reading the candidates)
 
-- [ ] 6.1 Add the command table of `design.md` decision 8 to the root `README.md` and link `docs/architecture.md`, `docs/glossary.md`, `docs/deprecations.md` and the module READMEs. Verify: each command in the table was run once and works.
+- [x] 6.1 Add the command table of `design.md` decision 8 to the root `README.md` and link `docs/architecture.md`, `docs/glossary.md`, `docs/deprecations.md` and the module READMEs. Verify: each command in the table was run once and works.
 - [ ] 6.2 The owner picks candidates from `docs/simplification-candidates.md`; each picked one becomes its own tracked task here (or a separate change when it alters behaviour) before anything is changed.
 
 ## Workflow follow-up
