@@ -6,8 +6,8 @@ Groups 1 and 2 are read-only investigations and can run in parallel; group 3 nee
 
 ## 1. Measure and find flaky tests (read-only, reports only)
 
-- [ ] 1.1 Run `./gradlew clean verify` five times in `backend/` (before any change, so first run `git status` is clean) and record per run: duration, failures (class, test, message). Also run `integrationTest`-equivalent (all tests) twice with the machine under load (for example while a second Gradle build compiles). Write `handoff/flaky.report.md` (under 80 lines): a table of every failure with its run, the likely cause by reading the test (sleep, port, shared state, order, Docker), and a proposed fix per test. Do not edit code.
-- [ ] 1.2 From `backend/build/test-results/test/*.xml` build a table of all test classes with test count, time and whether they use `@IntegrationTest`, their own `@SpringBootTest`, a Testcontainer, `Thread.sleep`/`delay`/`await`. Count distinct Spring contexts created in one full run (cache log). Write `handoff/slow.report.md` (under 80 lines) with the 15 slowest classes, the cause of each and a proposed fix with the expected saving. Do not edit code.
+- [x] 1.1 Run `./gradlew clean verify` five times in `backend/` (before any change, so first run `git status` is clean) and record per run: duration, failures (class, test, message). Also run `integrationTest`-equivalent (all tests) twice with the machine under load (for example while a second Gradle build compiles). Write `handoff/flaky.report.md` (under 80 lines): a table of every failure with its run, the likely cause by reading the test (sleep, port, shared state, order, Docker), and a proposed fix per test. Do not edit code.
+- [x] 1.2 From `backend/build/test-results/test/*.xml` build a table of all test classes with test count, time and whether they use `@IntegrationTest`, their own `@SpringBootTest`, a Testcontainer, `Thread.sleep`/`delay`/`await`. Count distinct Spring contexts created in one full run (cache log). Write `handoff/slow.report.md` (under 80 lines) with the 15 slowest classes, the cause of each and a proposed fix with the expected saving. Do not edit code.
 
 ## 2. Deprecation inventory (read-only)
 
