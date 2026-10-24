@@ -52,8 +52,11 @@ internal class DefaultExportService(
             }
         } catch (e: ExportBusyException) {
             throw e
-        } catch (_: Exception) {
-            // The cause is dropped on purpose: library messages may quote the document.
+        } catch (e: Throwable) {
+            // Errors too (for example a missing native library in the image). The cause is dropped on purpose: library
+            // messages may quote the document. Only the class name is logged, to find the reason.
+            if (e is VirtualMachineError) throw e
+            log.warn("CV export failed: {}", e::class.simpleName)
             throw ExportFailedException()
         }
         if (bytes.size > MAX_BYTES) throw ExportFailedException()
