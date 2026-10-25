@@ -9,10 +9,10 @@
 
 ## 2. UI
 
-- [ ] 2.1 `analysisApi.ts`: section type includes `contact`; `ProfilePage.tsx`: `onFillContact` with the fill-empty / confirm-overwrite rule (labels only in the dialog), notice, nothing-found message, fill state; `ContactSection.tsx`: the button via `FillFromCv`, disabled hint.
-- [ ] 2.2 Tests: empty form filled, conflicting field + confirm yes/no, nothing found, no master, error messages, no profile request sent.
+- [x] 2.1 `analysisApi.ts`: section type includes `contact`; `ProfilePage.tsx`: `onFillContact` with the fill-empty / confirm-overwrite rule (labels only in the dialog), notice, nothing-found message, fill state; `ContactSection.tsx`: the button via `FillFromCv`, disabled hint.
+- [x] 2.2 Tests: empty form filled, conflicting field + confirm yes/no, nothing found, no master, error messages, no profile request sent.
 
 ## 3. Wrap-up
 
-- [ ] 3.1 `./gradlew test integrationTest`, UI checks (vitest, tsc, oxlint, prettier), `openspec validate --all`.
-- [ ] 3.2 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.
+- [x] 3.1 `./gradlew test integrationTest`, UI checks (vitest, tsc, oxlint, prettier), `openspec validate --all`.
+- [x] 3.2 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.
