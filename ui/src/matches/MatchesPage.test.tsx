@@ -83,6 +83,23 @@ describe('the matches page', () => {
     expect(link.getAttribute('rel')).toContain('noreferrer')
   })
 
+  it('has one h1, a named card per match and a labelled pager', async () => {
+    stubFetch(() => json(200, [match()]))
+    mount()
+
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Matches' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Backend Engineer' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'Pages' }),
+    ).toBeInTheDocument()
+  })
+
   it('renders no anchor for an unsafe url', async () => {
     stubFetch(() => json(200, [match({ url: 'javascript:alert(1)' })]))
     mount()

@@ -1,0 +1,36 @@
+/* The matches page: a stack of cards, each with its reasons and a link to the original posting. */
+
+.match-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-card__meta {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+}
+
+.match-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matches-status {
+  color: var(--color-muted);
+}
+
+.match-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}

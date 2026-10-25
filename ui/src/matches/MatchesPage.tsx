@@ -3,22 +3,34 @@ import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { safeHttpUrl } from '../postings/links.ts'
+import { Alert } from '../ui/Alert.tsx'
+import { Badge } from '../ui/Badge.tsx'
+import { Card } from '../ui/Card.tsx'
+import { EmptyState } from '../ui/EmptyState.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
 import { loadMatches } from './matchesApi.ts'
 import { MATCH_PAGE_SIZE, type MatchItem } from './types.ts'
+import '../styles/matches.css'
 
 /** The signed-in user's prefilter matches. A visitor without a session sees the landing page. */
 export function MatchesPage() {
   const { state } = useAuth()
   switch (state.status) {
     case 'loading':
-      return <p>Loading…</p>
+      return (
+        <div className="page">
+          <p>Loading…</p>
+        </div>
+      )
     case 'signedOut':
       return <Landing returnTo="/matches" />
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':
@@ -59,62 +71,79 @@ function MatchesList() {
 
   return (
     <div className="page">
-      <h1>Matches</h1>
-      <p>
-        <Link to="/">Back</Link>
-      </p>
-      {load.state === 'loading' && <p role="status">Loading matches…</p>}
+      <PageHeader
+        title="Matches"
+        lead="Postings ranked against your profile, with the reasons."
+        actions={
+          <Link className="button button--secondary" to="/">
+            Back
+          </Link>
+        }
+      />
+      {load.state === 'loading' && (
+        <p role="status" className="matches-status">
+          Loading matches…
+        </p>
+      )}
       {load.state === 'failed' && (
-        <div role="alert">
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchPage()}>
             Try again
           </button>
-        </div>
+        </Alert>
       )}
       {load.state === 'ready' && matches.length === 0 && (
-        <p>
-          No matches yet. <Link to="/profile">Save your profile first</Link>,
-          then check back after the next crawl.
-        </p>
+        <EmptyState title="No matches yet.">
+          <Link to="/profile">Save your profile first</Link>, then check back
+          after the next crawl.
+        </EmptyState>
       )}
       {load.state === 'ready' && matches.length > 0 && (
-        <ul className="postings">
+        <ul className="match-list">
           {matches.map((m) => {
             const href = safeHttpUrl(m.url)
             return (
               <li key={m.postingId}>
-                <h2>{m.title}</h2>
-                <p>
-                  {m.company}
-                  {m.city ? ` · ${m.city}` : ''}
-                  {m.canton ? ` (${m.canton})` : ''} · score {m.score}
-                </p>
-                {m.reasons.length > 0 && (
-                  <ul className="reasons">
-                    {m.reasons.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                )}
-                {href && (
-                  <ul className="original-links">
-                    <li>
-                      <a href={href} target="_blank" rel="noopener noreferrer">
+                <Card
+                  title={m.title}
+                  actions={
+                    href ? (
+                      <a
+                        className="button button--secondary"
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         Open original
                       </a>
-                    </li>
-                  </ul>
-                )}
+                    ) : undefined
+                  }
+                >
+                  <p className="match-card__meta">
+                    {m.company}
+                    {m.city ? ` · ${m.city}` : ''}
+                    {m.canton ? ` (${m.canton})` : ''} · score {m.score}
+                  </p>
+                  {m.reasons.length > 0 && (
+                    <ul className="match-reasons" aria-label="Reasons">
+                      {m.reasons.map((r) => (
+                        <li key={r}>
+                          <Badge>{r}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
               </li>
             )
           })}
         </ul>
       )}
-      <div className="actions">
+      <nav aria-label="Pages" className="match-pagination">
         <button
           type="button"
-          className="secondary"
+          className="button--secondary"
           disabled={page === 0}
           onClick={() => goTo(page - 1)}
         >
@@ -123,13 +152,13 @@ function MatchesList() {
         <span>Page {page + 1}</span>
         <button
           type="button"
-          className="secondary"
+          className="button--secondary"
           disabled={load.state !== 'ready' || matches.length < MATCH_PAGE_SIZE}
           onClick={() => goTo(page + 1)}
         >
           Next
         </button>
-      </div>
+      </nav>
     </div>
   )
 }
