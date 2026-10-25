@@ -12,7 +12,12 @@ export function OriginalLinks({ links }: { links: PostingLink[] }) {
     <ul className="original-links">
       {safe.map(({ href, sourceId }) => (
         <li key={`${sourceId}-${href}`}>
-          <a href={href} target="_blank" rel="noopener noreferrer">
+          <a
+            className="button button--secondary"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Open original ({sourceId})
           </a>
         </li>

@@ -7,9 +7,13 @@ import {
   useTrackedStages,
 } from '../applications/useTrackedStages.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPosting } from './postingsApi.ts'
 import type { PostingDetail } from './types.ts'
+import '../styles/postings.css'
 
 /** One posting with its description as plain text and its original links. */
 export function PostingPage() {
@@ -23,8 +27,10 @@ export function PostingPage() {
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':
@@ -59,11 +65,16 @@ function PostingView({ id }: { id: string }) {
     void fetchPosting()
   }, [fetchPosting])
 
-  if (load.state === 'loading') return <p role="status">Loading posting…</p>
+  if (load.state === 'loading')
+    return (
+      <div className="page page--narrow">
+        <p role="status">Loading posting…</p>
+      </div>
+    )
   if (load.state === 'notFound')
     return (
       <div className="page page--narrow">
-        <h1>Posting not found</h1>
+        <PageHeader title="Posting not found" />
         <p>
           <Link to="/postings">Back to the postings</Link>
         </p>
@@ -72,12 +83,13 @@ function PostingView({ id }: { id: string }) {
   if (load.state === 'failed')
     return (
       <div className="page page--narrow">
-        <div role="alert">
+        <PageHeader title="Posting" />
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchPosting()}>
             Try again
           </button>
-        </div>
+        </Alert>
         <p>
           <Link to="/postings">Back to the postings</Link>
         </p>
@@ -90,16 +102,20 @@ function PostingView({ id }: { id: string }) {
       <p>
         <Link to="/postings">Back to the postings</Link>
       </p>
-      <h1>{p.title}</h1>
-      <p>
+      <PageHeader title={p.title} />
+      <p className="posting-meta">
         {p.company}
         {p.city ? ` · ${p.city}` : ''}
         {p.canton ? ` (${p.canton})` : ''} · {p.language} · first seen{' '}
         {p.firstSeen.slice(0, 10)} · last seen {p.lastSeen.slice(0, 10)}
       </p>
-      <OriginalLinks links={p.links} />
-      <InterestedButton postingId={p.id} tracked={trackedOf(tracked, p.id)} />
-      <pre className="description">{p.description}</pre>
+      <div className="posting-actions">
+        <OriginalLinks links={p.links} />
+        <InterestedButton postingId={p.id} tracked={trackedOf(tracked, p.id)} />
+      </div>
+      <Card title="Description">
+        <div className="posting-description">{p.description}</div>
+      </Card>
     </div>
   )
 }

@@ -7,9 +7,15 @@ import {
   useTrackedStages,
 } from '../applications/useTrackedStages.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { EmptyState } from '../ui/EmptyState.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPostings } from './postingsApi.ts'
 import { PAGE_SIZE, type ListQuery, type PostingSummary } from './types.ts'
+import '../styles/postings.css'
 
 const CANTONS = [
   'AG',
@@ -51,8 +57,10 @@ export function PostingsPage() {
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':
@@ -125,87 +133,97 @@ function PostingsList() {
 
   return (
     <div className="page">
-      <h1>Postings</h1>
+      <PageHeader title="Postings" />
       <p>
         <Link to="/">Back</Link>
       </p>
-      <form onSubmit={submit} className="filters" role="search">
-        <label>
-          Search
-          <input
-            type="search"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Title or company"
-          />
-        </label>
-        <label>
-          Canton
-          <select
-            value={query.canton}
-            onChange={(e) => update({ canton: e.target.value, page: 0 })}
-          >
-            <option value="">All</option>
-            {CANTONS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Source
-          <select
-            value={query.source}
-            onChange={(e) => update({ source: e.target.value, page: 0 })}
-          >
-            <option value="">All</option>
-            {sourceChoices.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+      <form onSubmit={submit} className="posting-filters" role="search">
+        <FormField label="Search">
+          {(control) => (
+            <input
+              {...control}
+              type="search"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Title or company"
+            />
+          )}
+        </FormField>
+        <FormField label="Canton">
+          {(control) => (
+            <select
+              {...control}
+              value={query.canton}
+              onChange={(e) => update({ canton: e.target.value, page: 0 })}
+            >
+              <option value="">All</option>
+              {CANTONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
+        </FormField>
+        <FormField label="Source">
+          {(control) => (
+            <select
+              {...control}
+              value={query.source}
+              onChange={(e) => update({ source: e.target.value, page: 0 })}
+            >
+              <option value="">All</option>
+              {sourceChoices.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
+        </FormField>
         <button type="submit">Search</button>
       </form>
 
       {load.state === 'loading' && <p role="status">Loading postings…</p>}
       {load.state === 'failed' && (
-        <div role="alert">
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchPage()}>
             Try again
           </button>
-        </div>
+        </Alert>
       )}
       {load.state === 'ready' && postings.length === 0 && (
-        <p>No postings match.</p>
+        <EmptyState title="No postings match.">
+          <p>Try another search word, or clear the canton and source.</p>
+        </EmptyState>
       )}
       {load.state === 'ready' && postings.length > 0 && (
-        <ul className="postings">
+        <ul className="posting-list">
           {postings.map((p) => (
             <li key={p.id}>
-              <h2>
-                <Link to={`/postings/${p.id}`}>{p.title}</Link>
-              </h2>
-              <p>
-                {p.company}
-                {p.city ? ` · ${p.city}` : ''}
-                {p.canton ? ` (${p.canton})` : ''} · {p.language} · first seen{' '}
-                {p.firstSeen.slice(0, 10)}
-              </p>
-              <OriginalLinks links={p.links} />
-              <InterestedButton
-                postingId={p.id}
-                tracked={trackedOf(tracked, p.id)}
-              />
+              <Card className="posting-card">
+                <h2 className="posting-card__title">
+                  <Link to={`/postings/${p.id}`}>{p.title}</Link>
+                </h2>
+                <p className="posting-card__meta">
+                  {p.company}
+                  {p.city ? ` · ${p.city}` : ''}
+                  {p.canton ? ` (${p.canton})` : ''} · {p.language} · first seen{' '}
+                  {p.firstSeen.slice(0, 10)}
+                </p>
+                <OriginalLinks links={p.links} />
+                <InterestedButton
+                  postingId={p.id}
+                  tracked={trackedOf(tracked, p.id)}
+                />
+              </Card>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="actions">
+      <nav aria-label="Pages" className="pagination">
         <button
           type="button"
           className="secondary"
@@ -223,7 +241,7 @@ function PostingsList() {
         >
           Next
         </button>
-      </div>
+      </nav>
     </div>
   )
 }
