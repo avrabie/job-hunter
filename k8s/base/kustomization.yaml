@@ -10,3 +10,4 @@ resources:
   - ui.yaml
   - edge.yaml
   - network-policies.yaml
+  - backend-egress.yaml

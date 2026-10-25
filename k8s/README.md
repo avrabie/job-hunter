@@ -448,6 +448,39 @@ kubectl -n job-hunter run np-test --rm -i --restart=Never --image=busybox:1.37.0
 # the same with --labels=app.kubernetes.io/name=backend prints OPEN
 ```
 
+**Backend egress (`base/backend-egress.yaml`, `backend-egress`).** The backend pod may send traffic only to:
+
+- DNS: `kube-system` pods labelled `k8s-app: kube-dns`, UDP and TCP 53;
+- `postgres` in `job-hunter`, TCP 5432;
+- `auth` in `job-hunter`, TCP 9090;
+- the public internet, TCP 443, through `ipBlock 0.0.0.0/0` with `except` for `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`,
+  `100.64.0.0/10`, `127.0.0.0/8` and `169.254.0.0/16` (the metadata address).
+
+Everything else is denied for the backend, including other pods and other namespaces. The public rule is TCP 443 only because
+every outbound URL in the backend is https on 443 (the Anthropic API, the GitHub API, the job boards, and the import's user URLs,
+which `UrlRules` pins to https/443). If a source ever needs plain HTTP, add a port here and say why. The other pods keep open
+egress.
+
+Caveats and checks:
+
+- **The CNI must enforce NetworkPolicy.** Calico v3.31.7 on the Hetzner cluster does (section 2). Any CNI that ignores egress
+  policies makes this a no-op, silently. Verify with the same kind of test as above: from a `job-hunter` pod labelled
+  `app.kubernetes.io/name=backend` in `job-hunter`, a request to a private address (for example another pod's IP on port 80)
+  must fail, and an https request to a public host must succeed. Not run yet; the first check on the cluster is the proof.
+- **The DNS, postgres and auth rules assume the policy sees the destination pod after kube-proxy's service translation.** This
+  is the usual Calico behaviour, but it is not verified on this cluster. If DNS fails once the policy is applied, check this
+  first.
+- **The public range includes the node's own public address** (`46.224.228.182`), where `s4v3.net` resolves. The backend must
+  reach it on 443 (Traefik answers the issuer `https://s4v3.net/auth`), so the rule keeps 443 open there. Other ports on that
+  address, such as the kubelet on 10250, are closed to the backend by the TCP 443 restriction.
+- **IPv6 is not covered.** The pod CIDR is IPv4 only (`10.233.64.0/18`), so pods have no IPv6 address and the cluster has no
+  IPv6 egress path. If pods ever get IPv6, add a `::/0` rule with `except` for `fc00::/7`, `fe80::/10` and `::1/128`, and
+  deny the rest.
+- **Not applied to the cluster.** This policy is in the repository only. Before applying, render with `kubectl kustomize
+  k8s/overlays/prod` and run `k8s/validate.sh`. After applying, check on the cluster with `kubectl --context s4v3 -n job-hunter
+  get networkpolicy backend-egress -o yaml`, then run an import preview and a CV extraction; both must still reach the public
+  internet and the database.
+
 ## 9. How the overlays differ
 
 Rendered with `kubectl kustomize` and diffed (local vs prod). Both contain the same five workloads and the same policies.

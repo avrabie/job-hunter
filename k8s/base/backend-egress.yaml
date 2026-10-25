@@ -1,0 +1,52 @@
+# Egress from the backend pod: the public internet on TCP 443, plus DNS, postgres and auth. Private, loopback,
+# link-local (including the cloud metadata address 169.254.169.254) and CGNAT addresses are denied. Every other
+# pod (and any other namespace) is unreachable from the backend. Calico enforces this; see k8s/README.md, section 8.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-egress
+  namespace: job-hunter
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  policyTypes: [Egress]
+  egress:
+    # DNS: CoreDNS in kube-system
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # PostgreSQL in this namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+      ports:
+        - {protocol: TCP, port: 5432}
+    # Auth service in this namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: auth
+      ports:
+        - {protocol: TCP, port: 9090}
+    # Public internet over HTTPS: Anthropic API, job boards, GitHub, user-given https URLs (the backend uses https only)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+      ports:
+        - {protocol: TCP, port: 443}

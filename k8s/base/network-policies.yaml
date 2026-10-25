@@ -1,4 +1,5 @@
-# Ingress is denied by default; each allowed path is listed below. Egress stays open (Claude API, job sites, DNS).
+# Ingress is denied by default; each allowed path is listed below. Egress of the backend is restricted in backend-egress.yaml;
+# the other pods keep egress open.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
