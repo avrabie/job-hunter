@@ -211,8 +211,21 @@ internal class JobImportApiTests(
     }
 
     @Test
+    fun `an http url or one without a scheme is fetched over https`() {
+        extractor.answer = { job(title = "Backend Engineer", company = "Employer1 AG", description = DESCRIPTION) }
+        fetcher.answer = { FetchResult.Page(page(DESCRIPTION)) }
+        val id = UUID.randomUUID().toString().take(8)
+
+        previewUrl(newSub(), "http://jobs.example.com/a-$id").andExpect(status().isOk)
+        previewUrl(newSub(), "jobs.example.com/b-$id").andExpect(status().isOk)
+
+        assertTrue(fetcher.urls.any { it == "https://jobs.example.com/a-$id" }, fetcher.urls.toString())
+        assertTrue(fetcher.urls.any { it == "https://jobs.example.com/b-$id" }, fetcher.urls.toString())
+    }
+
+    @Test
     fun `bad urls and unsupported sites are 400 and nothing is fetched`() {
-        for (url in listOf("http://jobs.example.com/a", "https://203.0.113.5/a", "https://jobs.example.com:8443/a", "https://user@jobs.example.com/a", "")) {
+        for (url in listOf("https://203.0.113.5/a", "https://jobs.example.com:8443/a", "https://user@jobs.example.com/a", "")) {
             previewUrl(newSub(), url).andExpect(status().isBadRequest).andExpect(jsonPath("$.error").value("invalid_url"))
         }
         previewUrl(newSub(), "https://www.linkedin.com/jobs/1").andExpect(status().isBadRequest).andExpect(jsonPath("$.error").value("unsupported_site"))
@@ -394,7 +407,7 @@ internal class JobImportApiTests(
         val events = captureAppLogs {
             val id = field(previewUrl(sub, url).andExpect(status().isOk), "$.draftId")
             confirm(sub, """{"draftId":"$id"}""").andExpect(status().isCreated)
-            previewUrl(sub, "http://jobs.example.com/$marker").andExpect(status().isBadRequest)
+            previewUrl(sub, "https://203.0.113.5/$marker").andExpect(status().isBadRequest)
             extractor.answer = { throw LlmFailure(LlmFailureKind.FAILED) }
             previewUrl(sub, url).andExpect(status().isBadGateway)
         }

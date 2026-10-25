@@ -47,7 +47,7 @@ export type ImportErrorCode = (typeof IMPORT_ERROR_CODES)[number]
 /** Fixed texts per error code. The response body is never shown. */
 const CODE_MESSAGES: Record<ImportErrorCode, string> = {
   invalid_url:
-    'That does not look like a web address. Check the URL and try again.',
+    'That does not look like a web address. Check the URL (for example https://company.com/jobs/123) and try again.',
   unsupported_site:
     "Jobs cannot be imported from this site. Use the company's own posting instead.",
   blocked_address:

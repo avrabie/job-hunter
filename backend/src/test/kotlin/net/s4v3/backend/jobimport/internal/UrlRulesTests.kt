@@ -14,6 +14,15 @@ class UrlRulesTests {
     private fun canonical(url: String): String = (UrlRules.check(url) as UrlCheck.Ok).url.canonical
 
     @Test
+    fun `normalizeInput upgrades http, adds a missing scheme and leaves redirects strict`() {
+        assertEquals("https://jobs.example.com/a", UrlRules.normalizeInput("  http://jobs.example.com/a "))
+        assertEquals("https://jobs.example.com/a", UrlRules.normalizeInput("HTTP://jobs.example.com/a"))
+        assertEquals("https://jobs.example.com/a", UrlRules.normalizeInput("jobs.example.com/a"))
+        assertEquals("https://jobs.example.com/a", UrlRules.normalizeInput("https://jobs.example.com/a"))
+        assertEquals(FetchError.INVALID_URL, rejected("http://jobs.example.com/a"))
+    }
+
+    @Test
     fun `accepts a plain https url`() {
         val ok = UrlRules.check("https://Jobs.Example.com/ada-engineer") as UrlCheck.Ok
         assertEquals("jobs.example.com", ok.url.host)

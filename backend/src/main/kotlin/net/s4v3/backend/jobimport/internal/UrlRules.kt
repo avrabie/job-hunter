@@ -16,6 +16,19 @@ internal object UrlRules {
     private val denied = listOf("linkedin.com", "indeed.com")
     private val hostPattern = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
 
+    /**
+     * What a person typed or pasted, made checkable: a missing scheme becomes `https://` and `http://` is upgraded to
+     * `https://` (we never fetch over plain http). Redirect targets do not go through this, so a downgrade stays rejected.
+     */
+    fun normalizeInput(raw: String): String {
+        val text = raw.trim()
+        return when {
+            text.startsWith("http://", ignoreCase = true) -> "https://" + text.substring("http://".length)
+            "://" in text -> text
+            else -> "https://$text"
+        }
+    }
+
     fun check(raw: String): UrlCheck {
         if (raw.length > MAX_LENGTH) return UrlCheck.Rejected(FetchError.INVALID_URL)
         val uri = try {

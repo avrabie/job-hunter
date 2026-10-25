@@ -125,7 +125,7 @@ describe('Add job from URL: fixed messages per error code', () => {
   it.each([
     [
       'invalid_url',
-      'That does not look like a web address. Check the URL and try again.',
+      'That does not look like a web address. Check the URL (for example https://company.com/jobs/123) and try again.',
     ],
     [
       'unsupported_site',

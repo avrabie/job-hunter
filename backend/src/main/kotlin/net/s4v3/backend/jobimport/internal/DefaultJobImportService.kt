@@ -71,14 +71,14 @@ internal class DefaultJobImportService(
 
     private fun previewWithin(sub: String, request: ImportRequest): ImportPreview {
         previewLimiter.tryAcquire(sub)?.let { throw JobImportException(ImportError.RATE_LIMITED, it) }
-        val url = when (val check = UrlRules.check(request.url.orEmpty())) {
+        val url = when (val check = UrlRules.check(UrlRules.normalizeInput(request.url.orEmpty()))) {
             is UrlCheck.Ok -> check.url
             is UrlCheck.Rejected -> throw JobImportException(check.error.toImportError())
         }
         val pageText = if (!request.text.isNullOrBlank()) {
             request.text.trim().takeIf { it.length >= PageText.MIN_CHARS }?.take(PageText.MAX_CHARS)
         } else {
-            when (val fetched = fetcher.fetch(request.url.orEmpty())) {
+            when (val fetched = fetcher.fetch(url.canonical)) {
                 is FetchResult.Failed -> throw JobImportException(fetched.error.toImportError())
                 is FetchResult.Page -> PageText.extract(fetched.html)
             }
