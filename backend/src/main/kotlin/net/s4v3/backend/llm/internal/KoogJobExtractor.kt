@@ -1,7 +1,6 @@
 package net.s4v3.backend.llm.internal
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.params.LLMParams
 import kotlinx.coroutines.runBlocking
@@ -55,9 +54,7 @@ internal class KoogJobExtractor(
         } catch (e: Exception) {
             // Only the class name: an exception message may carry the prompt or the answer.
             log.warn(
-                "Job extraction failed after {} ms (model {}): {}{}", elapsedMs(started), modelName, e::class.simpleName,
-                if (e is LLMClientException) describeClientFailure(e.message) else "",
-            )
+                "Job extraction failed after {} ms (model {}): {}", elapsedMs(started), modelName, e::class.simpleName)
             throw LlmFailure(LlmFailureKind.FAILED)
         }
     }
@@ -86,7 +83,7 @@ internal object JobDraftCleaner {
     const val MAX_LOCATION_CHARS = 200
     const val MAX_DESCRIPTION_CHARS = 20_000
     private val FENCE = Regex("^```[A-Za-z]*[ \\t]*\\n(.*)\\n```$", RegexOption.DOT_MATCHES_ALL)
-    private val HTML_TAG = Regex("<[A-Za-z/!][A-Za-z0-9-]*")
+    private val HTML_TAG = Regex("<\\s*[A-Za-z/!]")
     private val JSON = Json { ignoreUnknownKeys = true }
 
     fun clean(raw: String): JobDraft? {

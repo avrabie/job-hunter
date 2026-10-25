@@ -31,3 +31,5 @@ Purpose: the user's tracked jobs. Marking a posting interested stores a frozen c
 
 ## Tests (`backend/src/test/kotlin/net/s4v3/backend/`)
 - `ApplicationsApiTests` (every scenario of the `applications` spec, including the log check), `LettersApiTests` (every scenario of the `motivation-letter` spec with a recording fake `LetterWriter`), `ParagraphsTests` (reads `ui/src/applications/paragraphs.cases.json`), `LetterFileNameTests`, `DatabaseBaselineTests`, `ApiDocsContentTests`, `ModularityTests`.
+
+`trackImported(sub, JobData)` tracks a job that has no posting (a user import): `source = IMPORT`, `posting_id` empty, live status always OPEN, unique per user and canonical link (a repeat returns the existing application with `created=false`). Letters and every owner-scoped query work on it like on any other application.

@@ -93,14 +93,12 @@ How to write it
 
     /** At most [MAX_DESCRIPTION_CHARS], cut at a paragraph edge when one lies in the second half; the delimiter tags are removed. */
     fun description(text: String): String {
-        val body = text.replace(TAGS, "").trim()
+        val body = PromptText.strip(text).trim()
         if (body.length <= MAX_DESCRIPTION_CHARS) return body
         val head = body.substring(0, MAX_DESCRIPTION_CHARS)
         val edge = head.lastIndexOf("\n\n")
         return (if (edge > MAX_DESCRIPTION_CHARS / 2) head.substring(0, edge) else head).trimEnd()
     }
 
-    private fun clean(s: String) = s.replace(Regex("\\s+"), " ").trim()
-
-    private val TAGS = Regex("</?job_description>", RegexOption.IGNORE_CASE)
+    private fun clean(s: String) = PromptText.strip(s).replace(Regex("\\s+"), " ").trim()
 }

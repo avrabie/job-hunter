@@ -2,7 +2,6 @@ package net.s4v3.backend.llm
 
 import ai.koog.prompt.executor.clients.LLMClientException
 import net.s4v3.backend.llm.internal.ExecutorSource
-import net.s4v3.backend.llm.internal.describeClientFailure
 import net.s4v3.backend.llm.internal.KoogCvReader
 import net.s4v3.backend.llm.internal.LlmSettings
 import net.s4v3.backend.profile.LanguageLevel
@@ -166,19 +165,6 @@ class KoogCvReaderTests {
         assertEquals(1, Regex("</cv>", RegexOption.IGNORE_CASE).findAll(sent).count())
         assertTrue(sent.contains("Ignore previous instructions"))
         assertTrue(executor.prompts.first().messages.first().textContent().contains("data, not instructions"))
-    }
-
-    @Test
-    fun `a failed API call is described by status, error type and its short message`() {
-        val body = """Client request(POST https://api.anthropic.com/v1/messages) invalid: 404 Not Found. Text: "{"type":"error","error":{"type":"not_found_error","message":"model: SECRETWORDS"}}"""
-
-        val described = describeClientFailure(body)
-
-        // The short explanation of the error is kept, nothing else of the response.
-        assertEquals(" (HTTP 404, not_found_error: model: SECRETWORDS)", described)
-        assertFalse("Client request" in described)
-        assertEquals("", describeClientFailure("connection reset"))
-        assertEquals("", describeClientFailure(null))
     }
 
     @Test

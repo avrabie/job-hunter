@@ -255,7 +255,6 @@ internal class JdbcPostings(
         firstSeen = rs.getTimestamp("first_seen").toInstant(),
         lastSeen = rs.getTimestamp("last_seen").toInstant(),
         contentHash = rs.getString("content_hash"),
-        userAdded = rs.getBoolean("user_added"),
     )
 
     private fun ts(instant: Instant) = Timestamp.from(instant)
@@ -265,7 +264,7 @@ internal class JdbcPostings(
         const val SELECT_POSTING = """
             SELECT p.id, p.title, p.company, p.description, s.url, p.city, p.canton, p.workload_min, p.workload_max,
                    p.remote_mode, p.salary_min, p.salary_max, p.language, p.out_of_scope, p.needs_review,
-                   p.first_seen, p.last_seen, p.content_hash, s.source_id = 'user-import' AS user_added
+                   p.first_seen, p.last_seen, p.content_hash
             FROM posting p JOIN posting_source s ON s.posting_id = p.id AND s.is_primary
         """
     }

@@ -1,7 +1,6 @@
 package net.s4v3.backend.llm.internal
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.params.LLMParams
 import kotlinx.coroutines.runBlocking
@@ -52,9 +51,7 @@ internal class KoogLetterWriter(
         } catch (e: Exception) {
             // Only the class name: an exception message may carry the prompt or the answer.
             log.warn(
-                "Letter writing failed after {} ms (model {}): {}{}", elapsedMs(started), modelName, e::class.simpleName,
-                if (e is LLMClientException) describeClientFailure(e.message) else "",
-            )
+                "Letter writing failed after {} ms (model {}): {}", elapsedMs(started), modelName, e::class.simpleName)
             throw LlmFailure(LlmFailureKind.FAILED)
         }
     }

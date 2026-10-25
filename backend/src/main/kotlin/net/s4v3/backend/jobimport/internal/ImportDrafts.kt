@@ -20,7 +20,7 @@ internal data class Draft(
     val language: String,
 )
 
-/** Drafts and attribution rows. Every read and delete of a draft is by id and owner, so another user's id is an unknown id. */
+/** Drafts. Every read and delete of a draft is by id and owner, so another user's id is an unknown id. */
 @Repository
 internal class ImportDrafts(private val jdbc: JdbcTemplate) {
 
@@ -50,31 +50,11 @@ internal class ImportDrafts(private val jdbc: JdbcTemplate) {
         jdbc.update("delete from job_import_draft where id = ? and owner = ?", id, owner)
     }
 
-    fun recordImport(postingId: UUID, owner: String, url: String, now: Instant) {
-        jdbc.update(
-            "insert into posting_import (posting_id, user_sub, url, created_at) values (?, ?, ?, ?) on conflict do nothing",
-            postingId, owner, url, Timestamp.from(now),
-        )
-    }
-
     fun purgeExpired(now: Instant): Int = jdbc.update("delete from job_import_draft where expires_at <= ?", Timestamp.from(now))
 
     fun deleteByOwner(owner: String) {
         jdbc.update("delete from job_import_draft where owner = ?", owner)
-        jdbc.update("delete from posting_import where user_sub = ?", owner)
     }
-
-    /** The posting an earlier import of the same canonical URL created or found, or null. */
-    fun findImported(sourceId: String, sourcePostingId: String): UUID? = jdbc.query(
-        "select posting_id from posting_source where source_id = ? and source_posting_id = ?",
-        { rs, _ -> rs.getObject("posting_id", UUID::class.java) }, sourceId, sourcePostingId,
-    ).firstOrNull()
-
-    /** True when another source reference (a crawler, or an earlier import of another URL) already holds the posting. */
-    fun hasOtherSource(postingId: UUID, sourceId: String, sourcePostingId: String): Boolean = jdbc.queryForObject(
-        "select count(*) from posting_source where posting_id = ? and not (source_id = ? and source_posting_id = ?)",
-        Int::class.java, postingId, sourceId, sourcePostingId,
-    )!! > 0
 
     companion object {
         val TTL: Duration = Duration.ofHours(1)

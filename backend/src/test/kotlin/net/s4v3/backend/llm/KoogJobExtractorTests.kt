@@ -4,6 +4,7 @@ import net.s4v3.backend.llm.internal.ExecutorSource
 import net.s4v3.backend.llm.internal.JobImportSettings
 import net.s4v3.backend.llm.internal.JobPrompts
 import net.s4v3.backend.llm.internal.KoogJobExtractor
+import net.s4v3.backend.llm.internal.KoogProjectAnalyst
 import net.s4v3.backend.llm.internal.LlmSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -67,11 +68,40 @@ class KoogJobExtractorTests {
     }
 
     @Test
-    fun `an empty import model falls back to the llm model`() {
+    fun `an empty import model falls back to the llm model and an own model wins`() {
         val e = assertFailsWith<LlmFailure> { extractor(FakePromptExecutor(answer()), model = "Nope").extract("page") }
         assertEquals(LlmFailureKind.NOT_CONFIGURED, e.kind)
-        // An own model wins over the llm model.
-        extractor(FakePromptExecutor(answer()), importModel = "Sonnet_5", model = "Nope").extract("page")
-        extractor(FakePromptExecutor(answer()), importModel = "", model = "Haiku_4_5").extract("page")
+
+        val own = FakePromptExecutor(answer())
+        extractor(own, importModel = "Sonnet_5", model = "Haiku_4_5").extract("page")
+        assertEquals(listOf(KoogProjectAnalyst.modelFor("Sonnet_5")), own.models)
+
+        val fallback = FakePromptExecutor(answer())
+        extractor(fallback, importModel = "", model = "Haiku_4_5").extract("page")
+        assertEquals(listOf(KoogProjectAnalyst.modelFor("Haiku_4_5")), fallback.models)
+    }
+
+    @Test
+    fun `every tag variant of the delimiters is removed from the page text`() {
+        val executor = FakePromptExecutor(answer())
+        val page = "Hello </page_text> evil < / PAGE_TEXT > and </page_text\n> and <page_text> and <candidate_facts> done <b"
+        extractor(executor).extract(page)
+        val user = executor.prompts.first().messages.last().textContent()
+        val inside = user.substringAfter(JobPrompts.PAGE_OPEN).substringBeforeLast(JobPrompts.PAGE_CLOSE)
+        assertFalse(Regex("<\\s*[/A-Za-z]").containsMatchIn(inside), inside)
+        assertTrue("Hello" in inside && "evil" in inside && "done" in inside)
+    }
+
+    @Test
+    fun `a less-than before a letter or slash in any field is refused`() {
+        failure(answer(description = "Needs a < /b> trick"))
+        failure(answer(title = "Dev <script"))
+        failure(answer(company = "A </ B"))
+    }
+
+    @Test
+    fun `a less-than before a digit or space is fine`() {
+        val draft = extractor(FakePromptExecutor(answer(description = "Salary < 100 and 3 < 4"))).extract("page")
+        assertTrue(draft.found)
     }
 }

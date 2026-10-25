@@ -32,7 +32,7 @@ class DatabaseBaselineTests(
         assertTrue("public_cv" in tables && "public_cv_handle_hold" in tables && "public_cv_audit" in tables, tables.toString())
         // Raise by one for every new changeset.
         assertTrue("application" in tables && "motivation_letter" in tables, tables.toString())
-        assertTrue("job_import_draft" in tables && "posting_import" in tables, tables.toString())
+        assertTrue("job_import_draft" in tables && "posting_import" !in tables, tables.toString())
         assertEquals(18, count("select count(*) from databasechangelog"))
     }
 

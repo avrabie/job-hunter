@@ -141,6 +141,20 @@ class SafeFetcherTests {
     }
 
     @Test
+    fun `a failing first address falls through to the next validated one`() {
+        // ::1 is loopback too (so validated) but nothing listens there.
+        val dead = InetAddress.getByName("::1")
+        val result = fetcher(resolver = { listOf(dead, loopback) }).fetch("https://example.com/a")
+        assertEquals("<p>ok</p>", (result as FetchResult.Page).html)
+    }
+
+    @Test
+    fun `when every validated address fails the host is unreachable`() {
+        val dead = InetAddress.getByName("::1")
+        assertEquals(FetchError.UNREACHABLE, failed(fetcher(resolver = { listOf(dead) }).fetch("https://example.com/a")))
+    }
+
+    @Test
     fun `redirect to an internal host is blocked`() {
         handler = { _, out -> respond(out, 302, null, "", "Location: https://internal.example.com/secret\r\n") }
         assertEquals(FetchError.BLOCKED_ADDRESS, failed(fetcher().fetch("https://example.com/a")))

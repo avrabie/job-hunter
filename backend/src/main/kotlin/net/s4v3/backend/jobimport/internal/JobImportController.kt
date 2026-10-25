@@ -45,8 +45,9 @@ internal class JobImportController(
             ApiResponse(responseCode = "200", description = "`{draftId, title, company, location, description, language}`"),
             ApiResponse(responseCode = "400", description = "`invalid_url`, `unsupported_site` or `blocked_address`"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
+            ApiResponse(responseCode = "413", description = "The request body is over 256 KB (`too_large`)"),
             ApiResponse(responseCode = "422", description = "`not_html`, `too_large`, `not_a_job` or `unreadable` (paste the description)"),
-            ApiResponse(responseCode = "429", description = "Hourly limit reached (`rate_limited`), with `Retry-After`"),
+            ApiResponse(responseCode = "429", description = "Hourly limit or too many previews at once (`rate_limited`), with `Retry-After`"),
             ApiResponse(responseCode = "502", description = "`extraction_failed`, `unreachable` or `llm_unavailable`"),
         ],
     )
@@ -56,12 +57,12 @@ internal class JobImportController(
     @PostMapping("/api/job-imports")
     @Operation(
         summary = "Confirm a job import",
-        description = "Body `{draftId, title?, company?, location?, description?}`. Turns the caller's own unexpired draft into a shared " +
-            "posting (source `user-import`, or the existing posting when the same URL or company, title and city is known) and an " +
-            "INTERESTED application. Edits replace the draft's fields within their length limits. Counts against " +
-            "`jobhunter.import.confirms-per-day`.",
+        description = "Body `{draftId, title?, company?, location?, description?}`. Turns the caller's own unexpired draft into an " +
+            "INTERESTED application that only the caller can see (no shared posting is created). Importing the same link again " +
+            "returns the existing application with `created` false. Edits replace the draft's fields within their length " +
+            "limits. Counts against `jobhunter.import.confirms-per-day`.",
         responses = [
-            ApiResponse(responseCode = "201", description = "`{applicationId, postingId, created, postingExisted}`"),
+            ApiResponse(responseCode = "201", description = "`{applicationId, created}`"),
             ApiResponse(responseCode = "400", description = "An edit is blank, too long or contains HTML (`invalid_edit`)"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "404", description = "No such draft of the caller's, or it expired (`draft_not_found`)"),

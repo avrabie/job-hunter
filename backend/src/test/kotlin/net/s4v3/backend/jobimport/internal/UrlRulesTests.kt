@@ -92,6 +92,20 @@ class AddressRulesTests {
     }
 
     @Test
+    fun `documentation, 6to4, Teredo and ipv4-compatible addresses fail`() {
+        listOf(
+            "192.0.2.1", "192.0.2.255", "198.51.100.7", "203.0.113.9",
+            "2001:db8::1", "2001:db8:ffff::1", "2002::1", "2002:0808:0808::1", "2001::1", "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+            "::8.8.8.8", "::a00:1", "::2",
+        ).forEach { assertFalse(public(it), it) }
+    }
+
+    @Test
+    fun `neighbours of the new ranges stay public`() {
+        listOf("192.0.3.1", "198.51.101.1", "203.0.114.1", "2001:db9::1", "2001:1::1", "2003::1").forEach { assertTrue(public(it), it) }
+    }
+
+    @Test
     fun `edges of the ranges are public`() {
         listOf("172.15.255.255", "172.32.0.1", "100.63.255.255", "100.128.0.1", "198.20.0.1", "::ffff:8.8.8.8")
             .forEach { assertTrue(public(it), it) }

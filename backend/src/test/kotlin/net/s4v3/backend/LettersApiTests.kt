@@ -1,6 +1,8 @@
 package net.s4v3.backend
 
 import com.jayway.jsonpath.JsonPath
+import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.llm.LetterRequest
 import net.s4v3.backend.llm.LetterWriter
 import net.s4v3.backend.llm.LlmFailure
@@ -45,6 +47,7 @@ internal class LettersApiTests(
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val ingest: PostingIngest,
     @Autowired private val writer: RecordingWriter,
+    @Autowired private val applications: ApplicationService,
 ) {
 
     class RecordingWriter : LetterWriter {
@@ -133,6 +136,21 @@ internal class LettersApiTests(
         )
 
     private fun quote(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
+
+    @Test
+    fun `a letter can be written for an imported job and sees only its frozen text`() {
+        val sub = newSub()
+        saveProfile(sub)
+        val job = JobData("https://jobs.example.com/" + UUID.randomUUID(), "Imported Engineer", "Employer1 AG", description, "de")
+        val app = applications.trackImported(sub, job).application.id.toString()
+
+        generate(sub, app).andExpect(status().isCreated)
+
+        val sent = writer.requests.single().job
+        assertEquals("Imported Engineer", sent.title)
+        assertEquals(description, sent.description)
+        generate(newSub(), app).andExpect(status().isNotFound)
+    }
 
     @Test
     fun `generate stores version 1 in the requested language from the chosen parts`() {
