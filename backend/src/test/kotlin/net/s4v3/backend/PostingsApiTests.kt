@@ -53,6 +53,16 @@ class PostingsApiTests(
             .andExpect(jsonPath("$[0].links[0].url").exists())
             .andExpect(jsonPath("$[0].links[0].primary").value(true))
             .andExpect(jsonPath("$[0].description").doesNotExist())
+            .andExpect(jsonPath("$[0].userAdded").value(false))
+    }
+
+    @Test
+    fun `a posting imported by a user is marked userAdded in list and detail`() {
+        val id = add("Imported ${unique()}", source = "user-import")
+
+        mvc.perform(get("/api/postings/$id").header("Authorization", token()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.userAdded").value(true))
     }
 
     @Test

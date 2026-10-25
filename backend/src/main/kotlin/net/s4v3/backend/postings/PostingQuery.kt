@@ -63,6 +63,8 @@ data class Posting(
     val links: List<PostingLink> = emptyList(),
     /** Hash of the canonical content; changes when the description or another canonical field changes. */
     val contentHash: String = "",
+    /** True when the primary source is `user-import`: a user added the ad, no crawler verified it. */
+    val userAdded: Boolean = false,
 )
 
 /** When a posting was last seen and its content hash, without the text. */
