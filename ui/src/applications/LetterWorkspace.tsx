@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/authContext.ts'
 import { loadProfile } from '../profile/profileApi.ts'
 import type { Profile } from '../profile/types.ts'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import '../styles/applications.css'
 import {
   deleteLetter,
   downloadLetter,
@@ -208,30 +212,34 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
   const lines = current ? paragraphs(current.text) : []
 
   return (
-    <section aria-labelledby="letter-heading" className="letter-workspace">
-      <h2 id="letter-heading">Motivation letter</h2>
-      <p role="note">{CHECK_NOTICE}</p>
+    <Card
+      title="Motivation letter"
+      headingLevel={2}
+      className="letter-workspace"
+    >
+      <Alert tone="warning">{CHECK_NOTICE}</Alert>
 
-      <form
-        className="letter-form"
-        aria-label="Letter settings"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <div className="export-field">
-          <label htmlFor="letter-language">Language</label>
-          <select
-            id="letter-language"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as LetterLanguage | '')}
-          >
-            <option value="">Language of the posting</option>
-            <option value="EN">English</option>
-            <option value="DE">Deutsch</option>
-          </select>
-        </div>
+      <form aria-label="Letter settings" onSubmit={(e) => e.preventDefault()}>
+        <FormField label="Language">
+          {(control) => (
+            <select
+              {...control}
+              value={language}
+              onChange={(e) =>
+                setLanguage(e.target.value as LetterLanguage | '')
+              }
+            >
+              <option value="">Language of the posting</option>
+              <option value="EN">English</option>
+              <option value="DE">Deutsch</option>
+            </select>
+          )}
+        </FormField>
 
         {profile.state === 'loading' && <p role="status">Loading profile…</p>}
-        {profile.state === 'failed' && <p role="alert">{profile.message}</p>}
+        {profile.state === 'failed' && (
+          <Alert tone="danger">{profile.message}</Alert>
+        )}
         {profile.state === 'loaded' && (
           <>
             <Choice
@@ -262,30 +270,33 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
           </>
         )}
 
-        <div className="export-field">
-          <label htmlFor="letter-instructions">Instructions (optional)</label>
-          <textarea
-            id="letter-instructions"
-            rows={3}
-            maxLength={1000}
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-          />
+        <FormField label="Instructions (optional)">
+          {(control) => (
+            <textarea
+              {...control}
+              rows={3}
+              maxLength={1000}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          )}
+        </FormField>
+        <div className="application-actions">
+          <button
+            type="button"
+            disabled={busy || chosen === 0}
+            onClick={onGenerate}
+          >
+            Generate
+          </button>
         </div>
-        <button
-          type="button"
-          disabled={busy || chosen === 0}
-          onClick={onGenerate}
-        >
-          Generate
-        </button>
         {chosen === 0 && (
           <p>Choose at least one entry from your profile to generate.</p>
         )}
       </form>
 
       {busy && <p role="status">Working…</p>}
-      {message && <p role="alert">{message}</p>}
+      {message && <Alert tone="danger">{message}</Alert>}
       {status && <p role="status">{status}</p>}
       {!loaded && <p role="status">Loading letters…</p>}
 
@@ -298,32 +309,36 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
                 {lines.map((text, i) => (
                   <li key={`${current.version}-${i}`}>
                     <p>{text}</p>
-                    <label>
-                      Comment on paragraph {i + 1}
-                      <textarea
-                        rows={2}
-                        maxLength={500}
-                        value={perParagraph[i + 1] ?? ''}
-                        onChange={(e) =>
-                          setPerParagraph((c) => ({
-                            ...c,
-                            [i + 1]: e.target.value,
-                          }))
-                        }
-                      />
-                    </label>
+                    <FormField label={`Comment on paragraph ${i + 1}`}>
+                      {(control) => (
+                        <textarea
+                          {...control}
+                          rows={2}
+                          maxLength={500}
+                          value={perParagraph[i + 1] ?? ''}
+                          onChange={(e) =>
+                            setPerParagraph((c) => ({
+                              ...c,
+                              [i + 1]: e.target.value,
+                            }))
+                          }
+                        />
+                      )}
+                    </FormField>
                   </li>
                 ))}
               </ol>
-              <label>
-                General comment
-                <textarea
-                  rows={2}
-                  maxLength={500}
-                  value={general}
-                  onChange={(e) => setGeneral(e.target.value)}
-                />
-              </label>
+              <FormField label="General comment">
+                {(control) => (
+                  <textarea
+                    {...control}
+                    rows={2}
+                    maxLength={500}
+                    value={general}
+                    onChange={(e) => setGeneral(e.target.value)}
+                  />
+                )}
+              </FormField>
               <div className="letter-actions">
                 <button
                   type="button"
@@ -334,7 +349,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
                 </button>
                 <button
                   type="button"
-                  className="secondary"
+                  className="button--secondary"
                   disabled={busy}
                   onClick={() => setEditing(current.text)}
                 >
@@ -342,14 +357,14 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
                 </button>
                 <button
                   type="button"
-                  className="secondary"
+                  className="button--secondary"
                   onClick={() => void onCopy()}
                 >
                   Copy
                 </button>
                 <button
                   type="button"
-                  className="secondary"
+                  className="button--secondary"
                   onClick={() => void onDownload()}
                 >
                   Download .md
@@ -358,13 +373,16 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
             </>
           ) : (
             <>
-              <label htmlFor="letter-edit">Letter text</label>
-              <textarea
-                id="letter-edit"
-                rows={16}
-                value={editing}
-                onChange={(e) => setEditing(e.target.value)}
-              />
+              <FormField label="Letter text">
+                {(control) => (
+                  <textarea
+                    {...control}
+                    rows={16}
+                    value={editing}
+                    onChange={(e) => setEditing(e.target.value)}
+                  />
+                )}
+              </FormField>
               <div className="letter-actions">
                 <button
                   type="button"
@@ -375,7 +393,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
                 </button>
                 <button
                   type="button"
-                  className="secondary"
+                  className="button--secondary"
                   onClick={() => setEditing(null)}
                 >
                   Cancel
@@ -387,28 +405,33 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
       )}
 
       {versions.length > 0 && (
-        <section aria-labelledby="letter-versions-heading">
+        <section
+          aria-labelledby="letter-versions-heading"
+          className="letter-versions"
+        >
           <h3 id="letter-versions-heading">Versions</h3>
-          <ul>
+          <ul className="letter-versions__list">
             {[...versions]
               .sort((a, b) => b.version - a.version)
               .map((v) => (
-                <li key={v.version}>
+                <li key={v.version} className="letter-versions__item">
                   <button
                     type="button"
-                    className="secondary"
+                    className="button--secondary"
                     disabled={busy}
                     aria-current={current?.version === v.version}
                     onClick={() => void onOpen(v.version)}
                   >
                     Version {v.version}
-                  </button>{' '}
-                  {HOW[v.how]}, {v.language}, {v.createdAt.slice(0, 10)}
-                  {v.basedOnVersion !== null &&
-                    `, from version ${v.basedOnVersion}`}{' '}
+                  </button>
+                  <span className="letter-versions__text">
+                    {HOW[v.how]}, {v.language}, {v.createdAt.slice(0, 10)}
+                    {v.basedOnVersion !== null &&
+                      `, from version ${v.basedOnVersion}`}
+                  </span>
                   <button
                     type="button"
-                    className="secondary"
+                    className="button--danger"
                     disabled={busy}
                     aria-label={`Remove version ${v.version}`}
                     onClick={() => void onDelete(v.version)}
@@ -420,7 +443,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
           </ul>
         </section>
       )}
-    </section>
+    </Card>
   )
 }
 
@@ -444,13 +467,13 @@ function Choice({
   onChange: (next: number[]) => void
 }) {
   return (
-    <fieldset>
-      <legend>{legend}</legend>
+    <fieldset className="choice">
+      <legend className="choice__legend">{legend}</legend>
       {labels.length === 0 && <p>Nothing saved in your profile yet.</p>}
       {labels.map((label, index) => {
         const on = chosen.includes(index)
         return (
-          <label className="inline" key={index}>
+          <label className="choice__option" key={index}>
             <input
               type="checkbox"
               checked={on}
@@ -463,7 +486,7 @@ function Choice({
           </label>
         )
       })}
-      {labels.length > 0 && <p>At most {max}.</p>}
+      {labels.length > 0 && <p className="choice__count">At most {max}.</p>}
     </fieldset>
   )
 }
