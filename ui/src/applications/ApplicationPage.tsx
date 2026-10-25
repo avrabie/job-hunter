@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { safeHttpUrl } from '../postings/links.ts'
 import { Landing } from '../pages/Landing.tsx'
@@ -24,6 +24,11 @@ const LIVE_NOTICE: Record<'CHANGED' | 'GONE', string> = {
 export function ApplicationPage() {
   const { state } = useAuth()
   const { id = '' } = useParams()
+  // Set by the import form when the posting was already tracked, so the page can say so.
+  const location = useLocation()
+  const alreadyTracked =
+    (location.state as { alreadyTracked?: unknown } | null)?.alreadyTracked ===
+    true
   switch (state.status) {
     case 'loading':
       return <p>Loading…</p>
@@ -37,7 +42,7 @@ export function ApplicationPage() {
         </main>
       )
     case 'signedIn':
-      return <ApplicationView id={id} />
+      return <ApplicationView id={id} alreadyTracked={alreadyTracked} />
   }
 }
 
@@ -47,7 +52,13 @@ type Load =
   | { state: 'failed'; message: string }
   | { state: 'ready'; application: ApplicationDetail }
 
-function ApplicationView({ id }: { id: string }) {
+function ApplicationView({
+  id,
+  alreadyTracked,
+}: {
+  id: string
+  alreadyTracked: boolean
+}) {
   const auth = useAuth()
   const [load, setLoad] = useState<Load>({ state: 'loading' })
 
@@ -103,6 +114,9 @@ function ApplicationView({ id }: { id: string }) {
       </p>
       <h1>{a.title}</h1>
       <p>{a.company}</p>
+      {alreadyTracked && (
+        <p role="status">This job was already in your job tracking.</p>
+      )}
       {a.liveStatus !== 'OPEN' && (
         <p className="warning">{LIVE_NOTICE[a.liveStatus]}</p>
       )}

@@ -114,6 +114,41 @@ describe('application page', () => {
     ).toHaveAttribute('href', 'https://example.org/jobs/1')
   })
 
+  it('says so when the import found the job already tracked', async () => {
+    fakeServer()
+    render(
+      <AuthContext.Provider value={fakeAuth(signedIn())}>
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: `/applications/${ID}`,
+              state: { alreadyTracked: true },
+            },
+          ]}
+        >
+          <Routes>
+            <Route path="/applications/:id" element={<ApplicationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'This job was already in your job tracking.',
+    )
+  })
+
+  it('shows no such note when the job was just tracked', async () => {
+    fakeServer()
+    mount()
+
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(
+      screen.queryByText(/already in your job tracking/),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows no link for an unsafe original address', async () => {
     fakeServer({ url: 'javascript:alert(1)' })
     mount()
