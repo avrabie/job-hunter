@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { Alert } from '../ui/Alert.tsx'
+import '../styles/applications.css'
 import { STAGE_LABEL, trackPosting } from './applicationsApi.ts'
 import type { TrackedStage } from './useTrackedStages.ts'
 
@@ -26,7 +28,7 @@ export function InterestedButton({
 
   if (current) {
     return (
-      <p className="tracked">
+      <p className="interested__status">
         Stage: {STAGE_LABEL[current.stage]} ·{' '}
         <Link to={`/applications/${current.applicationId}`}>
           Open application
@@ -53,13 +55,13 @@ export function InterestedButton({
     <div className="interested">
       <button
         type="button"
-        className="secondary"
+        className="button--secondary"
         disabled={busy}
         onClick={() => void markInterested()}
       >
         Interested
       </button>
-      {message && <p role="alert">{message}</p>}
+      {message && <Alert tone="danger">{message}</Alert>}
     </div>
   )
 }

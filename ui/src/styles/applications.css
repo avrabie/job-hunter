@@ -1,0 +1,203 @@
+/*
+ * Job tracking, import, application and letter pages. Only tokens from tokens.css; class names follow
+ * block__element--modifier. The page roots carry `applications-page`, which scopes the legacy `form label` and
+ * `form input` margins that the shared form fields already space themselves.
+ */
+
+.applications-page label {
+  margin-bottom: 0;
+}
+
+.applications-page .form-field input,
+.applications-page .form-field select,
+.applications-page .form-field textarea {
+  margin-top: 0;
+}
+
+.applications-page .form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ---- Shared actions row ---- */
+
+.application-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.application-meta {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+/* ---- Job tracking list ---- */
+
+.application-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-list__item {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.application-list__item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.application-list__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.application-list__meta {
+  margin: 0 0 var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.stage-card__empty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* ---- Import from URL ---- */
+
+.import-job .card__title {
+  margin-bottom: var(--space-3);
+}
+
+/* ---- Application page ---- */
+
+/* The job description as captured: the text keeps its line breaks and wraps long URLs. */
+.application-description {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.application-confirm {
+  margin-top: var(--space-3);
+}
+
+.application-confirm p {
+  margin: 0 0 var(--space-2);
+}
+
+/* ---- Interested action ---- */
+
+.interested {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.interested__status {
+  margin: 0;
+}
+
+/* ---- Letter workspace ---- */
+
+.letter-workspace .card__title {
+  margin-bottom: var(--space-3);
+}
+
+/* A fieldset of profile entries that can be chosen for a letter. */
+.choice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.choice__legend {
+  padding: 0 var(--space-1);
+  font-weight: var(--weight-medium);
+}
+
+.choice__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  margin: 0;
+}
+
+.choice__option input {
+  flex: none;
+  margin: 0;
+}
+
+.choice__count {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+/* A paragraph keeps the line breaks it was written with. */
+.letter-paragraphs {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-6);
+}
+
+.letter-paragraphs li {
+  margin-bottom: var(--space-3);
+}
+
+.letter-paragraphs p {
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+}
+
+.letter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.letter-versions {
+  margin-top: var(--space-4);
+}
+
+.letter-versions__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.letter-versions__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.letter-versions__item:last-child {
+  border-bottom: 0;
+}
+
+.letter-versions__text {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}

@@ -3,6 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { safeHttpUrl } from '../postings/links.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
+import '../styles/applications.css'
 import {
   loadApplication,
   removeApplication,
@@ -36,8 +41,8 @@ export function ApplicationPage() {
       return <Landing returnTo={`/applications/${id}`} />
     case 'error':
       return (
-        <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
+        <div className="page page--narrow applications-page">
+          <PageHeader title="Sign-in failed" />
           <p>We could not reach the sign-in service.</p>
         </div>
       )
@@ -83,8 +88,8 @@ function ApplicationView({
   if (load.state === 'loading') return <p role="status">Loading application…</p>
   if (load.state === 'notFound')
     return (
-      <div className="page page--narrow">
-        <h1>Application not found</h1>
+      <div className="page page--narrow applications-page">
+        <PageHeader title="Application not found" />
         <p>
           <Link to="/applications">Back to job tracking</Link>
         </p>
@@ -92,33 +97,32 @@ function ApplicationView({
     )
   if (load.state === 'failed')
     return (
-      <div className="page page--narrow">
-        <div role="alert">
+      <div className="page page--narrow applications-page">
+        <p>
+          <Link to="/applications">Back to job tracking</Link>
+        </p>
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void refresh()}>
             Try again
           </button>
-        </div>
-        <p>
-          <Link to="/applications">Back to job tracking</Link>
-        </p>
+        </Alert>
       </div>
     )
 
   const a = load.application
   const original = safeHttpUrl(a.url)
   return (
-    <div className="page page--narrow">
+    <div className="page page--narrow applications-page">
       <p>
         <Link to="/applications">Back to job tracking</Link>
       </p>
-      <h1>{a.title}</h1>
-      <p>{a.company}</p>
+      <PageHeader title={a.title} lead={a.company} />
       {alreadyTracked && (
-        <p role="status">This job was already in your job tracking.</p>
+        <Alert tone="info">This job was already in your job tracking.</Alert>
       )}
       {a.liveStatus !== 'OPEN' && (
-        <p className="warning">{LIVE_NOTICE[a.liveStatus]}</p>
+        <Alert tone="warning">{LIVE_NOTICE[a.liveStatus]}</Alert>
       )}
       {original && (
         <p>
@@ -127,15 +131,16 @@ function ApplicationView({
           </a>
         </p>
       )}
-      <p>
+      <p className="application-meta">
         Captured {a.capturedAt.slice(0, 10)}
         {a.postingLastSeen
           ? ` · posting last seen ${a.postingLastSeen.slice(0, 10)}`
           : ''}
       </p>
 
-      <h2>Job description (as captured)</h2>
-      <pre className="description">{a.description}</pre>
+      <Card title="Job description (as captured)" headingLevel={2}>
+        <pre className="application-description">{a.description}</pre>
+      </Card>
 
       <Editor key={a.id} application={a} onChanged={() => void refresh()} />
 
@@ -192,72 +197,89 @@ function Editor({
   }
 
   return (
-    <section>
-      <p>
-        Stage{' '}
-        <select
-          aria-label="Stage"
-          value={application.stage}
-          onChange={(e) => void changeStage(e.target.value as ApplicationStage)}
-        >
-          {STAGES.map((s) => (
-            <option key={s} value={s}>
-              {STAGE_LABEL[s]}
-            </option>
-          ))}
-        </select>
-      </p>
+    <Card>
+      <FormField label="Stage">
+        {(control) => (
+          <select
+            {...control}
+            value={application.stage}
+            onChange={(e) =>
+              void changeStage(e.target.value as ApplicationStage)
+            }
+          >
+            {STAGES.map((s) => (
+              <option key={s} value={s}>
+                {STAGE_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        )}
+      </FormField>
 
       <form onSubmit={save}>
-        <label>
-          Applied on{' '}
-          <input
-            type="date"
-            value={appliedOn}
-            onChange={(e) => setAppliedOn(e.target.value)}
-          />
-        </label>
-        <label>
-          Notes
-          <textarea
-            value={notes}
-            maxLength={5000}
-            rows={5}
-            onChange={(e) => {
-              setNotes(e.target.value)
-              setSaved(false)
-            }}
-          />
-        </label>
-        <button type="submit">Save</button>
-        {saved && <span role="status"> Saved.</span>}
+        <FormField label="Applied on">
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={appliedOn}
+              onChange={(e) => setAppliedOn(e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Notes">
+          {(control) => (
+            <textarea
+              {...control}
+              value={notes}
+              maxLength={5000}
+              rows={5}
+              onChange={(e) => {
+                setNotes(e.target.value)
+                setSaved(false)
+              }}
+            />
+          )}
+        </FormField>
+        <div className="application-actions">
+          <button type="submit">Save</button>
+          {saved && <span role="status">Saved.</span>}
+        </div>
       </form>
 
-      {message && <p role="alert">{message}</p>}
+      {message && <Alert tone="danger">{message}</Alert>}
 
       {confirming ? (
-        <div>
+        <Alert tone="warning">
           <p>Remove this application and its letters? This cannot be undone.</p>
-          <button type="button" onClick={() => void remove()}>
-            Yes, remove
-          </button>{' '}
+          <div className="application-actions">
+            <button
+              type="button"
+              className="button--danger"
+              onClick={() => void remove()}
+            >
+              Yes, remove
+            </button>
+            <button
+              type="button"
+              className="button--secondary"
+              onClick={() => setConfirming(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </Alert>
+      ) : (
+        <div className="application-actions">
           <button
             type="button"
-            className="secondary"
-            onClick={() => setConfirming(false)}
+            className="button--danger"
+            onClick={() => setConfirming(true)}
           >
-            Cancel
+            Remove application
           </button>
         </div>
-      ) : (
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => setConfirming(true)}
-        >
-          Remove application
-        </button>
       )}
-    </section>
+    </Card>
   )
 }

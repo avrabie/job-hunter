@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { EmptyState } from '../ui/EmptyState.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
+import '../styles/applications.css'
 import { ImportJob } from './ImportJob.tsx'
 import {
   listApplications,
@@ -27,8 +32,8 @@ export function ApplicationsPage() {
       return <Landing returnTo="/applications" />
     case 'error':
       return (
-        <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
+        <div className="page page--narrow applications-page">
+          <PageHeader title="Sign-in failed" />
           <p>We could not reach the sign-in service.</p>
         </div>
       )
@@ -81,30 +86,34 @@ function ApplicationsList() {
   }
 
   return (
-    <div className="page">
-      <h1>Job tracking</h1>
-      <p>
-        <Link to="/postings">Postings</Link>
-      </p>
+    <div className="page applications-page">
+      <PageHeader
+        title="Job tracking"
+        actions={
+          <Link className="button button--secondary" to="/postings">
+            Postings
+          </Link>
+        }
+      />
 
       <ImportJob />
 
       {load.state === 'loading' && <p role="status">Loading applications…</p>}
       {load.state === 'failed' && (
-        <div role="alert">
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchList()}>
             Try again
           </button>
-        </div>
+        </Alert>
       )}
-      {notice && <p role="alert">{notice}</p>}
+      {notice && <Alert tone="danger">{notice}</Alert>}
 
       {load.state === 'ready' && load.applications.length === 0 && (
-        <p>
+        <EmptyState title="No applications yet">
           You have not marked any postings yet. Open a posting and press
           Interested.
-        </p>
+        </EmptyState>
       )}
 
       {load.state === 'ready' &&
@@ -112,28 +121,25 @@ function ApplicationsList() {
         STAGES.map((stage) => {
           const rows = load.applications.filter((a) => a.stage === stage)
           return (
-            <section
-              key={stage}
-              aria-labelledby={`stage-${stage}`}
-              className="stage"
-            >
-              <h2 id={`stage-${stage}`}>{STAGE_LABEL[stage]}</h2>
+            <Card key={stage} title={STAGE_LABEL[stage]}>
               {rows.length === 0 ? (
-                <p>None.</p>
+                <p className="stage-card__empty">None.</p>
               ) : (
-                <ul className="applications">
+                <ul className="application-list">
                   {rows.map((a) => (
-                    <li key={a.id}>
-                      <h3>
+                    <li key={a.id} className="application-list__item">
+                      <h3 className="application-list__title">
                         <Link to={`/applications/${a.id}`}>{a.title}</Link>
                       </h3>
-                      <p>
+                      <p className="application-list__meta">
                         {a.company} · stage since{' '}
                         {a.stageChangedAt.slice(0, 10)}
                         {a.appliedOn ? ` · applied ${a.appliedOn}` : ''}
                       </p>
                       {a.liveStatus !== 'OPEN' && (
-                        <p className="warning">{LIVE_WARNING[a.liveStatus]}</p>
+                        <Alert tone="warning">
+                          {LIVE_WARNING[a.liveStatus]}
+                        </Alert>
                       )}
                       <select
                         aria-label={`Stage of ${a.title}`}
@@ -155,7 +161,7 @@ function ApplicationsList() {
                   ))}
                 </ul>
               )}
-            </section>
+            </Card>
           )
         })}
     </div>

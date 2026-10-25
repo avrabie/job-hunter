@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import '../styles/applications.css'
 import {
   confirmJobImport,
   previewJobImport,
@@ -59,35 +63,42 @@ export function ImportJob() {
   }
 
   return (
-    <div className="import-job">
-      <h2>Add job from URL</h2>
+    // A plain box, not a titled section: the heading is the first thing in it, and an empty list has no regions.
+    <Card className="import-job">
+      <h2 className="card__title">Add job from URL</h2>
       <form onSubmit={(e) => void preview(e)}>
-        <label>
-          Job posting URL{' '}
-          <input
-            type="text"
-            inputMode="url"
-            autoComplete="off"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-        </label>
-        {pasteOpen && (
-          <label>
-            Job description{' '}
-            <textarea
-              rows={8}
-              value={paste}
-              onChange={(e) => setPaste(e.target.value)}
+        <FormField label="Job posting URL">
+          {(control) => (
+            <input
+              {...control}
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
             />
-          </label>
+          )}
+        </FormField>
+        {pasteOpen && (
+          <FormField label="Job description">
+            {(control) => (
+              <textarea
+                {...control}
+                rows={8}
+                value={paste}
+                onChange={(e) => setPaste(e.target.value)}
+              />
+            )}
+          </FormField>
         )}
-        <button type="submit" disabled={busy || !url.trim()}>
-          Preview
-        </button>
+        <div className="application-actions">
+          <button type="submit" disabled={busy || !url.trim()}>
+            Preview
+          </button>
+        </div>
       </form>
-      {message && <p role="alert">{message}</p>}
-    </div>
+      {message && <Alert tone="danger">{message}</Alert>}
+    </Card>
   )
 }
 
@@ -136,54 +147,64 @@ function ReviewForm({
     edits.description.trim() !== ''
 
   return (
-    <div className="import-job">
-      <h2>Review the job</h2>
-      <p className="notice">
+    <Card className="import-job">
+      <h2 className="card__title">Review the job</h2>
+      <Alert tone="info">
         This job is saved only in your own job tracking; other users cannot see
         it.
-      </p>
+      </Alert>
       <form onSubmit={(e) => void save(e)}>
-        <label>
-          Title{' '}
-          <input
-            value={edits.title}
-            onChange={(e) => change('title', e.target.value)}
-          />
-        </label>
-        <label>
-          Company{' '}
-          <input
-            value={edits.company}
-            onChange={(e) => change('company', e.target.value)}
-          />
-        </label>
-        <label>
-          Location{' '}
-          <input
-            value={edits.location}
-            onChange={(e) => change('location', e.target.value)}
-          />
-        </label>
-        <label>
-          Description{' '}
-          <textarea
-            rows={12}
-            value={edits.description}
-            onChange={(e) => change('description', e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy || !complete}>
-          Save and track
-        </button>{' '}
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => onClose(null)}
-        >
-          Start over
-        </button>
+        <FormField label="Title">
+          {(control) => (
+            <input
+              {...control}
+              value={edits.title}
+              onChange={(e) => change('title', e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Company">
+          {(control) => (
+            <input
+              {...control}
+              value={edits.company}
+              onChange={(e) => change('company', e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Location">
+          {(control) => (
+            <input
+              {...control}
+              value={edits.location}
+              onChange={(e) => change('location', e.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Description">
+          {(control) => (
+            <textarea
+              {...control}
+              rows={12}
+              value={edits.description}
+              onChange={(e) => change('description', e.target.value)}
+            />
+          )}
+        </FormField>
+        <div className="application-actions">
+          <button type="submit" disabled={busy || !complete}>
+            Save and track
+          </button>
+          <button
+            type="button"
+            className="button--secondary"
+            onClick={() => onClose(null)}
+          >
+            Start over
+          </button>
+        </div>
       </form>
-      {message && <p role="alert">{message}</p>}
-    </div>
+      {message && <Alert tone="danger">{message}</Alert>}
+    </Card>
   )
 }
