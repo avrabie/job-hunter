@@ -1,53 +1,17 @@
-:root {
-  color-scheme: light dark;
-  --accent: #1f5fbf;
-  --border: color-mix(in srgb, currentColor 25%, transparent);
-}
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/components.css';
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.5;
-}
-
-main {
-  max-width: 32rem;
-  margin: 0 auto;
-  padding: 3rem 1rem;
-}
-
-h1 {
-  margin-top: 0;
-}
+/*
+ * Legacy page rules from before the design system. Pages move to the shared components one by one; a rule goes when
+ * no page uses it any more.
+ */
 
 .actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-top: 1.5rem;
-}
-
-button,
-.button {
-  font: inherit;
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--accent);
-  border-radius: 0.4rem;
-  background: var(--accent);
-  color: white;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-button.secondary,
-.button.secondary {
-  background: transparent;
-  color: var(--accent);
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 form label {
@@ -62,18 +26,14 @@ form input {
   margin-top: 0.25rem;
   padding: 0.5rem;
   font: inherit;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.4rem;
 }
 
-[role='alert'] {
+[role='alert']:not(.alert) {
   display: block;
-  color: #b3261e;
+  color: var(--color-danger);
   font-size: 0.9rem;
-}
-
-main.wide {
-  max-width: 48rem;
 }
 
 textarea,
@@ -85,14 +45,14 @@ form input[type='number'] {
   margin-top: 0.25rem;
   padding: 0.5rem;
   font: inherit;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.4rem;
 }
 
 fieldset {
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 0.4rem;
 }
 
@@ -135,7 +95,7 @@ form label.inline input {
   align-items: center;
   gap: 0.25rem;
   padding: 0.15rem 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border-strong);
   border-radius: 1rem;
 }
 
@@ -149,7 +109,7 @@ form label.inline input {
 
 .notice {
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 0.4rem;
 }
 
@@ -171,7 +131,7 @@ section {
 
 .postings li {
   padding: 0.75rem 0;
-  border-bottom: 1px solid currentColor;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .original-links,
@@ -194,6 +154,11 @@ section {
 
 .cv-section {
   margin-bottom: 2rem;
+}
+
+/* Letter workspace: a paragraph keeps the line breaks it was written with. */
+.letter-paragraphs p {
+  white-space: pre-wrap;
 }
 
 /* Export page: options on the left, preview and download on the right; one column on narrow screens. */
@@ -237,9 +202,9 @@ section {
 .export-preview {
   width: 100%;
   min-height: 70vh;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.4rem;
-  background: white;
+  background: var(--color-paper);
 }
 
 @media (max-width: 40rem) {

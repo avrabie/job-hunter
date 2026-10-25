@@ -1,0 +1,111 @@
+/*
+ * Design tokens: the only place with raw colour values (build.test.ts checks this). Components use the custom
+ * properties below. Text pairs keep WCAG AA (4.5:1), borders of controls and the focus ring 3:1, in both themes;
+ * tokens.test.ts computes the ratios from this file.
+ */
+:root {
+  color-scheme: light;
+
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef1f5;
+  --color-text: #1b1f24;
+  --color-muted: #5a636e;
+  --color-primary: #1f5fbf;
+  --color-primary-hover: #194e9e;
+  --color-primary-soft: #e8eff9;
+  --color-primary-contrast: #ffffff;
+  /* Dividers and card edges; decorative, so below 3:1 on purpose. */
+  --color-border: #d5dae1;
+  /* Edges of inputs and other controls: 3:1 against the surface. */
+  --color-border-strong: #7b8491;
+  --color-success: #1d7337;
+  --color-success-soft: #e7f4eb;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fbf1df;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fbe9e7;
+  --color-focus: #1f5fbf;
+  /* The CV preview frame shows a printed page, which is white in both themes. */
+  --color-paper: #ffffff;
+
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --leading-tight: 1.25;
+  --leading: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 650;
+
+  /* 4-point scale. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
+  --shadow-md: 0 4px 8px rgb(16 24 40 / 0.08), 0 2px 4px rgb(16 24 40 / 0.06);
+
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+
+  --touch-target: 2.5rem;
+  --content-max: 72rem;
+  --content-narrow: 48rem;
+  --duration: 150ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --color-bg: #12151a;
+    --color-surface: #1b2027;
+    --color-surface-2: #252c35;
+    --color-text: #e6e9ee;
+    --color-muted: #a3acb8;
+    /* The same hue as the light primary, lighter so text and the focus ring stay readable on dark surfaces. */
+    --color-primary: #7fabef;
+    --color-primary-hover: #a3c3f4;
+    --color-primary-soft: #16243a;
+    --color-primary-contrast: #0b1424;
+    --color-border: #333b46;
+    --color-border-strong: #6f7a88;
+    --color-success: #6fcf8f;
+    --color-success-soft: #132a1b;
+    --color-warning: #e9b95b;
+    --color-warning-soft: #2d2410;
+    --color-danger: #f2877d;
+    --color-danger-soft: #3a1815;
+    --color-focus: #7fabef;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 10px rgb(0 0 0 / 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}

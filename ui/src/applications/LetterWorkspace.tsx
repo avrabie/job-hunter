@@ -297,7 +297,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
               <ol className="letter-paragraphs">
                 {lines.map((text, i) => (
                   <li key={`${current.version}-${i}`}>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{text}</p>
+                    <p>{text}</p>
                     <label>
                       Comment on paragraph {i + 1}
                       <textarea
