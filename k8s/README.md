@@ -448,7 +448,7 @@ kubectl -n job-hunter run np-test --rm -i --restart=Never --image=busybox:1.37.0
 # the same with --labels=app.kubernetes.io/name=backend prints OPEN
 ```
 
-**Backend egress (`base/backend-egress.yaml`, `backend-egress`).** The backend pod may send traffic only to:
+**Status: not applied (owner decision, 2026-10-25); the file is kept for a later change and is not in `base/kustomization.yaml`.** **Backend egress (`base/backend-egress.yaml`, `backend-egress`).** The backend pod may send traffic only to:
 
 - DNS: `kube-system` pods labelled `k8s-app: kube-dns`, UDP and TCP 53;
 - `postgres` in `job-hunter`, TCP 5432;

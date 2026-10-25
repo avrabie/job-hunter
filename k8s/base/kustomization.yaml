@@ -10,4 +10,4 @@ resources:
   - ui.yaml
   - edge.yaml
   - network-policies.yaml
-  - backend-egress.yaml
+  # backend-egress.yaml is written but deliberately NOT applied yet (owner decision); see k8s/README.md, Backend egress.
