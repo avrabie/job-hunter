@@ -1,0 +1,62 @@
+package net.s4v3.backend.jobimport
+
+import java.time.Duration
+import java.util.UUID
+
+/** The body of a preview. With [text] (the page's text, pasted by the user) nothing is fetched. */
+data class ImportRequest(val url: String?, val text: String? = null)
+
+/** The extracted job, held as a draft owned by the caller until [JobImportService.confirm]. */
+data class ImportPreview(
+    val draftId: UUID,
+    val title: String,
+    val company: String,
+    val location: String?,
+    val description: String,
+    val language: String,
+)
+
+/** Fields the user corrected in the review step; null keeps the draft's value. The URL cannot be edited. */
+data class ImportEdits(
+    val title: String? = null,
+    val company: String? = null,
+    val location: String? = null,
+    val description: String? = null,
+)
+
+/** [created] is false when the caller already tracked the posting; [postingExisted] when the posting was known before. */
+data class ImportConfirmation(val applicationId: UUID, val postingId: UUID, val created: Boolean, val postingExisted: Boolean)
+
+/** Fixed error codes of the import. The code is the only thing ever reported or logged about a failure. */
+enum class ImportError(val code: String) {
+    INVALID_URL("invalid_url"),
+    UNSUPPORTED_SITE("unsupported_site"),
+    BLOCKED_ADDRESS("blocked_address"),
+    UNREACHABLE("unreachable"),
+    NOT_HTML("not_html"),
+    TOO_LARGE("too_large"),
+    UNREADABLE("unreadable"),
+    NOT_A_JOB("not_a_job"),
+    EXTRACTION_FAILED("extraction_failed"),
+    LLM_UNAVAILABLE("llm_unavailable"),
+    RATE_LIMITED("rate_limited"),
+    DRAFT_NOT_FOUND("draft_not_found"),
+    INVALID_EDIT("invalid_edit"),
+    APPLICATION_LIMIT("application_limit"),
+}
+
+/** [retryAfter] is set for [ImportError.RATE_LIMITED]. The message is the code, never input. */
+class JobImportException(val error: ImportError, val retryAfter: Duration? = null) : RuntimeException(error.code)
+
+/** Imports a job from a link or pasted text. Every method is scoped by [sub], the token's `sub`. */
+interface JobImportService {
+
+    /** Fetches (or takes the pasted text), extracts and stores a draft; nothing is created yet. Throws [JobImportException]. */
+    fun preview(sub: String, request: ImportRequest): ImportPreview
+
+    /** Turns the caller's unexpired draft into a shared posting and a tracked application. Throws [JobImportException]. */
+    fun confirm(sub: String, draftId: UUID, edits: ImportEdits = ImportEdits()): ImportConfirmation
+
+    /** Removes the user's drafts and import records (the postings stay). For the account deletion flow. */
+    fun removeUserData(sub: String)
+}

@@ -18,6 +18,11 @@ internal sealed interface FetchResult {
     data class Failed(val error: FetchError) : FetchResult
 }
 
+/** What the import service needs from a fetcher; [SafeFetcher] is the only production implementation. */
+internal fun interface PageFetcher {
+    fun fetch(url: String): FetchResult
+}
+
 /**
  * One user-initiated GET of a job page. Every hop is checked by [UrlRules], the host must resolve only to public
  * addresses ([isPublic]), and the TLS socket connects to the address that was validated, so a second DNS answer
@@ -32,10 +37,10 @@ internal class SafeFetcher(
     private val sslContext: SSLContext = SSLContext.getDefault(),
     private val port: Int = 443,
     private val totalTimeout: Duration = Duration.ofSeconds(10),
-) {
+) : PageFetcher {
     private class Fail(val error: FetchError) : Exception(null, null, false, false)
 
-    fun fetch(url: String): FetchResult {
+    override fun fetch(url: String): FetchResult {
         val deadline = System.nanoTime() + totalTimeout.toNanos()
         return try {
             var current = checked(url)

@@ -20,7 +20,7 @@
 
 ## 4. Service and API (after 1, 2, 3)
 
-- [ ] 4.1 `JobImportService` (preview, paste mode, grounding check, draft store with TTL and purge, confirm via `PostingIngest` and `ApplicationService`, attribution row, limiter) and `JobImportController`; API tests incl. user A/B, expired draft, dedupe, limits, no URL/text in logs, account deletion cleanup.
+- [x] 4.1 `JobImportService` (preview, paste mode, grounding check, draft store with TTL and purge, confirm via `PostingIngest` and `ApplicationService`, attribution row, limiter) and `JobImportController`; API tests incl. user A/B, expired draft, dedupe, limits, no URL/text in logs, account deletion cleanup.
 - [x] 4.2 `NetworkPolicy` for the backend pod denying private and metadata egress; `k8s/validate.sh`.
 
 ## 5. UI (after 4.1 contract)
