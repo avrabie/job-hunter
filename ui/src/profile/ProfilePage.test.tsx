@@ -539,7 +539,11 @@ describe('fill a section from the CV', () => {
    * Like `stubApi`, with a master CV chosen or not, and the section endpoint answered by `extract`. `calls` records
    * the URL and method of each request, the cabinet's own requests included.
    */
-  function stubSections(master: boolean, extract: () => Response) {
+  function stubSections(
+    master: boolean,
+    extract: () => Response,
+    stored: Profile = full,
+  ) {
     const calls: { url: string; method: string }[] = []
     vi.stubGlobal(
       'fetch',
@@ -552,7 +556,7 @@ describe('fill a section from the CV', () => {
         if (url.startsWith('/api/files'))
           return new Response('', { status: 404 })
         if (url.startsWith('/api/cv/extract')) return extract()
-        if (method === 'GET') return json(200, { version: 1, profile: full })
+        if (method === 'GET') return json(200, { version: 1, profile: stored })
         const body = JSON.parse(init!.body as string) as { profile: Profile }
         return json(200, { version: 2, profile: body.profile })
       }),
@@ -633,14 +637,14 @@ describe('fill a section from the CV', () => {
     stubSections(false, () => json(200, emptyProfile()))
     mount()
     await screen.findByLabelText('City')
-    for (const name of ['Experience', 'Education', 'Publications']) {
+    for (const name of ['Contact', 'Experience', 'Education', 'Publications']) {
       expect(
         section(name).getByRole('button', { name: 'Fill from CV' }),
       ).toBeDisabled()
     }
     expect(
       screen.getAllByText('Choose a master CV in your files to use this.'),
-    ).toHaveLength(3)
+    ).toHaveLength(4)
     expect(screen.queryByRole('region', { name: 'Projects' })).toBeNull()
   })
 
@@ -670,6 +674,153 @@ describe('fill a section from the CV', () => {
       expect(screen.getAllByLabelText('Employer')[0]).toHaveValue('Example AG')
     },
   )
+
+  describe('Fill the contact section from the CV', () => {
+    const cvContact = {
+      fullName: 'Ada Example',
+      headline: 'Engineer',
+      email: 'ada@example.com',
+      phone: '+41 79 000 00 00',
+      website: 'https://example.com',
+      linkedin: 'https://www.linkedin.com/in/ada-example',
+    }
+    const cvDraft = (contact: Partial<Profile['contact']>) =>
+      json(200, {
+        ...emptyProfile(),
+        contact: { ...emptyProfile().contact, ...contact },
+      })
+    const emptyStored = (): Profile => ({
+      ...full,
+      contact: emptyProfile().contact,
+    })
+    const contactSection = () => section('Contact')
+    const requests = (calls: { url: string; method: string }[]) =>
+      calls.filter((c) => c.url.startsWith('/api/cv/extract'))
+
+    it('fills the empty fields, unsaved, and sends no profile request', async () => {
+      const calls = stubSections(true, () => cvDraft(cvContact), emptyStored())
+      mount()
+      await screen.findByLabelText('City')
+      const button = contactSection().getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      expect(
+        await screen.findByText(/Nothing is saved until you press Save/),
+      ).toBeVisible()
+      expect(contactSection().getByLabelText('Full name')).toHaveValue(
+        'Ada Example',
+      )
+      expect(contactSection().getByLabelText('Email')).toHaveValue(
+        'ada@example.com',
+      )
+      expect(contactSection().getByLabelText('Phone')).toHaveValue(
+        '+41 79 000 00 00',
+      )
+      expect(contactSection().getByLabelText('Website')).toHaveValue(
+        'https://example.com',
+      )
+      expect(contactSection().getByLabelText('LinkedIn')).toHaveValue(
+        'https://www.linkedin.com/in/ada-example',
+      )
+      expect(requests(calls)).toEqual([
+        { url: '/api/cv/extract?section=contact', method: 'POST' },
+      ])
+      expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+    })
+
+    it('asks before replacing a different value, naming the field and not its value', async () => {
+      stubSections(true, () => cvDraft(cvContact), {
+        ...emptyStored(),
+        contact: { ...emptyProfile().contact, fullName: 'Grace Sample' },
+      })
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      mount()
+      await screen.findByLabelText('City')
+      const button = contactSection().getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      await waitFor(() =>
+        expect(contactSection().getByLabelText('Full name')).toHaveValue(
+          'Ada Example',
+        ),
+      )
+      expect(confirm).toHaveBeenCalledTimes(1)
+      const message = confirm.mock.calls[0]![0] as string
+      expect(message).toContain('Full name')
+      expect(message).not.toContain('Grace Sample')
+      expect(message).not.toContain('Ada Example')
+      expect(contactSection().getByLabelText('Email')).toHaveValue(
+        'ada@example.com',
+      )
+    })
+
+    it('keeps a different value when the user declines, and still fills the empty fields', async () => {
+      stubSections(true, () => cvDraft(cvContact), {
+        ...emptyStored(),
+        contact: { ...emptyProfile().contact, fullName: 'Grace Sample' },
+      })
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mount()
+      await screen.findByLabelText('City')
+      const button = contactSection().getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      expect(
+        await screen.findByText(/Nothing is saved until you press Save/),
+      ).toBeVisible()
+      expect(confirm).toHaveBeenCalledTimes(1)
+      expect(contactSection().getByLabelText('Full name')).toHaveValue(
+        'Grace Sample',
+      )
+      expect(contactSection().getByLabelText('Email')).toHaveValue(
+        'ada@example.com',
+      )
+    })
+
+    it('says nothing was found and changes nothing when the CV has no contact', async () => {
+      const calls = stubSections(true, () => cvDraft({}), emptyStored())
+      mount()
+      await screen.findByLabelText('City')
+      const button = contactSection().getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      expect(
+        await screen.findByText(
+          'No contact details were found in your CV. The contact fields are unchanged.',
+        ),
+      ).toBeVisible()
+      expect(contactSection().getByLabelText('Full name')).toHaveValue('')
+      expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+    })
+
+    it('shows the fixed message in the Contact section and keeps the fields', async () => {
+      stubSections(true, () => json(429, {}), emptyStored())
+      mount()
+      await screen.findByLabelText('City')
+      const button = contactSection().getByRole('button', {
+        name: 'Fill from CV',
+      })
+      await waitFor(() => expect(button).toBeEnabled())
+      await userEvent.click(button)
+
+      expect(await contactSection().findByRole('alert')).toHaveTextContent(
+        'Too many extractions. Please try again later.',
+      )
+      expect(contactSection().getByLabelText('Full name')).toHaveValue('')
+    })
+  })
 })
 
 describe('Open Source Projects section', () => {

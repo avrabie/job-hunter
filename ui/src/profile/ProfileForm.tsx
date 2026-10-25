@@ -42,6 +42,10 @@ interface Props {
   onAnalyze: (project: OpenSourceProject) => Promise<AnalysisResult>
   /** Whether the public CV is live; shown next to the Contact section. */
   publicCv: PublicCvState
+  /** Asks for the contact block to be read from the CV. */
+  onFillContact: () => void
+  /** Whether the contact request is running and its last fixed message. */
+  contactFill: FillState
 }
 
 /**
@@ -60,6 +64,8 @@ export function ProfileForm({
   savedProjects,
   onAnalyze,
   publicCv,
+  onFillContact,
+  contactFill,
 }: Props) {
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value })
@@ -89,6 +95,13 @@ export function ProfileForm({
       >
         <ExpandCollapseAll />
         <ContactSection
+          fill={
+            <FillFromCv
+              canFillFromCv={canFillFromCv}
+              onFill={onFillContact}
+              state={contactFill}
+            />
+          }
           contact={profile.contact}
           onChange={(v) => set('contact', v)}
           errors={errors}

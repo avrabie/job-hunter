@@ -9,8 +9,8 @@
 
 ## 2. UI
 
-- [ ] 2.1 `analysisApi.ts`: section type includes `contact`; `ProfilePage.tsx`: `onFillContact` with the fill-empty / confirm-overwrite rule (labels only in the dialog), notice, nothing-found message, fill state; `ContactSection.tsx`: the button via `FillFromCv`, disabled hint.
-- [ ] 2.2 Tests: empty form filled, conflicting field + confirm yes/no, nothing found, no master, error messages, no profile request sent.
+- [x] 2.1 `analysisApi.ts`: section type includes `contact`; `ProfilePage.tsx`: `onFillContact` with the fill-empty / confirm-overwrite rule (labels only in the dialog), notice, nothing-found message, fill state; `ContactSection.tsx`: the button via `FillFromCv`, disabled hint.
+- [x] 2.2 Tests: empty form filled, conflicting field + confirm yes/no, nothing found, no master, error messages, no profile request sent.
 
 ## 3. Wrap-up
 

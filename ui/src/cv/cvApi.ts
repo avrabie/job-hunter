@@ -33,6 +33,9 @@ async function guarded<T extends { kind: string }>(
 
 export type ProfileSectionName = 'experience' | 'education' | 'publications'
 
+/** Every section the backend can read: the list sections and the contact block. */
+export type CvSectionName = ProfileSectionName | 'contact'
+
 const SECTION_MESSAGES: Record<number, string> = {
   400: 'That section cannot be read.',
 }
@@ -48,7 +51,7 @@ export function extractProfile(auth: TokenSource): Promise<DraftResult> {
  */
 export function extractSection(
   auth: TokenSource,
-  section: ProfileSectionName,
+  section: CvSectionName,
 ): Promise<DraftResult> {
   return runExtract(
     auth,

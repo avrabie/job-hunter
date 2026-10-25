@@ -14,6 +14,12 @@ import { loadMaster } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
 import { revealAndFocus } from '../ui/revealAndFocus.ts'
 import { analyzeProject, type AnalysisResult } from './analysisApi.ts'
+import {
+  applyContactFill,
+  contactConflicts,
+  countChanged,
+  hasContactValue,
+} from './contactFill.ts'
 import { ProfileForm, type FillState } from './ProfileForm.tsx'
 import { listRepositories } from './repositoriesApi.ts'
 import { loadProfile, saveProfile } from './profileApi.ts'
@@ -95,6 +101,7 @@ function ProfileEditor() {
     education: NO_FILL,
     publications: NO_FILL,
   })
+  const [contactFill, setContactFill] = useState<FillState>(NO_FILL)
   const [notice, setNotice] = useState<string | null>(null)
   // Whether the public CV is live; it only adds the notice, so the page never waits for it.
   const [publicCv, setPublicCv] = useState<PublicCvState>({ state: 'unknown' })
@@ -208,6 +215,49 @@ function ProfileEditor() {
     } else {
       setFillFor(section, NO_FILL)
     }
+  }
+
+  /**
+   * Reads the contact block from the CV into the form as unsaved changes. Empty fields are filled; a field with a
+   * different value is replaced only after the user confirms, and the confirmation names the fields, not the values.
+   * Nothing is saved, and no profile request is sent.
+   */
+  async function onFillContact() {
+    setContactFill({ loading: true, error: null })
+    setNotice(null)
+    const result = await extractSection(auth, 'contact')
+    if (result.kind === 'failed') {
+      setContactFill({ loading: false, error: result.message })
+      return
+    }
+    setContactFill(NO_FILL)
+    if (result.kind !== 'draft') return
+    const cv = result.profile.contact
+    if (!hasContactValue(cv)) {
+      setNotice(
+        'No contact details were found in your CV. The contact fields are unchanged.',
+      )
+      return
+    }
+    const conflicts = contactConflicts(draft.contact, cv)
+    const replace =
+      conflicts.length > 0 &&
+      window.confirm(
+        `Replace these contact fields with the values from your CV: ${conflicts.join(', ')}?`,
+      )
+    const changed = countChanged(
+      draft.contact,
+      applyContactFill(draft.contact, cv, replace),
+    )
+    setDraft((current) => ({
+      ...current,
+      contact: applyContactFill(current.contact, cv, replace),
+    }))
+    setNotice(
+      changed > 0
+        ? 'The contact fields now hold values from your CV. Nothing is saved until you press Save. Check them first.'
+        : 'Nothing in the contact fields changed.',
+    )
   }
 
   async function onSave() {
@@ -331,6 +381,8 @@ function ProfileEditor() {
           savedProjects={savedProjects}
           onAnalyze={onAnalyze}
           publicCv={publicCv}
+          onFillContact={() => void onFillContact()}
+          contactFill={contactFill}
         />
 
         {save.state === 'conflict' && (
