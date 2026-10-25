@@ -10,6 +10,7 @@ import { Landing } from '../pages/Landing.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPosting } from './postingsApi.ts'
 import type { PostingDetail } from './types.ts'
+import { UserAddedBadge } from './UserAddedBadge.tsx'
 
 /** One posting with its description as plain text and its original links. */
 export function PostingPage() {
@@ -91,6 +92,7 @@ function PostingView({ id }: { id: string }) {
         <Link to="/postings">Back to the postings</Link>
       </p>
       <h1>{p.title}</h1>
+      <UserAddedBadge userAdded={p.userAdded} />
       <p>
         {p.company}
         {p.city ? ` · ${p.city}` : ''}

@@ -26,7 +26,7 @@
 ## 5. UI (after 4.1 contract)
 
 - [ ] 5.1 `ui/src/applications/ImportJob*` form, review step, paste fallback, error messages; tests.
-- [ ] 5.2 "Added by a user" badge in `PostingsPage` and `PostingPage`; tests.
+- [x] 5.2 "Added by a user" badge in `PostingsPage` and `PostingPage`; tests.
 
 ## 6. Wrap-up
 
