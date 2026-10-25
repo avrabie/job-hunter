@@ -49,6 +49,9 @@ jobhunter:
     model: ""
     # Maximum number of letter generations and regenerations per user per hour; each one is one model call. Manual edits do not count.
     per-hour: 20
+    # Maximum number of job skill analyses per user per hour; each one is one model call. Counted separately from per-hour.
+    # Reading a stored analysis and saving gap notes do not count.
+    skills-per-hour: 20
   import:
     # Model for importing a job from a URL (same names as above). Empty = use jobhunter.llm.model.
     model: ""

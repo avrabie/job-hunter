@@ -33,7 +33,8 @@ class DatabaseBaselineTests(
         // Raise by one for every new changeset.
         assertTrue("application" in tables && "motivation_letter" in tables, tables.toString())
         assertTrue("job_import_draft" in tables && "posting_import" !in tables, tables.toString())
-        assertEquals(18, count("select count(*) from databasechangelog"))
+        assertTrue("letter_skill_analysis" in tables, tables.toString())
+        assertEquals(19, count("select count(*) from databasechangelog"))
     }
 
     @Test

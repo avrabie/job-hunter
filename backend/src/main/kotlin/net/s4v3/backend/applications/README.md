@@ -15,13 +15,16 @@ Purpose: the user's tracked jobs. Marking a posting interested stores a frozen c
 - `LetterController`: `POST /api/applications/{id}/letters` (201 `LetterDetail`), `POST .../letters/edited` `{text}`, `GET .../letters` (bare array), `GET .../letters/{version}`, `GET .../letters/{version}/download` (`text/markdown; charset=utf-8`, attachment, nosniff, no-store), `DELETE .../letters/{version}` (204). Errors `{"error": code}`: `selection_invalid` 400, `letter_text_invalid` 400, `letter_limit` 409, `rate_limited` 429, `letter_failed` 502, `letter_not_configured` 503, 404 for others' or unknown ids.
 - `DefaultLetterService`: indexes resolve against the saved profile (`ProfileService.get(sub)`, never the client); the candidate is the full name plus the chosen entries only; language defaults to the posting's; caps 8 experience, 6 projects, 40 skills, instructions 1 000, 20 comments of 500; the model call runs outside a transaction and the version number and the 20 cap are settled under an advisory lock. The cap is checked before the limiter, so a refused request costs no call.
 - `LetterLimiter` (`jobhunter.letters.per-hour`, 20): generate and regenerate only. `LetterFileName`: `motivation-<company>-<title>-v<version>.md`, same normalisation as the CV export (copied, tested).
+- `SkillAnalysisService` / `DefaultSkillAnalysisService` / `SkillMatcher`: skill analysis of an application (change `letter-skill-gaps`). The model (via `llm.SkillExtractor`) only lists the skills the frozen description asks for; `SkillMatcher` decides which the caller has (normalised names plus a fixed alias table) and the split `include` / `gaps` / `other` is derived from the current saved profile on every read. Gap notes (max 20, 500 chars each, per application, never written to the profile) are read by `DefaultLetterService` itself and passed to the letter writer as `gapNotes`.
+- `SkillsController`: `GET /api/applications/{id}/skills` (`{analysed:false}` or the analysis), `POST .../skills/analyse` (model call, replaces, keeps notes of skills that are still gaps), `PUT .../skills/notes` `{notes:[{skill,text}]}`. Errors: `notes_invalid` 400, `rate_limited` 429, `skills_failed` 502, `skills_not_configured` 503, 404 for others' or unknown ids.
+- `SkillsLimiter` (`jobhunter.letters.skills-per-hour`, 20): analyses only, separate from `LetterLimiter`; reading and saving notes do not count.
 - `LetterRepository`, `ApplicationRepository`: JDBC, every statement scoped by owner.
 
 ## Events
 - None.
 
 ## Tables
-- `application`, `motivation_letter` (`db/changelog/011-applications.sql`, changesets `moldo:016` and `moldo:017`).
+- `application`, `motivation_letter` (`db/changelog/011-applications.sql`, changesets `moldo:016` and `moldo:017`), `letter_skill_analysis` (`013-letter-skill-gaps.sql`, changeset `moldo:019`).
 
 ## Calls
 - `accounts` (`CurrentUser`, `UserHourlyLimiter`), `postings` (`PostingQuery.find`, `liveState`), `profile` (`ProfileService.get`), `llm` (`LetterWriter`). Nothing may depend on this module.

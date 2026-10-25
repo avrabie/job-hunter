@@ -20,6 +20,13 @@ import {
   type LetterSummary,
 } from './lettersApi.ts'
 import { paragraphs } from './paragraphs.ts'
+import {
+  analyseSkills,
+  readSkills,
+  saveSkillNotes,
+  type SkillsResult,
+} from './skillsApi.ts'
+import { SkillsStep, type Analysed } from './SkillsStep.tsx'
 
 export const CHECK_NOTICE =
   'Check every statement before you send this letter; the writing assistant can get facts wrong.'
@@ -63,6 +70,24 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<Analysed | null>(null)
+  const [skillsLoading, setSkillsLoading] = useState(true)
+  const [skillsMessage, setSkillsMessage] = useState<string | null>(null)
+  const [skillsStatus, setSkillsStatus] = useState<string | null>(null)
+  const [ticked, setTicked] = useState<number[]>([])
+  const [notes, setNotes] = useState<Record<string, string>>({})
+
+  /** Shows an analysis: advised skills ticked, the others not, notes as saved. */
+  const applyAnalysis = useCallback((result: SkillsResult) => {
+    if (result.kind === 'done' && result.analysis.analysed) {
+      const a = result.analysis
+      setAnalysis(a)
+      setTicked(a.include.map((s) => s.profileIndex).sort((x, y) => x - y))
+      setNotes(Object.fromEntries(a.gaps.map((g) => [g.name, g.note ?? ''])))
+    } else if (result.kind === 'done') {
+      setAnalysis(null)
+    }
+  }, [])
 
   const show = useCallback((letter: LetterDetail) => {
     setCurrent(letter)
@@ -90,6 +115,12 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
           message: result.kind === 'failed' ? result.message : SIGN_IN_AGAIN,
         })
     })
+    void readSkills(auth, applicationId).then((result) => {
+      if (ignore) return
+      // A failed read is not an error: the step stays optional.
+      applyAnalysis(result)
+      setSkillsLoading(false)
+    })
     void (async () => {
       const list = await listLetters(auth, applicationId)
       if (ignore) return
@@ -114,7 +145,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
     return () => {
       ignore = true
     }
-  }, [auth, applicationId, show])
+  }, [auth, applicationId, show, applyAnalysis])
 
   /** Runs one call that makes a new version, then shows it and refreshes the list. */
   const makeVersion = async (call: () => Promise<LetterResult>) => {
@@ -132,6 +163,41 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
     setBusy(false)
   }
 
+  const runSkills = async (
+    call: () => Promise<SkillsResult>,
+    done: string | null,
+  ) => {
+    setBusy(true)
+    setSkillsMessage(null)
+    setSkillsStatus(null)
+    const result = await call()
+    if (result.kind === 'done') {
+      applyAnalysis(result)
+      setSkillsStatus(done)
+    } else {
+      setSkillsMessage(
+        result.kind === 'failed' ? result.message : SIGN_IN_AGAIN,
+      )
+    }
+    setBusy(false)
+  }
+  const onAnalyse = () =>
+    void runSkills(() => analyseSkills(auth, applicationId), null)
+  const onSaveNotes = () =>
+    void runSkills(
+      () =>
+        saveSkillNotes(
+          auth,
+          applicationId,
+          Object.entries(notes)
+            .map(([skill, text]) => ({ skill, text: text.trim() }))
+            .filter((n) => n.text.length > 0),
+        ),
+      'Notes saved. They stay with this application.',
+    )
+
+  const skillIndexes = analysis ? ticked : selection.skills
+
   const request = (basedOn: LetterDetail | null): GenerateRequest => {
     const asked = Object.entries(perParagraph)
       .map(([n, text]) => ({ n: Number(n), text: text.trim() }))
@@ -142,7 +208,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
       language: language === '' ? null : language,
       experience: selection.experience,
       projects: selection.projects,
-      skills: selection.skills,
+      skills: skillIndexes,
       instructions: instructions.trim() === '' ? null : instructions.trim(),
       basedOnVersion: basedOn?.version ?? null,
       comments: basedOn
@@ -208,7 +274,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
   const chosen =
     selection.experience.length +
     selection.projects.length +
-    selection.skills.length
+    skillIndexes.length
   const lines = current ? paragraphs(current.text) : []
 
   return (
@@ -260,15 +326,31 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
               chosen={selection.projects}
               onChange={(projects) => setSelection((s) => ({ ...s, projects }))}
             />
-            <Choice
-              legend="Skills"
-              max={MAX_SKILLS}
-              labels={profile.profile.skills.map((s) => s.name)}
-              chosen={selection.skills}
-              onChange={(skills) => setSelection((s) => ({ ...s, skills }))}
-            />
+            {!analysis && (
+              <Choice
+                legend="Skills"
+                max={MAX_SKILLS}
+                labels={profile.profile.skills.map((s) => s.name)}
+                chosen={selection.skills}
+                onChange={(skills) => setSelection((s) => ({ ...s, skills }))}
+              />
+            )}
           </>
         )}
+
+        <SkillsStep
+          analysis={analysis}
+          loading={skillsLoading}
+          busy={busy}
+          message={skillsMessage}
+          status={skillsStatus}
+          ticked={ticked}
+          notes={notes}
+          onAnalyse={onAnalyse}
+          onTick={(index, on) => setTicked((t) => toggled(t, index, on))}
+          onNote={(skill, text) => setNotes((n) => ({ ...n, [skill]: text }))}
+          onSaveNotes={onSaveNotes}
+        />
 
         <FormField label="Instructions (optional)">
           {(control) => (

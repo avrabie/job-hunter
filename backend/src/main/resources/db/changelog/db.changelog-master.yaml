@@ -23,3 +23,5 @@ databaseChangeLog:
       file: db/changelog/011-applications.sql
   - include:
       file: db/changelog/012-job-import.sql
+  - include:
+      file: db/changelog/013-letter-skill-gaps.sql

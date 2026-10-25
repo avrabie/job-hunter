@@ -36,10 +36,14 @@ data class PreviousLetter(
     val paragraphComments: List<ParagraphComment> = emptyList(),
 )
 
+/** A note the candidate wrote about a skill the job asks for and the profile lacks. [text] is the candidate's own words. */
+data class GapNote(val skill: String, val text: String)
+
 data class LetterRequest(
     val job: JobText,
     val candidate: Candidate,
     val language: LetterLanguage,
     val instructions: String? = null,
     val previous: PreviousLetter? = null,
+    val gapNotes: List<GapNote> = emptyList(),
 )

@@ -13,7 +13,9 @@ import net.s4v3.backend.applications.LetterSelectionInvalidException
 import net.s4v3.backend.applications.LetterService
 import net.s4v3.backend.applications.LetterSummary
 import net.s4v3.backend.applications.LetterTextInvalidException
+import net.s4v3.backend.applications.SkillAnalysisService
 import net.s4v3.backend.llm.Candidate
+import net.s4v3.backend.llm.GapNote
 import net.s4v3.backend.llm.JobText
 import net.s4v3.backend.llm.LetterLanguage
 import net.s4v3.backend.llm.LetterRequest
@@ -39,6 +41,7 @@ internal class DefaultLetterService(
     private val applications: ApplicationService,
     private val profiles: ProfileService,
     private val writer: LetterWriter,
+    private val skillAnalysis: SkillAnalysisService,
     private val limiter: LetterLimiter,
     private val transactions: TransactionTemplate,
     private val json: JsonMapper,
@@ -75,6 +78,8 @@ internal class DefaultLetterService(
             language = language,
             instructions = command.instructions?.takeIf { it.isNotBlank() },
             previous = previous,
+            // Read here, never from the request body: only the notes of the application's current gaps.
+            gapNotes = skillAnalysis.gapNotes(sub, applicationId).map { GapNote(it.skill, it.text) },
         )
 
         if (!limiter.tryAcquire(sub)) {

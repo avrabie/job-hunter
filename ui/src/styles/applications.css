@@ -188,3 +188,22 @@
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
+
+/* The optional skill analysis step of the letter workspace. */
+.skills-step {
+  margin: 0 0 var(--space-4);
+}
+
+.skills-step__hint {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+}
+
+.skills-step__gap {
+  margin: 0 0 var(--space-3);
+}
+
+.skills-step__gap-title {
+  margin: 0;
+  font-weight: var(--weight-medium);
+}
