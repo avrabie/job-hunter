@@ -84,4 +84,20 @@ describe('Technology tags', () => {
     )
     expect(offered).toEqual(['PostgreSQL', 'Go'])
   })
+
+  it('links an error to the input and marks it invalid', () => {
+    render(
+      <TagInput
+        label="Technologies"
+        value={[]}
+        suggestions={[]}
+        path="skills"
+        error="Too many"
+        onChange={() => {}}
+      />,
+    )
+    const input = screen.getByRole('combobox')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription('Technologies: Too many')
+  })
 })

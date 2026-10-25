@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Alert } from '../ui/Alert.tsx'
 import type { AnalysisResult } from './analysisApi.ts'
 import { Repeater, Select, TextInput } from './fields.tsx'
 import type { RepositoriesResult } from './repositoriesApi.ts'
@@ -185,7 +186,9 @@ export function OpenSourceSection({
       {listing.state === 'loading' && (
         <p role="status">Loading repositories…</p>
       )}
-      {listing.state === 'failed' && <p role="alert">{listing.message}</p>}
+      {listing.state === 'failed' && (
+        <Alert tone="danger">{listing.message}</Alert>
+      )}
       {listing.state === 'listed' && (
         <fieldset>
           <legend>Repositories</legend>
@@ -216,11 +219,7 @@ export function OpenSourceSection({
         </fieldset>
       )}
 
-      {picking && (
-        <p className="notice" role="status">
-          Nothing is saved until you press Save.
-        </p>
-      )}
+      {picking && <Alert>Nothing is saved until you press Save.</Alert>}
       <h3>Picked projects</h3>
       {projects.length === 0 && (
         <p className="hint">No repositories picked yet.</p>
@@ -288,7 +287,7 @@ export function OpenSourceSection({
                   Reading the repository. This can take a minute.
                 </p>
               )}
-              {failures[i] && <p role="alert">{failures[i]}</p>}
+              {failures[i] && <Alert tone="danger">{failures[i]}</Alert>}
               {p.analysis && (
                 <div>
                   <h4>Analysis</h4>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
@@ -17,11 +18,7 @@ export function MatchesPage() {
   const { state } = useAuth()
   switch (state.status) {
     case 'loading':
-      return (
-        <div className="page">
-          <p>Loading…</p>
-        </div>
-      )
+      return <PageLoading title="Matches" />
     case 'signedOut':
       return <Landing returnTo="/matches" />
     case 'error':

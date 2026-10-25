@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { InterestedButton } from '../applications/InterestedButton.tsx'
@@ -66,11 +67,7 @@ function PostingView({ id }: { id: string }) {
   }, [fetchPosting])
 
   if (load.state === 'loading')
-    return (
-      <div className="page page--narrow">
-        <p role="status">Loading posting…</p>
-      </div>
-    )
+    return <PageLoading title="Posting" text="Loading posting…" />
   if (load.state === 'notFound')
     return (
       <div className="page page--narrow">

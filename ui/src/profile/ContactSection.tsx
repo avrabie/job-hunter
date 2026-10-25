@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Alert } from '../ui/Alert.tsx'
 import { publicCvAddress, type PublicCvState } from './publicCvNotice.ts'
 import { TextInput } from './fields.tsx'
 import { ProfileSection } from './ProfileSection.tsx'
@@ -9,7 +10,7 @@ import type { Contact } from './types.ts'
 function PublicCvNotice({ state }: { state: PublicCvState }) {
   if (state.state === 'live')
     return (
-      <div className="notice">
+      <Alert>
         <p>
           Your public CV is live at {publicCvAddress(state.handle)}; saved
           changes show there at once.
@@ -17,7 +18,7 @@ function PublicCvNotice({ state }: { state: PublicCvState }) {
         <p>
           <Link to="/publish">Public CV</Link>
         </p>
-      </div>
+      </Alert>
     )
   if (state.state === 'not-live')
     return (

@@ -1,4 +1,5 @@
 import { useId, useState, type KeyboardEvent } from 'react'
+import { errorAttributes } from './errorAttributes.ts'
 import { tidyTags } from './types.ts'
 
 interface Props {
@@ -28,6 +29,7 @@ export function TagInput({
   const [draft, setDraft] = useState('')
   const inputId = useId()
   const listId = useId()
+  const errorId = useId()
   const offered = tidyTags(suggestions).filter(
     (s) => !value.some((v) => v.toLowerCase() === s.toLowerCase()),
   )
@@ -77,13 +79,14 @@ export function TagInput({
         onKeyDown={onKeyDown}
         // Text typed but not confirmed would be lost when the user goes on to Save, so leaving the field adds it.
         onBlur={add}
+        {...errorAttributes(errorId, error)}
       />
       <datalist id={listId}>
         {offered.map((s) => (
           <option key={s} value={s} />
         ))}
       </datalist>
-      {error && <span role="alert">{`${label}: ${error}`}</span>}
+      {error && <span id={errorId} role="alert">{`${label}: ${error}`}</span>}
     </div>
   )
 }

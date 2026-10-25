@@ -31,7 +31,8 @@ export function FillFromCv({
         <p className="hint">Choose a master CV in your files to use this.</p>
       )}
       {state.loading && <p role="status">Reading your CV…</p>}
-      {state.error && <p role="alert">{state.error}</p>}
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
     </div>
   )
 }
+import { Alert } from '../ui/Alert.tsx'

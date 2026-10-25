@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
@@ -19,7 +20,7 @@ export function AdminPage() {
   const { state } = useAuth()
   switch (state.status) {
     case 'loading':
-      return <p>Loading…</p>
+      return <PageLoading title="Schedule" />
     case 'signedOut':
       return <Landing returnTo="/admin" />
     case 'error':

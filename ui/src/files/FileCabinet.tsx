@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Card } from '../ui/Card.tsx'
+import { Alert } from '../ui/Alert.tsx'
 import { useAuth } from '../auth/authContext.ts'
 import { extractProfile } from '../cv/cvApi.ts'
 import type { Profile } from '../profile/types.ts'
@@ -168,13 +170,11 @@ export function FileCabinet({
   }
 
   return (
-    <section aria-labelledby="files-heading" className="file-cabinet">
-      <h2 id="files-heading">Your files</h2>
-
+    <Card title="Your files">
       {listing.state === 'loading' && <p role="status">Loading your files…</p>}
       {listing.state === 'failed' && (
         <>
-          <p role="alert">{listing.message}</p>
+          <Alert tone="danger">{listing.message}</Alert>
           <button
             type="button"
             className="secondary"
@@ -191,7 +191,7 @@ export function FileCabinet({
         </p>
       )}
       {listing.state === 'ready' && listing.files.length > 0 && (
-        <ul className="files">
+        <ul>
           {listing.files.map((f) => (
             <li key={f.id}>
               <strong>{f.name}</strong> {f.master && <span>Master CV</span>}
@@ -304,12 +304,8 @@ export function FileCabinet({
         </div>
       )}
       {busy === 'deleting' && <p role="status">Deleting…</p>}
-      {error && <p role="alert">{error}</p>}
-      {notice && (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
-    </section>
+      {error && <Alert tone="danger">{error}</Alert>}
+      {notice && <Alert>{notice}</Alert>}
+    </Card>
   )
 }

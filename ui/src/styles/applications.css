@@ -14,11 +14,6 @@
   margin-top: 0;
 }
 
-.applications-page .form-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 /* ---- Shared actions row ---- */
 
 .application-actions {
@@ -90,14 +85,6 @@
   font: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-.application-confirm {
-  margin-top: var(--space-3);
-}
-
-.application-confirm p {
-  margin: 0 0 var(--space-2);
 }
 
 /* ---- Interested action ---- */

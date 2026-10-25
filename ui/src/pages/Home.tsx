@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link } from 'react-router'
 import {
   listApplications,
@@ -15,12 +16,14 @@ export function Home() {
   const { state, signIn } = useAuth()
   switch (state.status) {
     case 'loading':
-      return <p>Loading…</p>
+      return <PageLoading title="Home" />
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
           <button type="button" onClick={() => void signIn()}>
             Try again
           </button>

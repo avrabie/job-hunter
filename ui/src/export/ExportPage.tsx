@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link } from 'react-router'
 import { messageForError } from '../api/messages.ts'
 import { useAuth, type AuthApi } from '../auth/authContext.ts'
@@ -31,14 +32,16 @@ export function ExportPage() {
   const { state } = useAuth()
   switch (state.status) {
     case 'loading':
-      return <p>Loading…</p>
+      return <PageLoading title="Export" />
     case 'signedOut':
       return <Landing returnTo="/export" />
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':

@@ -57,3 +57,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.export-field label {
+  margin-bottom: var(--space-1);
+}
+
+.export-field select {
+  margin-bottom: var(--space-4);
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { safeHttpUrl } from '../postings/links.ts'
@@ -85,7 +86,8 @@ function ApplicationView({
     void refresh()
   }, [refresh])
 
-  if (load.state === 'loading') return <p role="status">Loading application…</p>
+  if (load.state === 'loading')
+    return <PageLoading title="Application" text="Loading application…" />
   if (load.state === 'notFound')
     return (
       <div className="page page--narrow applications-page">

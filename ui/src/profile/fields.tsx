@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import { errorAttributes, type FieldControl } from './errorAttributes.ts'
 
 /** A labelled control with the server's message for its field underneath. */
 export function Field({
@@ -8,13 +9,14 @@ export function Field({
 }: {
   label: string
   error?: string | undefined
-  children: ReactNode
+  children: (control: FieldControl) => ReactNode
 }) {
+  const errorId = useId()
   return (
     <label>
       {label}
-      {children}
-      {error && <span role="alert">{`${label}: ${error}`}</span>}
+      {children(errorAttributes(errorId, error))}
+      {error && <span id={errorId} role="alert">{`${label}: ${error}`}</span>}
     </label>
   )
 }
@@ -37,12 +39,15 @@ export function TextInput({
 }) {
   return (
     <Field label={label} error={error}>
-      <input
-        data-path={path}
-        type={type}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      {(control) => (
+        <input
+          {...control}
+          data-path={path}
+          type={type}
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
     </Field>
   )
 }
@@ -62,16 +67,19 @@ export function NumberInput({
 }) {
   return (
     <Field label={label} error={error}>
-      <input
-        data-path={path}
-        type="number"
-        inputMode="numeric"
-        value={value ?? ''}
-        onChange={(e) => {
-          const n = e.target.valueAsNumber
-          onChange(Number.isNaN(n) ? null : n)
-        }}
-      />
+      {(control) => (
+        <input
+          {...control}
+          data-path={path}
+          type="number"
+          inputMode="numeric"
+          value={value ?? ''}
+          onChange={(e) => {
+            const n = e.target.valueAsNumber
+            onChange(Number.isNaN(n) ? null : n)
+          }}
+        />
+      )}
     </Field>
   )
 }
@@ -99,20 +107,23 @@ export function Select<T extends string>({
 }) {
   return (
     <Field label={label} error={error}>
-      <select
-        data-path={path}
-        value={value ?? ''}
-        onChange={(e) =>
-          onChange(e.target.value === '' ? null : (e.target.value as T))
-        }
-      >
-        {empty !== undefined && <option value="">{empty}</option>}
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {labels?.[o] ?? o}
-          </option>
-        ))}
-      </select>
+      {(control) => (
+        <select
+          {...control}
+          data-path={path}
+          value={value ?? ''}
+          onChange={(e) =>
+            onChange(e.target.value === '' ? null : (e.target.value as T))
+          }
+        >
+          {empty !== undefined && <option value="">{empty}</option>}
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {labels?.[o] ?? o}
+            </option>
+          ))}
+        </select>
+      )}
     </Field>
   )
 }

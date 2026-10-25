@@ -60,11 +60,14 @@ export function AboutSection({
         onChange={(v) => onWorkAuthorisationChange(v)}
       />
       <Field label="Summary" error={errors['summary']}>
-        <textarea
-          rows={4}
-          value={summary ?? ''}
-          onChange={(e) => onSummaryChange(e.target.value)}
-        />
+        {(control) => (
+          <textarea
+            {...control}
+            rows={4}
+            value={summary ?? ''}
+            onChange={(e) => onSummaryChange(e.target.value)}
+          />
+        )}
       </Field>
     </ProfileSection>
   )

@@ -80,7 +80,7 @@ a:hover {
 }
 
 /* `main` gets focus from the skip link only; a ring around the whole page would just be noise. */
-[tabindex='-1']:focus {
+main#content[tabindex='-1']:focus {
   outline: none;
 }
 

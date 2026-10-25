@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PageHeader } from '../ui/PageHeader.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import {
@@ -31,14 +34,16 @@ export function ProfilePage() {
 
   switch (state.status) {
     case 'loading':
-      return <p>Loading…</p>
+      return <PageLoading title="Your profile" />
     case 'signedOut':
       return <Landing returnTo="/profile" />
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':
@@ -267,12 +272,13 @@ function ProfileEditor() {
     return result
   }
 
-  if (load.state === 'loading') return <p>Loading your profile…</p>
+  if (load.state === 'loading')
+    return <PageLoading title="Your profile" text="Loading your profile…" />
   if (load.state === 'failed') {
     return (
       <div className="page page--narrow">
-        <h1>Your profile</h1>
-        <p role="alert">{load.message}</p>
+        <PageHeader title="Your profile" />
+        <Alert tone="danger">{load.message}</Alert>
         <button type="button" onClick={() => void fetchStored()}>
           Try again
         </button>
@@ -293,10 +299,10 @@ function ProfileEditor() {
           Back
         </Link>
       </p>
-      <h1>Your profile</h1>
-      <p>
-        These facts are the only source for the applications we draft for you.
-      </p>
+      <PageHeader
+        title="Your profile"
+        lead="These facts are the only source for the applications we draft for you."
+      />
       <FileCabinet
         formHasContent={snapshot(draft) !== snapshot(emptyProfile())}
         onDraft={(d) => setDraft((current) => applyDraft(current, d))}
@@ -310,11 +316,7 @@ function ProfileEditor() {
         }}
         noValidate
       >
-        {notice && (
-          <p className="notice" role="status">
-            {notice}
-          </p>
-        )}
+        {notice && <Alert>{notice}</Alert>}
         <ProfileForm
           profile={draft}
           onChange={setDraft}
@@ -332,7 +334,7 @@ function ProfileEditor() {
         />
 
         {save.state === 'conflict' && (
-          <div className="notice" role="alert">
+          <Alert tone="danger">
             <p>
               Your profile was changed somewhere else. Your edits are still
               here; saving is paused.
@@ -344,11 +346,11 @@ function ProfileEditor() {
             >
               Reload
             </button>
-          </div>
+          </Alert>
         )}
-        {save.state === 'failed' && <p role="alert">{save.message}</p>}
+        {save.state === 'failed' && <Alert tone="danger">{save.message}</Alert>}
         {save.state === 'saved' && !dirty && (
-          <p role="status">{`Saved (version ${version}).`}</p>
+          <Alert tone="success">{`Saved (version ${version}).`}</Alert>
         )}
         <div className="actions">
           <button
