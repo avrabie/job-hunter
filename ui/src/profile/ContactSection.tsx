@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Alert } from '../ui/Alert.tsx'
 import { publicCvAddress, type PublicCvState } from './publicCvNotice.ts'
@@ -31,11 +32,14 @@ function PublicCvNotice({ state }: { state: PublicCvState }) {
 
 /** Contact details, with a note about the public CV. */
 export function ContactSection({
+  fill,
   contact,
   onChange,
   errors,
   publicCv,
 }: {
+  /** The "Fill from CV" control; the form builds it. */
+  fill: ReactNode
   contact: Contact
   onChange: (contact: Contact) => void
   /** Server messages by field path, for example `contact.email`. */
@@ -51,6 +55,7 @@ export function ContactSection({
       summary={contact.fullName?.trim() || 'Not set'}
       hasError={hasErrorAt(errors, ['contact.'])}
     >
+      {fill}
       <p className="hint">
         The full name is needed to export a CV.{' '}
         <Link to="/export">Export CV</Link>
