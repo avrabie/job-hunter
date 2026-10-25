@@ -6,8 +6,8 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 0. Checks by the lead
 
-- [ ] 0.1 Check `javax.imageio` JPEG read and write inside the production backend image (run a tiny Java/Kotlin test with the image's JRE as done for the PDF renderer) and record the result in `design.md` Risks.
-- [ ] 0.2 Compare the sample's look to the rendered Professional PDF (render pages to PNG locally with `sips` for inspection only, never committed) and list differences as follow-ups.
+- [x] 0.1 Check `javax.imageio` JPEG read and write inside the production backend image (run a tiny Java/Kotlin test with the image's JRE as done for the PDF renderer) and record the result in `design.md` Risks.
+- [x] 0.2 Compare the sample's look to the rendered Professional PDF (render pages to PNG locally with `sips` for inspection only, never committed) and list differences as follow-ups.
 
 ## 1. File cabinet API (backend, `files`)
 
@@ -38,4 +38,4 @@ Groups 1, 2, 3 and 5 are independent and can run in parallel; group 4 needs 1, 2
 
 ## 7. Lead
 
-- [ ] 7.1 Merge, full `./gradlew clean verify`, UI tests/tsc/oxlint/prettier, `openspec validate --all`, security review of the photo route and the processor (independent agent), then deploy only after the owner says so; archive after the owner tests.
+- [x] 7.1 Merge, full `./gradlew clean verify`, UI tests/tsc/oxlint/prettier, `openspec validate --all`, security review of the photo route and the processor (independent agent), then deploy only after the owner says so; archive after the owner tests.

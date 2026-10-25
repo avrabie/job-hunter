@@ -6,8 +6,8 @@ Groups 1 and 2 are independent and can run in parallel; group 3 needs 1 and 2 me
 
 ## 0. Checks by the lead
 
-- [ ] 0.1 After group 2 is merged, run the real model once with a synthetic job description and synthetic profile (locally with the key, never committed) and judge the letter's quality, length, invention and language; adjust `LetterPrompts` if needed and record the result in `design.md` Risks.
-- [ ] 0.2 Decide with the owner whether `jobhunter.letters.model` stays Haiku or moves to Sonnet.
+- [x] 0.1 After group 2 is merged, run the real model once with a synthetic job description and synthetic profile (locally with the key, never committed) and judge the letter's quality, length, invention and language; adjust `LetterPrompts` if needed and record the result in `design.md` Risks.
+- [x] 0.2 Decide with the owner whether `jobhunter.letters.model` stays Haiku or moves to Sonnet.
 
 ## 1. Applications (backend)
 
