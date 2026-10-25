@@ -5,9 +5,9 @@
 
 ## 1. Fetcher (independent)
 
-- [ ] 1.1 `jobimport/internal/UrlRules` (https/443/no userinfo/no IP literal, canonical URL, denylist) with unit tests.
-- [ ] 1.2 `AddressRules` (public-address check incl. IPv4-mapped and ULA) and `SafeFetcher` (validated-address connect with SNI, manual redirects, 10 s, 1 MB, identity encoding, content type), tested against a local TLS fake with rebinding, redirect-to-internal, oversize and wrong-type cases.
-- [ ] 1.3 `PageText` (jsoup to capped plain text, under-300-chars rule) with tests.
+- [x] 1.1 `jobimport/internal/UrlRules` (https/443/no userinfo/no IP literal, canonical URL, denylist) with unit tests.
+- [x] 1.2 `AddressRules` (public-address check incl. IPv4-mapped and ULA) and `SafeFetcher` (validated-address connect with SNI, manual redirects, 10 s, 1 MB, identity encoding, content type), tested against a local TLS fake with rebinding, redirect-to-internal, oversize and wrong-type cases.
+- [x] 1.3 `PageText` (jsoup to capped plain text, under-300-chars rule) with tests.
 
 ## 2. LLM extractor (independent)
 
