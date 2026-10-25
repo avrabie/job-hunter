@@ -1,6 +1,6 @@
 # Backend architecture
 
-Scope: the `backend/` Gradle build only (the Spring Modulith application). Gateway, auth and ui appear only where the backend talks to them.
+Scope: the `backend/` Gradle build (the Spring Modulith application), sections 1 to 9. Gateway, auth and ui appear there only where the backend talks to them; section 10 describes the ui's shape.
 Read on 2026-10-24 from the files cited inline. Paths starting `backend/` are relative to the repository root; `K/` below is shorthand for
 `backend/src/main/kotlin/net/s4v3/backend/`. Anything I did not confirm in a file is labelled "unverified".
 
@@ -427,3 +427,14 @@ fast and integration is in `openspec/changes/fast-build-and-code-map/design.md`.
 - Architecture tests: section 8.
 - Fakes and helpers: `FakeGreenhouse.kt` (local Greenhouse), `ai/koog/fake/FakeKoogClient.kt`, `llm/FakePromptExecutor.kt`, `MatchingTestSupport.kt`, `TestEndpoints.kt`.
 - Real network is not used: Anthropic is faked through `ExecutorSource`, GitHub and Greenhouse through local servers (stated by the `base-url` settings being overridable; the fakes' use per test was not checked for every class).
+
+## 10. UI (`ui/`)
+
+Short map of the single-page app; the folder map and the rules are in `ui/src/README.md`, the auth and gateway detail in `docs/architecture-auth-gateway-ui.md` section 4.
+
+- **Top-bar navigation** (`layout/NavBar.tsx`): signed in, the bar holds Postings, Matches, Job tracking, a CV disclosure (Export CV, Public CV), Profile, Admin (only with the `ADMIN` role, decoded from the token and enforced by the backend) and Sign out. Below 48rem the items sit behind a Menu button. Signed out, the header has Sign in and Register only. The current page is `aria-current="page"`.
+- **Landing** (`pages/Landing.tsx`, copy in `pages/landingContent.ts`): what a signed-out visitor sees on `/` and on any page that needs sign-in. Static, no API call.
+- **Home** (`pages/Home.tsx`): the signed-in overview with three cards (Matches, Job tracking with counts per stage from the existing applications list, Profile) and quick links. A failed count stays inside its card.
+- **Collapsible profile** (`profile/ProfilePage.tsx`, `ProfileForm.tsx`): each section is a `Collapsible` with a one-line summary; "Expand all" and "Collapse all" act on the whole form. A section with an error opens itself, and the first invalid field is focused after a failed save. Closing a section only hides it.
+- **Grouped skills** (`profile/skillGroups.ts`, `SkillsSection.tsx`): skills sit in nine groups (languages, frameworks, messaging, security, cloud, tests, databases, tools, other), with the same sort rule and fixture as the backend's `SkillGroups.kt`. Groups start collapsed above 20 skills; a filter opens the groups it matches.
+- **Shared rules**: one stylesheet of design tokens (`styles/tokens.css`, light and dark), per-page styles loaded with their page, and a strict CSP with no inline styles or scripts, checked by `build.test.ts` on a real build.

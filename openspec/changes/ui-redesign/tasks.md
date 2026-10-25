@@ -33,4 +33,4 @@
 ## 5. Wrap-up
 
 - [ ] 5.1 Full UI checks (vitest, tsc, oxlint --deny-warnings, prettier), backend `SkillGroupsTests`, `openspec validate --all`, image script; independent accessibility and CSP review (landmarks, one h1, keyboard path through nav and collapsibles, contrast, no inline styles).
-- [ ] 5.2 Docs (`ui/src/README.md`, `docs/architecture.md`, glossary: "design tokens", "collapsible section"); deploy A and B only after the owner says so; archive after the owner tests.
+- [x] 5.2 Docs (`ui/src/README.md`, `docs/architecture.md`, glossary: "design tokens", "collapsible section"); deploy A and B only after the owner says so; archive after the owner tests.

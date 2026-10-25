@@ -1,6 +1,6 @@
-# Glossary (backend)
+# Glossary
 
-Domain terms as the code uses them. Read on 2026-10-24. `K/` = `backend/src/main/kotlin/net/s4v3/backend/`. See `docs/architecture.md` for how the parts fit.
+Domain terms as the code uses them. Read on 2026-10-25. `K/` = `backend/src/main/kotlin/net/s4v3/backend/`, `ui/src/` = the web app. See `docs/architecture.md` for how the parts fit.
 
 ## People and accounts
 
@@ -87,3 +87,9 @@ Domain terms as the code uses them. Read on 2026-10-24. `K/` = `backend/src/main
 - **limiter**: an in-memory rolling-hour counter per user (`ExtractionLimiter`, `ExportLimiter`, `AnalysisLimiter`). `K/cv/internal/`, `K/web/internal/AnalysisLimiter.kt`.
 - **personal data rule**: profile, CV, repository and posting text and tokens never go into logs or error bodies; code comments across the modules repeat it (for example `K/profile/ProfileDirectory.kt`).
 - **applications / notifications**: planned modules with no code yet. `backend/src/main/java/net/s4v3/backend/applications/package-info.java`.
+
+## UI
+
+- **design tokens**: the custom properties in `ui/src/styles/tokens.css` (colours, type, spacing, radii, focus ring), light and dark values; the only place with raw colour values. Contrast of the text and control pairs is tested in `tokens.test.ts`.
+- **collapsible section**: a `Collapsible` (`ui/src/ui/Collapsible.tsx`), a `details`/`summary` with a one-line summary; inside a `CollapsibleGroup` it takes part in "Expand all" and "Collapse all". Used for the profile sections and the skill groups.
+- **skill group**: one of nine display groups a skill is sorted into by its name (`LANGUAGES` ... `OTHER`), with keyword matching and the same rules as the backend. `ui/src/profile/skillGroups.ts`, reference `K/cv/export/SkillGroups.kt`.

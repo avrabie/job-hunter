@@ -196,7 +196,7 @@ downstream servers), then `RoutingTests`, `PassThroughTests`, `HardeningTests`, 
 ## 4. ui/
 
 React 19 + Vite 8 + TypeScript 6, react-router 8, oidc-client-ts 3, vitest 5 (`ui/package.json`). No state library, no CSS
-framework: one `src/index.css`.
+framework: `src/styles/` (tokens, base, components, one file per page) and `src/index.css`, which imports the first three and keeps the legacy page rules.
 
 ### 4.1 Folder map of `ui/src`
 
@@ -210,7 +210,7 @@ framework: one `src/index.css`.
 | `ui/` | shared components: `Collapsible` (+ `CollapsibleGroup`, `ExpandCollapseAll`), `revealAndFocus`, `Card`, `PageHeader`, `Badge`, `Alert`, `EmptyState`, `FormField` |
 | `styles/` | `tokens.css` (design tokens, light and dark), `base.css`, `components.css`; `index.css` imports them and keeps the legacy page rules |
 | `register/` | `RegisterPage`, `register.ts` |
-| `profile/` | `ProfilePage`, `ProfileForm`, `fields`, `OpenSourceSection`, `TagInput`, `types`, `rules`, `skills`, `profileApi`, `repositoriesApi`, `analysisApi`, `fixtures/` |
+| `profile/` | `ProfilePage`, `ProfileForm`, `ProfileSection` (a `Collapsible` per section), `fields`, `OpenSourceSection`, `SkillsSection`, `skillGroups`, `TagInput`, `types`, `rules`, `skills`, `profileApi`, `repositoriesApi`, `analysisApi`, `fixtures/` |
 | `cv/` | `cvApi` (extract from the master CV) |
 | `files/` | `FileCabinet`, `filesApi`, `format`, `fakeXhr` (test helper, lives in `src/test/`) |
 | `postings/` | `PostingsPage`, `PostingPage`, `OriginalLinks`, `postingsApi`, `links`, `types` |
@@ -223,7 +223,7 @@ Pattern per feature: `<x>Page.tsx` (UI + state) + `<x>Api.ts` (calls, returns a 
 
 ### 4.2 Routing (`App.tsx`)
 
-`/` Home, `/profile`, `/postings`, `/postings/:id`, `/matches`, `/export`, `/admin`, `/register`, `/callback`, and `*` -> Home.
+`/` Home, `/profile`, `/postings`, `/postings/:id`, `/applications`, `/applications/:id`, `/matches`, `/export`, `/publish`, `/admin`, `/register`, `/callback`, and `*` -> Home.
 There is no route guard component: each page switches on `useAuth().state` and renders `Landing returnTo=...` when signed
 out (e.g. `ProfilePage.tsx`, `PostingsPage.tsx`). Every route renders inside the `Layout` route, which shows the
 `NavBar` when signed in and a minimal header (Sign in, Register) otherwise. `Home` renders Landing or the overview by
@@ -361,7 +361,7 @@ pages disable `react-hooks/exhaustive-deps` on purpose so a load runs once per m
 
 ### 4.8 Tests
 
-31 test files, next to the code (`*.test.ts(x)`), vitest with jsdom, setup in `src/test/setup.ts` (jest-dom matchers and
+51 test files, next to the code (`*.test.ts(x)`), vitest with jsdom, setup in `src/test/setup.ts` (jest-dom matchers and
 cleanup) (`vite.config.ts`). Styles: pure functions (`rules`, `skills`, `options`, `format`, `links`, `returnTo`), API modules
 with a stubbed `fetch` (`*Api.test.ts`), pages with Testing Library and `fakeAuth`/`fakeManager`, one
 `FakeXhr` for uploads. Two guard tests: `build.test.ts` runs a real Vite build in memory and fails on inline script or
@@ -395,8 +395,9 @@ for a year with `=404` for missing files, everything else falls back to `index.h
 4. **The rate limits are not where the layout suggests.** Gateway has none; the three limiters sit in separate backend
    packages (`backend/.../web/internal/AnalysisLimiter.kt`, `cv/internal/ExtractionLimiter.kt`, `ExportLimiter.kt`) and
    the open auth POSTs have none.
-5. **Stale message text.** `ui/src/api/messages.ts` still says "The backend has no endpoints yet." for any 404. `Shell`
-   still pings `GET /api/` (named "one call that proves the whole path works") although real pages exist.
+5. **Stale message text.** `ui/src/api/messages.ts` still says "The backend has no endpoints yet." for any 404. The
+   service ping that the old `Shell` made now lives in `layout/Footer.tsx` (`ServiceStatus`, signed in only), still
+   described as "one call that proves the whole path works".
 6. **No route guard.** Each of seven pages repeats the same `switch (state.status)` with Landing/loading/error
    (`ProfilePage`, `PostingsPage`, `PostingPage`, `MatchesPage`, `ExportPage`, `AdminPage`, `Home`); the "Sign-in failed"
    block is copied in `Home` and `ProfilePage`.
