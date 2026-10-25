@@ -1,12 +1,41 @@
 package net.s4v3.backend.cv.export
 
 import net.s4v3.backend.cv.export.internal.Labels
+import tools.jackson.databind.json.JsonMapper
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SkillGroupsTests {
 
     private fun group(name: String) = SkillGroups.group(name)
+
+    /** The same table as the UI test: `ui/src/profile/skillGroups.cases.json` is read in place so the two cannot drift. */
+    private fun casesFile(): Path {
+        var dir: Path? = Path.of("").toAbsolutePath()
+        while (dir != null) {
+            val candidate = dir.resolve("ui/src/profile/skillGroups.cases.json")
+            if (Files.exists(candidate)) return candidate
+            dir = dir.parent
+        }
+        error("ui/src/profile/skillGroups.cases.json not found")
+    }
+
+    @Test
+    fun `group passes every case of the shared table`() {
+        val cases = JsonMapper.builder().build().readTree(Files.readString(casesFile()))
+        assertTrue(cases.size() >= 10, "the table is suspiciously short")
+        for (index in 0 until cases.size()) {
+            val case = cases.get(index)
+            assertEquals(
+                SkillGroup.valueOf(case.path("group").asString()),
+                group(case.path("name").asString()),
+                case.path("name").asString(),
+            )
+        }
+    }
 
     @Test
     fun `spec examples land in their groups`() {

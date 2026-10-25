@@ -17,7 +17,7 @@
 
 ## 3. Profile page (after 1)
 
-- [ ] 3.1 `skillGroups.ts` + shared `skillGroups.cases.json`, UI test, and the backend `SkillGroupsTests` reading the same fixture.
+- [x] 3.1 `skillGroups.ts` + shared `skillGroups.cases.json`, UI test, and the backend `SkillGroupsTests` reading the same fixture.
 - [ ] 3.2 Profile sections as `Collapsible` with summaries and Expand/Collapse all; error-opens-section and focus; unsaved-edits behaviour kept.
 - [ ] 3.3 Grouped, collapsible, filterable Skills section (start collapsed over 20 skills); the existing 1 578-line profile test stays green or is adapted only where wrappers moved.
 
