@@ -23,7 +23,7 @@
 
 ## 4. Convert the remaining pages (after the owner approves deploy A; Haiku, one page per agent, in parallel)
 
-- [ ] 4.1 Postings list and posting page.
+- [x] 4.1 Postings list and posting page.
 - [ ] 4.2 Matches.
 - [ ] 4.3 Job tracking list, import form, application page and letter workspace.
 - [ ] 4.4 Export CV and Public CV pages.

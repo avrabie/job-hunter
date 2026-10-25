@@ -362,3 +362,38 @@ describe('the Interested action', () => {
     expect(screen.queryByText(/Stage:/)).not.toBeInTheDocument()
   })
 })
+
+describe('the new layout', () => {
+  it('has one h1 and a labelled pagination region on the list', async () => {
+    stubFetch(() => json(200, [posting()]))
+    mount('/postings')
+
+    await screen.findByRole('link', { name: 'Backend Engineer' })
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('navigation', { name: 'Pages' }),
+    ).toBeInTheDocument()
+  })
+
+  it('has one h1 and a labelled description section on the posting page', async () => {
+    stubFetch(() =>
+      json(200, {
+        ...posting(),
+        description: 'Plain text',
+        lastSeen: '2026-10-23T10:00:00Z',
+      }),
+    )
+    mount('/postings/11111111-1111-1111-1111-111111111111')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Backend Engineer',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('region', { name: 'Description' }),
+    ).toHaveTextContent('Plain text')
+  })
+})

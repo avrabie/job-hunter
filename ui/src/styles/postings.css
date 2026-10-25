@@ -1,0 +1,85 @@
+/*
+ * Postings list and posting page. Tokens only (build.test.ts checks for raw colours). Loaded from the postings
+ * components, so it comes after index.css and wins where the legacy rules overlap.
+ */
+
+.posting-filters {
+  display: grid;
+  gap: 0 var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.posting-filters > button {
+  justify-self: start;
+  margin-bottom: var(--space-4);
+}
+
+@media (min-width: 48rem) {
+  .posting-filters {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .posting-filters > button {
+    justify-self: stretch;
+  }
+}
+
+.posting-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.posting-card {
+  margin: 0;
+}
+
+.posting-card__title {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-lg);
+}
+
+.posting-card__meta,
+.posting-meta {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+}
+
+.posting-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.original-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.original-links li {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.posting-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
