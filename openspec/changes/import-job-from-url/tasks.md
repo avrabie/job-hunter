@@ -11,7 +11,7 @@
 
 ## 2. LLM extractor (independent)
 
-- [ ] 2.1 `llm.JobExtractor`, `KoogJobExtractor`, prompt, output cleaning, `JobImportSettings`, tests with `FakePromptExecutor` incl. injection text and HTML output.
+- [x] 2.1 `llm.JobExtractor`, `KoogJobExtractor`, prompt, output cleaning, `JobImportSettings`, tests with `FakePromptExecutor` incl. injection text and HTML output.
 
 ## 3. Postings read model and schema
 

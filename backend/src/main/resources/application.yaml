@@ -49,6 +49,9 @@ jobhunter:
     model: ""
     # Maximum number of letter generations and regenerations per user per hour; each one is one model call. Manual edits do not count.
     per-hour: 20
+  import:
+    # Model for importing a job from a URL (same names as above). Empty = use jobhunter.llm.model.
+    model: ""
   cv:
     # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
     max-text-chars: 120000
