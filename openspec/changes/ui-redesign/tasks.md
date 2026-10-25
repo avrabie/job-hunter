@@ -12,8 +12,8 @@
 
 ## 2. Landing and home (after 1)
 
-- [ ] 2.1 New `Landing` (hero, capability cards from a data file, how it works, privacy, CTA) with tests (no API call, buttons, content).
-- [ ] 2.2 New signed-in `Home` overview (cards, counts per stage from the existing applications list, service status moved to the footer); tests.
+- [x] 2.1 New `Landing` (hero, capability cards from a data file, how it works, privacy, CTA) with tests (no API call, buttons, content).
+- [x] 2.2 New signed-in `Home` overview (cards, counts per stage from the existing applications list, service status moved to the footer); tests.
 
 ## 3. Profile page (after 1)
 

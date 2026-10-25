@@ -131,8 +131,10 @@ describe('signed-in shell', () => {
     const auth = fakeAuth(signedIn())
     mount(auth)
     await screen.findByText('The backend has no endpoints yet.')
-    expect(fetchSpy).toHaveBeenCalledTimes(1)
-    expect(fetchSpy.mock.calls[0][0]).toBe('/api/')
+    // The overview also asks for the tracked jobs; the status check itself runs once.
+    expect(fetchSpy.mock.calls.filter(([url]) => url === '/api/')).toHaveLength(
+      1,
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(auth.signOut).toHaveBeenCalledTimes(1)
   })
@@ -157,6 +159,136 @@ describe('signed-in shell', () => {
       within(main.getByRole('region', { name: 'Profile' })).getByRole('link'),
     ).toHaveAttribute('href', '/profile')
     await screen.findByText('The backend has no endpoints yet.')
+  })
+})
+
+describe('signed-in overview', () => {
+  const app = (stage: string, id: string) => ({
+    id,
+    postingId: null,
+    title: 'Backend Engineer',
+    company: 'Example AG',
+    stage,
+    appliedOn: null,
+    stageChangedAt: '2026-01-01T00:00:00Z',
+    liveStatus: 'OPEN',
+  })
+
+  /** `/api/` answers 200; the list answers with `list`, or the given status when it is a number. */
+  function stubApi(list: unknown[] | number) {
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url !== '/api/applications') return new Response('x', { status: 200 })
+      return typeof list === 'number'
+        ? new Response('x', { status: list })
+        : new Response(JSON.stringify(list), { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    return fetchSpy
+  }
+
+  const signedInAuth = () =>
+    fakeAuth({ status: 'signedIn', user: fakeUser() } as AuthState)
+
+  const jobTracking = () =>
+    within(screen.getByRole('main')).getByRole('region', {
+      name: 'Job tracking',
+    })
+
+  it('greets the user by name and links to the main areas', async () => {
+    stubApi([])
+    mount(signedInAuth())
+    const main = within(screen.getByRole('main'))
+    expect(
+      main.getByRole('heading', { level: 1, name: 'Welcome, Ada Lovelace' }),
+    ).toBeInTheDocument()
+    const quick = within(main.getByRole('navigation', { name: 'Quick links' }))
+    expect(quick.getByRole('link', { name: 'Postings' })).toHaveAttribute(
+      'href',
+      '/postings',
+    )
+    expect(quick.getByRole('link', { name: 'Export CV' })).toHaveAttribute(
+      'href',
+      '/export',
+    )
+    expect(quick.getByRole('link', { name: 'Public CV' })).toHaveAttribute(
+      'href',
+      '/publish',
+    )
+    await screen.findByText(/not tracking any jobs yet/)
+  })
+
+  it('greets by email when the token has no name', async () => {
+    stubApi([])
+    const user = {
+      ...fakeUser(),
+      profile: { sub: 'u', email: 'ada@example.ch' },
+    } as unknown as User
+    mount(fakeAuth({ status: 'signedIn', user }))
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Welcome, ada@example.ch',
+      }),
+    ).toBeInTheDocument()
+    await screen.findByText(/not tracking any jobs yet/)
+  })
+
+  it('counts the tracked jobs per stage from the list', async () => {
+    const fetchSpy = stubApi([
+      app('INTERESTED', 'a'),
+      app('INTERESTED', 'b'),
+      app('APPLYING', 'c'),
+      app('APPLIED', 'd'),
+      app('INTERESTED', 'e'),
+    ])
+    mount(signedInAuth())
+    const counts = await within(jobTracking()).findByRole('list', {
+      name: 'Tracked jobs per stage',
+    })
+    expect(
+      within(counts)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['3 Interested', '1 Applying', '1 Applied', '0 Rejected'])
+    expect(
+      fetchSpy.mock.calls.filter(([url]) => url === '/api/applications'),
+    ).toHaveLength(1)
+  })
+
+  it('says so when no job is tracked yet', async () => {
+    stubApi([])
+    mount(signedInAuth())
+    expect(
+      await within(jobTracking()).findByText(/not tracking any jobs yet/),
+    ).toBeInTheDocument()
+    expect(
+      within(jobTracking()).getByRole('link', { name: 'Open job tracking' }),
+    ).toHaveAttribute('href', '/applications')
+  })
+
+  it('keeps the page working when the count fails', async () => {
+    stubApi(500)
+    mount(signedInAuth())
+    expect(
+      await within(jobTracking()).findByText(
+        /Your tracked jobs could not be counted\./,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('main')).getByRole('region', { name: 'Matches' }),
+    ).toBeInTheDocument()
+    expect(within(jobTracking()).queryByRole('list')).toBeNull()
+  })
+
+  it('shows a counting text while the list loads', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    )
+    mount(signedInAuth())
+    expect(
+      within(jobTracking()).getByText('Counting your tracked jobs…'),
+    ).toBeInTheDocument()
   })
 })
 
