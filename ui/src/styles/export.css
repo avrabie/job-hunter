@@ -1,0 +1,59 @@
+/*
+ * Export CV page: options on the left, preview and download on the right; one column under 40rem.
+ * Only tokens from tokens.css.
+ */
+
+.export-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.export-layout > * {
+  min-width: 0;
+}
+
+.export-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.export-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.export-sections li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.export-sections .inline {
+  flex: 1;
+  margin-right: 0;
+}
+
+.export-sections button {
+  min-height: var(--touch-target);
+  padding: var(--space-1) var(--space-3);
+}
+
+.export-preview {
+  display: block;
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+}
+
+@media (max-width: 40rem) {
+  .export-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

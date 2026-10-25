@@ -26,7 +26,7 @@
 - [ ] 4.1 Postings list and posting page.
 - [ ] 4.2 Matches.
 - [ ] 4.3 Job tracking list, import form, application page and letter workspace.
-- [ ] 4.4 Export CV and Public CV pages.
+- [x] 4.4 Export CV and Public CV pages.
 - [ ] 4.5 Admin and Register/Callback/error pages.
 - [ ] 4.6 Delete the unused legacy rules from `index.css`.
 
