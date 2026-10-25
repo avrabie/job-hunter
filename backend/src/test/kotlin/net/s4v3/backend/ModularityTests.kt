@@ -14,13 +14,13 @@ class ModularityTests {
     }
 
     @Test
-    fun `module set is exactly the eleven planned modules`() {
+    fun `module set is exactly the twelve planned modules`() {
         val names = modules.map { it.identifier.toString() }.toSet()
 
         assertEquals(
             setOf(
                 "sources", "postings", "accounts", "profile", "matching",
-                "applications", "llm", "web", "notifications", "cv", "files",
+                "applications", "llm", "web", "notifications", "cv", "files", "jobimport",
             ),
             names,
         )
