@@ -2,6 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import '../styles/publiccv.css'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
 import { JpegPhotoPicker } from '../files/JpegPhotoPicker.tsx'
 import { listFiles, type FileInfo } from '../files/filesApi.ts'
 import {
@@ -264,15 +269,15 @@ function PublicCvForm() {
   if (loadError !== null) {
     return (
       <div className="page page--narrow">
-        <h1>Public CV</h1>
-        <p role="alert">{loadError}</p>
+        <PageHeader title="Public CV" />
+        <Alert tone="danger">{loadError}</Alert>
       </div>
     )
   }
   if (!loaded) {
     return (
       <div className="page page--narrow">
-        <h1>Public CV</h1>
+        <PageHeader title="Public CV" />
         <p role="status">Loading…</p>
       </div>
     )
@@ -287,7 +292,7 @@ function PublicCvForm() {
 
   return (
     <div className="page page--narrow">
-      <h1>Public CV</h1>
+      <PageHeader title="Public CV" />
       <p>
         <Link to="/">Back</Link>
       </p>
@@ -296,10 +301,9 @@ function PublicCvForm() {
         field is shown only where you tick it below.
       </p>
 
-      <section aria-labelledby="public-cv-state-heading">
-        <h2 id="public-cv-state-heading">Status</h2>
+      <Card title="Status">
         {live && liveAddress !== null ? (
-          <div role="status" className="notice">
+          <Alert tone="success">
             <p>
               Your CV is live at <code>{liveAddress}</code>. Every change you
               save in your profile shows there at once, in the fields ticked
@@ -307,7 +311,7 @@ function PublicCvForm() {
             </p>
             <button
               type="button"
-              className="secondary"
+              className="button--secondary"
               onClick={() => void copyLink()}
             >
               {copyState === 'copied'
@@ -316,22 +320,19 @@ function PublicCvForm() {
                   ? 'Could not copy'
                   : 'Copy link'}
             </button>
-          </div>
+          </Alert>
         ) : (
-          <p role="status" className="notice">
-            Your CV is not public.
-          </p>
+          <Alert tone="info">Your CV is not public.</Alert>
         )}
         {locked && (
-          <p role="alert">
+          <Alert tone="danger">
             An administrator disabled this page. Publishing is not possible.
-          </p>
+          </Alert>
         )}
-      </section>
+      </Card>
 
       <form className="public-cv-form" onSubmit={noSubmit}>
-        <section aria-labelledby="public-cv-handle-heading">
-          <h2 id="public-cv-handle-heading">Address</h2>
+        <Card title="Address">
           <label htmlFor="public-handle">Handle</label>
           <input
             id="public-handle"
@@ -360,32 +361,32 @@ function PublicCvForm() {
           {handleLocked && changeableAt !== null && (
             <p>You can change the handle from {formatDay(changeableAt)}.</p>
           )}
-        </section>
+        </Card>
 
-        <section aria-labelledby="public-cv-layout-heading">
-          <h2 id="public-cv-layout-heading">Layout</h2>
-          <div className="export-field">
-            <label htmlFor="public-template">Template</label>
-            <select
-              id="public-template"
-              value={settings.template}
-              onChange={(e) =>
-                update({ template: e.target.value as PublicCvTemplate })
-              }
-            >
-              <option value="CLASSIC">Classic</option>
-              <option value="MODERN">Modern</option>
-              <option value="COMPACT">Compact</option>
-              <option value="PROFESSIONAL">Professional</option>
-            </select>
-          </div>
+        <Card title="Layout">
+          <FormField label="Template">
+            {(control) => (
+              <select
+                {...control}
+                value={settings.template}
+                onChange={(e) =>
+                  update({ template: e.target.value as PublicCvTemplate })
+                }
+              >
+                <option value="CLASSIC">Classic</option>
+                <option value="MODERN">Modern</option>
+                <option value="COMPACT">Compact</option>
+                <option value="PROFESSIONAL">Professional</option>
+              </select>
+            )}
+          </FormField>
           {photoPicker && (
-            <div className="export-field">
+            <div>
               {photos.state === 'loading' && (
                 <p role="status">Loading your photos…</p>
               )}
               {photos.state === 'failed' && (
-                <p role="alert">{photos.message}</p>
+                <Alert tone="danger">{photos.message}</Alert>
               )}
               {photos.state === 'loaded' && (
                 <JpegPhotoPicker
@@ -395,26 +396,27 @@ function PublicCvForm() {
                   onChange={(photoFileId) => update({ photoFileId })}
                 />
               )}
-              <p className="notice">
+              <p className="form-field__hint">
                 The photo becomes visible to everyone with your link once you
                 publish.
               </p>
             </div>
           )}
-          <div className="export-field">
-            <label htmlFor="public-language">Language</label>
-            <select
-              id="public-language"
-              value={settings.language}
-              onChange={(e) =>
-                update({ language: e.target.value as PublicCvLanguage })
-              }
-            >
-              <option value="EN">English</option>
-              <option value="DE">Deutsch</option>
-            </select>
-          </div>
-        </section>
+          <FormField label="Language">
+            {(control) => (
+              <select
+                {...control}
+                value={settings.language}
+                onChange={(e) =>
+                  update({ language: e.target.value as PublicCvLanguage })
+                }
+              >
+                <option value="EN">English</option>
+                <option value="DE">Deutsch</option>
+              </select>
+            )}
+          </FormField>
+        </Card>
 
         <fieldset>
           <legend>Sections</legend>
@@ -445,7 +447,7 @@ function PublicCvForm() {
                     <>
                       <button
                         type="button"
-                        className="secondary"
+                        className="button--secondary"
                         aria-label={`Move ${title} up`}
                         disabled={index === 0}
                         onClick={() =>
@@ -458,7 +460,7 @@ function PublicCvForm() {
                       </button>
                       <button
                         type="button"
-                        className="secondary"
+                        className="button--secondary"
                         aria-label={`Move ${title} down`}
                         disabled={index === settings.sections.length - 1}
                         onClick={() =>
@@ -543,7 +545,7 @@ function PublicCvForm() {
           {live ? (
             <button
               type="button"
-              className="secondary"
+              className="button--secondary"
               disabled={busyNow}
               onClick={() => void save(false)}
             >
@@ -560,7 +562,7 @@ function PublicCvForm() {
           )}
           <button
             type="button"
-            className="secondary"
+            className="button--secondary"
             disabled={busyNow}
             onClick={() => void save(live)}
           >
@@ -568,7 +570,7 @@ function PublicCvForm() {
           </button>
           <button
             type="button"
-            className="secondary"
+            className="button--secondary"
             disabled={busyNow}
             onClick={() => void preview()}
           >
@@ -577,7 +579,7 @@ function PublicCvForm() {
           {saved.configured && (
             <button
               type="button"
-              className="secondary"
+              className="button--secondary"
               disabled={busyNow}
               onClick={() => setConfirmRemove(true)}
             >
@@ -592,11 +594,10 @@ function PublicCvForm() {
         the settings on this page.
       </p>
       {busy === 'preview' && <p role="status">Preparing the preview…</p>}
-      {previewError !== null && <p role="alert">{previewError}</p>}
+      {previewError !== null && <Alert tone="danger">{previewError}</Alert>}
 
       {confirmRemove && (
-        <section aria-labelledby="public-cv-remove-heading">
-          <h2 id="public-cv-remove-heading">Remove the public CV?</h2>
+        <Card title="Remove the public CV?">
           <p>
             The address stops working. The handle is kept for you for 90 days.
           </p>
@@ -606,17 +607,17 @@ function PublicCvForm() {
             </button>
             <button
               type="button"
-              className="secondary"
+              className="button--secondary"
               onClick={() => setConfirmRemove(false)}
             >
               Keep it
             </button>
           </div>
-        </section>
+        </Card>
       )}
 
       {notice !== null && (
-        <p role={notice.tone}>
+        <Alert tone={notice.tone === 'alert' ? 'danger' : 'success'}>
           {notice.text}
           {notice.code === 'name_required' && (
             <>
@@ -624,7 +625,7 @@ function PublicCvForm() {
               <Link to="/profile#contact">Go to the Contact section</Link>
             </>
           )}
-        </p>
+        </Alert>
       )}
     </div>
   )

@@ -294,6 +294,15 @@ describe('the public CV page', () => {
     expect(screen.getByText('Your CV is not public.')).toBeInTheDocument()
   })
 
+  it('has one h1 and a named Status section', async () => {
+    stubApi()
+    mount()
+    await wait()
+
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Status' })).toBeInTheDocument()
+  })
+
   it('loads the saved state: handle, settings and the published state as saved', async () => {
     const calls = stubApi((call) =>
       call.method === 'GET'

@@ -152,6 +152,18 @@ describe('the export page', () => {
     ).toBeChecked()
   })
 
+  it('has one h1 and named regions for the preview and the download', () => {
+    stubExport()
+    mount()
+
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Export CV' }),
+    ).toBeInTheDocument()
+    expect(preview()).toBeInTheDocument()
+    expect(downloadArea()).toBeInTheDocument()
+  })
+
   it('shows the landing page with a sign-in button when signed out', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)

@@ -5,6 +5,11 @@ import { useAuth, type AuthApi } from '../auth/authContext.ts'
 import { JpegPhotoPicker } from '../files/JpegPhotoPicker.tsx'
 import { listFiles, type FileInfo } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
+import '../styles/export.css'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
 import { exportCv, type ExportErrorCode } from './exportApi.ts'
 import {
   SECTION_TITLES,
@@ -142,46 +147,48 @@ function ExportForm() {
 
   return (
     <div className="page">
-      <h1>Export CV</h1>
+      <PageHeader title="Export CV" />
       <p>
         <Link to="/">Back</Link>
       </p>
       <div className="export-layout">
         <form className="export-options" onSubmit={noSubmit}>
-          <div className="export-field">
-            <label htmlFor="export-format">Format</label>
-            <select
-              id="export-format"
-              value={options.format}
-              onChange={(e) => update({ format: e.target.value as CvFormat })}
-            >
-              <option value="PDF">PDF</option>
-              <option value="MARKDOWN">Markdown</option>
-              <option value="HTML">HTML</option>
-            </select>
-          </div>
-          <div className="export-field">
-            <label htmlFor="export-template">Template</label>
-            <select
-              id="export-template"
-              value={options.template}
-              onChange={(e) =>
-                update({ template: e.target.value as CvTemplate })
-              }
-            >
-              <option value="CLASSIC">Classic</option>
-              <option value="MODERN">Modern</option>
-              <option value="COMPACT">Compact</option>
-              <option value="PROFESSIONAL">Professional</option>
-            </select>
-          </div>
+          <FormField label="Format">
+            {(control) => (
+              <select
+                {...control}
+                value={options.format}
+                onChange={(e) => update({ format: e.target.value as CvFormat })}
+              >
+                <option value="PDF">PDF</option>
+                <option value="MARKDOWN">Markdown</option>
+                <option value="HTML">HTML</option>
+              </select>
+            )}
+          </FormField>
+          <FormField label="Template">
+            {(control) => (
+              <select
+                {...control}
+                value={options.template}
+                onChange={(e) =>
+                  update({ template: e.target.value as CvTemplate })
+                }
+              >
+                <option value="CLASSIC">Classic</option>
+                <option value="MODERN">Modern</option>
+                <option value="COMPACT">Compact</option>
+                <option value="PROFESSIONAL">Professional</option>
+              </select>
+            )}
+          </FormField>
           {photoPicker && (
-            <div className="export-field">
+            <div>
               {photos.state === 'loading' && (
                 <p role="status">Loading your photos…</p>
               )}
               {photos.state === 'failed' && (
-                <p role="alert">{photos.message}</p>
+                <Alert tone="danger">{photos.message}</Alert>
               )}
               {photos.state === 'loaded' && (
                 <JpegPhotoPicker
@@ -193,19 +200,20 @@ function ExportForm() {
               )}
             </div>
           )}
-          <div className="export-field">
-            <label htmlFor="export-language">Language</label>
-            <select
-              id="export-language"
-              value={options.language}
-              onChange={(e) =>
-                update({ language: e.target.value as CvLanguage })
-              }
-            >
-              <option value="EN">English</option>
-              <option value="DE">Deutsch</option>
-            </select>
-          </div>
+          <FormField label="Language">
+            {(control) => (
+              <select
+                {...control}
+                value={options.language}
+                onChange={(e) =>
+                  update({ language: e.target.value as CvLanguage })
+                }
+              >
+                <option value="EN">English</option>
+                <option value="DE">Deutsch</option>
+              </select>
+            )}
+          </FormField>
 
           <fieldset>
             <legend>Sections</legend>
@@ -226,7 +234,7 @@ function ExportForm() {
                     </label>
                     <button
                       type="button"
-                      className="secondary"
+                      className="button--secondary"
                       aria-label={`Move ${title} up`}
                       disabled={index === 0}
                       onClick={() =>
@@ -239,7 +247,7 @@ function ExportForm() {
                     </button>
                     <button
                       type="button"
-                      className="secondary"
+                      className="button--secondary"
                       aria-label={`Move ${title} down`}
                       disabled={index === options.sections.length - 1}
                       onClick={() =>
@@ -291,8 +299,7 @@ function ExportForm() {
         </form>
 
         <div className="export-side">
-          <section aria-labelledby="export-preview-heading">
-            <h2 id="export-preview-heading">Preview</h2>
+          <Card title="Preview">
             {preview === null && <p role="status">Loading preview…</p>}
             {preview?.state === 'failed' && (
               <Failure code={preview.code} message={preview.message} />
@@ -303,24 +310,27 @@ function ExportForm() {
               srcDoc={preview?.state === 'ready' ? preview.html : ''}
               className="export-preview"
             />
-          </section>
+          </Card>
 
-          <section aria-labelledby="export-download-heading">
-            <h2 id="export-download-heading">Download</h2>
-            <button
-              type="button"
-              disabled={download.state === 'loading'}
-              onClick={() => void onDownload()}
-            >
-              Download
-            </button>
+          <Card
+            title="Download"
+            actions={
+              <button
+                type="button"
+                disabled={download.state === 'loading'}
+                onClick={() => void onDownload()}
+              >
+                Download
+              </button>
+            }
+          >
             {download.state === 'loading' && (
               <p role="status">Preparing the file…</p>
             )}
             {download.state === 'failed' && (
               <Failure code={download.code} message={download.message} />
             )}
-          </section>
+          </Card>
         </div>
       </div>
     </div>
@@ -336,7 +346,7 @@ function Failure({
   message: string
 }) {
   return (
-    <p role="alert">
+    <Alert tone="danger">
       {message}
       {code === 'name_required' && (
         <>
@@ -344,7 +354,7 @@ function Failure({
           <Link to="/profile#contact">Go to the Contact section</Link>
         </>
       )}
-    </p>
+    </Alert>
   )
 }
 
