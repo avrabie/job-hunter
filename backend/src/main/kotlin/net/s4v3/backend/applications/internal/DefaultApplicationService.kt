@@ -8,6 +8,7 @@ import net.s4v3.backend.applications.ApplicationStage
 import net.s4v3.backend.applications.ApplicationSummary
 import net.s4v3.backend.applications.FrozenJob
 import net.s4v3.backend.applications.InvalidApplicationPatchException
+import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.applications.LiveStatus
 import net.s4v3.backend.applications.PostingTracking
 import net.s4v3.backend.applications.TrackResult
@@ -49,6 +50,25 @@ internal class DefaultApplicationService(
         )
         repository.insert(sub, row, now)
         log.info("Application tracked")
+        return TrackResult(detail(sub, row), created = true)
+    }
+
+    @Transactional
+    override fun trackImported(sub: String, job: JobData): TrackResult {
+        repository.lockUser(sub)
+        repository.findImported(sub, job.url)?.let { return TrackResult(detail(sub, it), created = false) }
+        if (repository.count(sub) >= ApplicationService.MAX_PER_USER) {
+            log.info("Application refused: limit reached")
+            throw ApplicationLimitException()
+        }
+        val now = Instant.now(clock)
+        val row = ApplicationRow(
+            id = UUID.randomUUID(), postingId = null, stage = ApplicationStage.INTERESTED, title = job.title, company = job.company,
+            url = job.url, description = job.description, jobLanguage = job.language, capturedAt = now, postingLastSeen = null,
+            contentHash = "", notes = "", appliedOn = null, stageChangedAt = now, source = IMPORT,
+        )
+        repository.insert(sub, row, now)
+        log.info("Imported application tracked")
         return TrackResult(detail(sub, row), created = true)
     }
 
@@ -99,6 +119,7 @@ internal class DefaultApplicationService(
         repository.find(sub, id)?.let { FrozenJob(it.title, it.company, it.description, it.jobLanguage) }
 
     private fun status(row: ApplicationRow, live: Map<UUID, PostingLiveState>): LiveStatus {
+        if (row.source == IMPORT) return LiveStatus.OPEN // nothing live to compare with
         val state = row.postingId?.let { live[it] } ?: return LiveStatus.GONE
         if (state.lastSeen.isBefore(Instant.now(clock).minus(GONE_AFTER))) return LiveStatus.GONE
         return if (state.contentHash != row.contentHash) LiveStatus.CHANGED else LiveStatus.OPEN
@@ -122,6 +143,7 @@ internal class DefaultApplicationService(
     }
 
     private companion object {
+        const val IMPORT = "IMPORT"
         val GONE_AFTER: Duration = Duration.ofDays(14)
     }
 }

@@ -33,6 +33,7 @@ import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -129,7 +130,7 @@ internal class JobImportApiTests(
     @Test
     fun `a readable job page gives a draft and creates nothing`() {
         val sub = newSub()
-        val before = count("select count(*) from posting_source where source_id = 'user-import'")
+        val before = count("select count(*) from posting")
 
         val result = previewUrl(sub, "https://jobs.example.com/ada-engineer").andExpect(status().isOk)
             .andExpect(jsonPath("$.title").value("Backend Engineer"))
@@ -140,7 +141,7 @@ internal class JobImportApiTests(
 
         val id = field(result, "$.draftId")
         assertEquals(1, count("select count(*) from job_import_draft where id = ?::uuid and owner = ?", id, sub))
-        assertEquals(before, count("select count(*) from posting_source where source_id = 'user-import'"))
+        assertEquals(before, count("select count(*) from posting"))
         assertEquals(0, count("select count(*) from application where owner_sub = ?", sub))
     }
 
@@ -228,24 +229,36 @@ internal class JobImportApiTests(
     }
 
     @Test
-    fun `a new job becomes a user-added posting and an interested application with the draft text`() {
+    fun `a new job becomes a private interested application with the draft text and no posting`() {
         val sub = newSub()
-        val title = "Backend Engineer ${unique()}"
-        extractor.answer = { job(title = title) }
+        val title = "Backend Engineer"
         val id = draftId(sub)
+        val postings = count("select count(*) from posting")
+        val sources = count("select count(*) from posting_source")
 
         val result = confirm(sub, """{"draftId":"$id"}""").andExpect(status().isCreated)
-            .andExpect(jsonPath("$.created").value(true)).andExpect(jsonPath("$.postingExisted").value(false))
-        val postingId = field(result, "$.postingId")
+            .andExpect(jsonPath("$.created").value(true)).andExpect(jsonPath("$.postingId").doesNotExist())
+            .andExpect(jsonPath("$.postingExisted").doesNotExist())
         val applicationId = field(result, "$.applicationId")
 
-        mvc.perform(get("/api/postings/$postingId").header("Authorization", bearer(sub))).andExpect(status().isOk)
-            .andExpect(jsonPath("$.userAdded").value(true)).andExpect(jsonPath("$.title").value(title))
         mvc.perform(get("/api/applications/$applicationId").header("Authorization", bearer(sub))).andExpect(status().isOk)
             .andExpect(jsonPath("$.stage").value("INTERESTED")).andExpect(jsonPath("$.description").value(DESCRIPTION))
+            .andExpect(jsonPath("$.title").value(title)).andExpect(jsonPath("$.liveStatus").value("OPEN"))
+            .andExpect(jsonPath("$.liveChanged").value(false)).andExpect(jsonPath("$.postingId").doesNotExist())
         assertEquals(0, count("select count(*) from job_import_draft where id = ?::uuid", id))
-        assertEquals(1, count("select count(*) from posting_import where posting_id = ?::uuid and user_sub = ?", postingId, sub))
-        assertEquals(DESCRIPTION, jdbc.queryForObject("select raw_payload from posting where id = ?::uuid", String::class.java, postingId))
+        assertEquals(postings, count("select count(*) from posting"), "the postings table is unchanged")
+        assertEquals(sources, count("select count(*) from posting_source"))
+        assertEquals("IMPORT", jdbc.queryForObject("select source from application where id = ?::uuid", String::class.java, applicationId))
+    }
+
+    @Test
+    fun `an imported job is not visible to another user`() {
+        val a = newSub()
+        val b = newSub()
+        val applicationId = field(confirm(a, """{"draftId":"${draftId(a)}"}""").andExpect(status().isCreated), "$.applicationId")
+
+        mvc.perform(get("/api/applications/$applicationId").header("Authorization", bearer(b))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications").header("Authorization", bearer(b))).andExpect(jsonPath("$.length()").value(0))
     }
 
     @Test
@@ -256,41 +269,31 @@ internal class JobImportApiTests(
         confirm(sub, """{"draftId":"$id","title":"  "}""").andExpect(status().isBadRequest).andExpect(jsonPath("$.error").value("invalid_edit"))
         confirm(sub, """{"draftId":"$id","company":"${"c".repeat(201)}"}""").andExpect(status().isBadRequest)
         confirm(sub, """{"draftId":"$id","description":"<script>x</script>"}""").andExpect(status().isBadRequest)
+        confirm(sub, """{"draftId":"$id","description":"fine < /b> not"}""").andExpect(status().isBadRequest)
         val title = "Edited Engineer ${unique()}"
         val result = confirm(sub, """{"draftId":"$id","title":"$title","location":"Bern"}""").andExpect(status().isCreated)
 
-        mvc.perform(get("/api/postings/${field(result, "$.postingId")}").header("Authorization", bearer(sub)))
-            .andExpect(jsonPath("$.title").value(title)).andExpect(jsonPath("$.city").value("Bern"))
+        mvc.perform(get("/api/applications/${field(result, "$.applicationId")}").header("Authorization", bearer(sub)))
+            .andExpect(jsonPath("$.title").value(title))
     }
 
     @Test
-    fun `the same canonical url is the same posting and the second user finds it known`() {
+    fun `the same canonical url gives each user their own application and never touches a posting`() {
         val a = newSub()
         val b = newSub()
         val path = "ada-${unique()}"
-        extractor.answer = { job(title = "Backend Engineer ${unique()}") }
+        val postings = count("select count(*) from posting")
         val first = confirm(a, """{"draftId":"${draftId(a, "https://jobs.example.com/$path")}"}""").andExpect(status().isCreated)
 
-        val second = confirm(b, """{"draftId":"${draftId(b, "https://Jobs.Example.com/$path/?utm_source=x#top")}","title":"Rewritten"}""")
-            .andExpect(status().isCreated).andExpect(jsonPath("$.created").value(true)).andExpect(jsonPath("$.postingExisted").value(true))
+        val second = confirm(b, """{"draftId":"${draftId(b, "https://Jobs.Example.com/$path/?utm_source=x#top")}","title":"Mine"}""")
+            .andExpect(status().isCreated).andExpect(jsonPath("$.created").value(true))
 
-        assertEquals(field(first, "$.postingId"), field(second, "$.postingId"))
-        mvc.perform(get("/api/postings/${field(first, "$.postingId")}").header("Authorization", bearer(b)))
-            .andExpect(jsonPath("$.title").value(org.hamcrest.Matchers.startsWith("Backend Engineer")))
-    }
-
-    @Test
-    fun `the same company, title and city under another url is the existing posting`() {
-        val a = newSub()
-        val b = newSub()
-        val title = "Backend Engineer ${unique()}"
-        extractor.answer = { job(title = title) }
-        val first = confirm(a, """{"draftId":"${draftId(a)}"}""").andExpect(status().isCreated)
-
-        val second = confirm(b, """{"draftId":"${draftId(b)}"}""").andExpect(status().isCreated)
-            .andExpect(jsonPath("$.postingExisted").value(true))
-
-        assertEquals(field(first, "$.postingId"), field(second, "$.postingId"))
+        assertNotEquals(field(first, "$.applicationId"), field(second, "$.applicationId"))
+        mvc.perform(get("/api/applications/${field(second, "$.applicationId")}").header("Authorization", bearer(b)))
+            .andExpect(jsonPath("$.title").value("Mine"))
+        mvc.perform(get("/api/applications/${field(first, "$.applicationId")}").header("Authorization", bearer(a)))
+            .andExpect(jsonPath("$.title").value("Backend Engineer"))
+        assertEquals(postings, count("select count(*) from posting"))
     }
 
     @Test
@@ -299,8 +302,8 @@ internal class JobImportApiTests(
         val url = "https://jobs.example.com/ada-${unique()}"
         val first = confirm(sub, """{"draftId":"${draftId(sub, url)}"}""").andExpect(status().isCreated)
 
-        val second = confirm(sub, """{"draftId":"${draftId(sub, url)}"}""").andExpect(status().isCreated)
-            .andExpect(jsonPath("$.created").value(false)).andExpect(jsonPath("$.postingExisted").value(true))
+        val second = confirm(sub, """{"draftId":"${draftId(sub, url + "/?utm_medium=x")}"}""").andExpect(status().isCreated)
+            .andExpect(jsonPath("$.created").value(false))
 
         assertEquals(field(first, "$.applicationId"), field(second, "$.applicationId"))
     }
@@ -363,22 +366,19 @@ internal class JobImportApiTests(
     @Test
     fun `no user id or import record appears in any response`() {
         val sub = newSub()
-        extractor.answer = { job(title = "Backend Engineer ${unique()}") }
         val id = draftId(sub)
         val confirmed = confirm(sub, """{"draftId":"$id"}""").andExpect(status().isCreated)
-        val postingId = field(confirmed, "$.postingId")
         val other = newSub()
 
         val bodies = listOf(
             confirmed.andReturn().response.contentAsString,
-            mvc.perform(get("/api/postings/$postingId").header("Authorization", bearer(other))).andReturn().response.contentAsString,
             mvc.perform(get("/api/postings").header("Authorization", bearer(other))).andReturn().response.contentAsString,
             mvc.perform(get("/api/applications/${field(confirmed, "$.applicationId")}").header("Authorization", bearer(sub))).andReturn().response.contentAsString,
         )
 
         for (body in bodies) {
             assertFalse(sub in body, "the importing user id appears in a response")
-            assertFalse("posting_import" in body || "userSub" in body || "user_sub" in body)
+            assertFalse("userSub" in body || "user_sub" in body)
         }
     }
 
@@ -407,20 +407,72 @@ internal class JobImportApiTests(
     }
 
     @Test
-    fun `removing a user's data deletes their drafts and import rows and keeps the posting`() {
+    fun `removing a user's data deletes their drafts`() {
         val sub = newSub()
         val other = newSub()
-        extractor.answer = { job(title = "Backend Engineer ${unique()}") }
-        val posting = field(confirm(sub, """{"draftId":"${draftId(sub)}"}""").andExpect(status().isCreated), "$.postingId")
         val pending = draftId(sub)
         val othersDraft = draftId(other)
 
         service.removeUserData(sub)
 
         assertEquals(0, count("select count(*) from job_import_draft where id = ?::uuid", pending))
-        assertEquals(0, count("select count(*) from posting_import where user_sub = ?", sub))
-        assertEquals(1, count("select count(*) from posting where id = ?::uuid", posting))
         assertEquals(1, count("select count(*) from job_import_draft where id = ?::uuid", othersDraft))
+    }
+
+    @Test
+    fun `a title or company the page does not contain is 502 extraction_failed`() {
+        val sub = newSub()
+        extractor.answer = { job(title = "Quantum Unicorn Wrangler") }
+        previewUrl(sub, "https://jobs.example.com/a").andExpect(status().isBadGateway).andExpect(jsonPath("$.error").value("extraction_failed"))
+        extractor.answer = { job(company = "Phantom Holdings International") }
+        previewUrl(sub, "https://jobs.example.com/b").andExpect(status().isBadGateway).andExpect(jsonPath("$.error").value("extraction_failed"))
+
+        assertEquals(0, count("select count(*) from job_import_draft where owner = ?", sub))
+    }
+
+    @Test
+    fun `a request body over 256 KB is 413 and reads nothing`() {
+        val big = "x".repeat(300_000)
+        mvc.perform(
+            post("/api/job-imports/preview").header("Authorization", bearer(newSub())).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"url":"https://jobs.example.com/a","text":"$big"}"""),
+        ).andExpect(status().isPayloadTooLarge)
+        mvc.perform(
+            post("/api/job-imports").header("Authorization", bearer(newSub())).contentType(MediaType.APPLICATION_JSON)
+                .content("""{"draftId":"${UUID.randomUUID()}","description":"$big"}"""),
+        ).andExpect(status().isPayloadTooLarge)
+
+        assertTrue(fetcher.urls.isEmpty() && extractor.texts.isEmpty())
+    }
+
+    @Test
+    fun `at most two previews of one user run at once, the third is 429, and the slots are released`() {
+        val sub = newSub()
+        val entered = java.util.concurrent.CountDownLatch(2)
+        val release = java.util.concurrent.CountDownLatch(1)
+        fetcher.answer = {
+            entered.countDown()
+            release.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            FetchResult.Page(page(DESCRIPTION))
+        }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val running = List(2) { pool.submit<Int> { previewUrl(sub, "https://jobs.example.com/p$it").andReturn().response.status } }
+            assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
+
+            previewUrl(sub, "https://jobs.example.com/third").andExpect(status().isTooManyRequests)
+                .andExpect(jsonPath("$.error").value("rate_limited")).andExpect(header().exists("Retry-After"))
+            release.countDown()
+            assertEquals(listOf(200, 200), running.map { it.get(10, java.util.concurrent.TimeUnit.SECONDS) })
+        } finally {
+            release.countDown()
+            pool.shutdownNow()
+        }
+        fetcher.answer = { FetchResult.Page(page(DESCRIPTION)) }
+        // A failed preview releases its slot as well: later previews of another user are unaffected, this user is at 3/3 hourly.
+        extractor.answer = { throw LlmFailure(LlmFailureKind.FAILED) }
+        val other = newSub()
+        repeat(3) { previewUrl(other, "https://jobs.example.com/f$it").andExpect(status().isBadGateway) }
     }
 
     @Test

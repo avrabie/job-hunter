@@ -18,8 +18,12 @@ import kotlinx.coroutines.flow.emptyFlow
 class FakePromptExecutor(private vararg val answers: String) : PromptExecutor() {
     val prompts = mutableListOf<Prompt>()
 
+    /** The model of every request, in order. */
+    val models = mutableListOf<LLModel>()
+
     override suspend fun execute(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Message.Assistant {
         prompts += prompt
+        models += model
         return Message.Assistant(answers[minOf(prompts.size - 1, answers.lastIndex)], ResponseMetaInfo.Empty)
     }
 

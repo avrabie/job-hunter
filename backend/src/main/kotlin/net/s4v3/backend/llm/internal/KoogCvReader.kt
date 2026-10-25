@@ -1,7 +1,6 @@
 package net.s4v3.backend.llm.internal
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
@@ -22,27 +21,6 @@ import net.s4v3.backend.llm.ProfileSection
 import net.s4v3.backend.profile.Profile
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-
-private val HTTP_STATUS = Regex("""(?<![\d.])([45]\d\d)(?![\d.])""")
-private val ERROR_TYPE = Regex(""""type"\s*:\s*"([a-z_]+_error)"""")
-private val ERROR_MESSAGE = Regex(""""message"\s*:\s*"((?:[^"\\]|\\.){1,240})"""")
-
-/**
- * What a failed API call may say in the log: the HTTP status, Anthropic's error type and the short `error.message` that
- * explains a rejected request (for example a missing credit balance or a parameter the model does not accept), as
- * `" (HTTP 400, invalid_request_error: <message>)"`. Anthropic's validation messages name the problem and do not repeat the
- * prompt. Nothing else of the response is logged, the message is cut at 240 characters, and line breaks become spaces.
- */
-internal fun describeClientFailure(message: String?): String {
-    if (message == null) return ""
-    val status = HTTP_STATUS.find(message)?.groupValues?.get(1)
-    val type = ERROR_TYPE.find(message)?.groupValues?.get(1)
-    val explanation = if (type == null) null else ERROR_MESSAGE.find(message, ERROR_TYPE.find(message)!!.range.first)?.groupValues?.get(1)
-        ?.replace(Regex("\\s+"), " ")?.trim()
-    if (status == null && type == null) return ""
-    val head = listOfNotNull(status?.let { "HTTP $it" }, type).joinToString(", ")
-    return " (" + head + (explanation?.let { ": $it" } ?: "") + ")"
-}
 
 /** Creates the object that talks to the model. A seam for tests, which pass a fake instead of calling Anthropic. */
 internal fun interface ExecutorSource {
@@ -124,7 +102,7 @@ internal class KoogCvReader(
     private fun elapsedMs(startedNanos: Long) = (System.nanoTime() - startedNanos) / 1_000_000
 
     private fun clientFailure(e: Exception): String =
-        if (e is LLMClientException) describeClientFailure(e.message) else origin(e)
+        origin(e)
 
     /** Where an unexpected exception was thrown (class and method only, never a message or data), to find the cause. */
     private fun origin(e: Exception): String =

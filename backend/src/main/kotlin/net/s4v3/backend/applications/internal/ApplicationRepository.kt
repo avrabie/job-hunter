@@ -25,6 +25,8 @@ internal data class ApplicationRow(
     val notes: String,
     val appliedOn: LocalDate?,
     val stageChangedAt: Instant,
+    /** `POSTING` (tracked from a shared posting) or `IMPORT` (imported by the user, no posting). */
+    val source: String = "POSTING",
 )
 
 /** `application`. Every statement is scoped by the owner's `sub`. */
@@ -43,6 +45,10 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         jdbc.sql("$SELECT WHERE owner_sub = :sub AND posting_id = :posting").param("sub", sub).param("posting", postingId)
             .query { rs, _ -> row(rs) }.optional().orElse(null)
 
+    fun findImported(sub: String, url: String): ApplicationRow? =
+        jdbc.sql("$SELECT WHERE owner_sub = :sub AND source = 'IMPORT' AND url = :url").param("sub", sub).param("url", url)
+            .query { rs, _ -> row(rs) }.optional().orElse(null)
+
     fun find(sub: String, id: UUID): ApplicationRow? =
         jdbc.sql("$SELECT WHERE owner_sub = :sub AND id = :id").param("sub", sub).param("id", id)
             .query { rs, _ -> row(rs) }.optional().orElse(null)
@@ -59,9 +65,9 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         jdbc.sql(
             """
             INSERT INTO application (id, owner_sub, posting_id, stage, title, company, url, description, job_language,
-                captured_at, posting_last_seen, content_hash, notes, applied_on, stage_changed_at, created_at, updated_at)
+                captured_at, posting_last_seen, content_hash, notes, applied_on, stage_changed_at, created_at, updated_at, source)
             VALUES (:id, :sub, :posting, :stage, :title, :company, :url, :description, :language,
-                :captured, :lastSeen, :hash, :notes, :appliedOn, :changed, :now, :now)
+                :captured, :lastSeen, :hash, :notes, :appliedOn, :changed, :now, :now, :source)
             """.trimIndent(),
         )
             .param("id", row.id).param("sub", sub).param("posting", row.postingId).param("stage", row.stage.name)
@@ -70,7 +76,7 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
             .param("captured", ts(row.capturedAt)).param("lastSeen", row.postingLastSeen?.let(::ts), java.sql.Types.TIMESTAMP)
             .param("hash", row.contentHash).param("notes", row.notes)
             .param("appliedOn", row.appliedOn?.let { java.sql.Date.valueOf(it) }, java.sql.Types.DATE)
-            .param("changed", ts(row.stageChangedAt)).param("now", ts(now))
+            .param("changed", ts(row.stageChangedAt)).param("now", ts(now)).param("source", row.source)
             .update()
     }
 
@@ -122,12 +128,13 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         notes = rs.getString("notes"),
         appliedOn = rs.getDate("applied_on")?.toLocalDate(),
         stageChangedAt = rs.getTimestamp("stage_changed_at").toInstant(),
+        source = rs.getString("source"),
     )
 
     private companion object {
         const val SELECT = """
             SELECT id, posting_id, stage, title, company, url, description, job_language, captured_at, posting_last_seen,
-                   content_hash, notes, applied_on, stage_changed_at
+                   content_hash, notes, applied_on, stage_changed_at, source
             FROM application
         """
     }

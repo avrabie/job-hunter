@@ -11,9 +11,41 @@ import java.time.Instant
 @EnableConfigurationProperties(ImportLimitSettings::class)
 internal class ImportLimitConfig
 
-/** `jobhunter.import.previews-per-hour` and `confirms-per-day`, per user. The shared postings make confirms the tighter limit. */
+/**
+ * `jobhunter.import.previews-per-hour` and `confirms-per-day` per user; `max-concurrent-previews-per-user` and
+ * `max-concurrent-previews` cap the fetch-and-extract work that runs at the same moment.
+ */
 @ConfigurationProperties("jobhunter.import")
-internal data class ImportLimitSettings(val previewsPerHour: Int = 20, val confirmsPerDay: Int = 10)
+internal data class ImportLimitSettings(
+    val previewsPerHour: Int = 20,
+    val confirmsPerDay: Int = 10,
+    val maxConcurrentPreviewsPerUser: Int = 2,
+    val maxConcurrentPreviews: Int = 8,
+)
+
+/** Previews in flight, per user and in total. [tryEnter] must be paired with [leave] in a finally block. */
+@Component
+internal class InFlightLimiter(private val settings: ImportLimitSettings) {
+    private val perUser = HashMap<String, Int>()
+    private var total = 0
+
+    /** False (nothing counted) when the user or the whole server is at its cap. */
+    @Synchronized
+    fun tryEnter(sub: String): Boolean {
+        val mine = perUser[sub] ?: 0
+        if (mine >= settings.maxConcurrentPreviewsPerUser || total >= settings.maxConcurrentPreviews) return false
+        perUser[sub] = mine + 1
+        total++
+        return true
+    }
+
+    @Synchronized
+    fun leave(sub: String) {
+        val mine = perUser[sub] ?: return
+        if (mine <= 1) perUser.remove(sub) else perUser[sub] = mine - 1
+        total--
+    }
+}
 
 /** At most `limit()` calls per user in any rolling [period], in memory (one backend instance). */
 internal open class WindowCounter(private val period: Duration, private val limit: () -> Int) {
@@ -24,7 +56,7 @@ internal open class WindowCounter(private val period: Duration, private val limi
     fun tryAcquire(sub: String, now: Instant = Instant.now()): Duration? {
         val window = calls.getOrPut(sub) { ArrayDeque() }
         while (window.isNotEmpty() && window.first() <= now.minus(period)) window.removeFirst()
-        if (window.size >= limit()) return Duration.between(now, window.first().plus(period))
+        if (window.size >= limit()) return window.firstOrNull()?.let { Duration.between(now, it.plus(period)) } ?: period
         window.addLast(now)
         return null
     }

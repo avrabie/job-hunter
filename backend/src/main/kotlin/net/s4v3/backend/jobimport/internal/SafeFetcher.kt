@@ -83,9 +83,21 @@ internal class SafeFetcher(
         if (addresses.isEmpty()) throw Fail(FetchError.UNREACHABLE)
         if (!addresses.all(isPublic)) throw Fail(FetchError.BLOCKED_ADDRESS)
 
+        var last: IOException? = null
+        for (address in addresses) {
+            try {
+                return requestFrom(url, address, deadline)
+            } catch (e: IOException) {
+                last = e // connect or handshake failed: try the next validated address
+            }
+        }
+        throw last ?: Fail(FetchError.UNREACHABLE)
+    }
+
+    private fun requestFrom(url: CheckedUrl, address: InetAddress, deadline: Long): Response {
         val plain = Socket()
         try {
-            plain.connect(InetSocketAddress(addresses.first(), port), remainingMillis(deadline))
+            plain.connect(InetSocketAddress(address, port), remainingMillis(deadline))
             val tls = sslContext.socketFactory.createSocket(plain, url.host, port, true) as SSLSocket
             tls.sslParameters = tls.sslParameters.apply {
                 serverNames = listOf(SNIHostName(url.host))

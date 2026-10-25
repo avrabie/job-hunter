@@ -24,8 +24,8 @@ data class ImportEdits(
     val description: String? = null,
 )
 
-/** [created] is false when the caller already tracked the posting; [postingExisted] when the posting was known before. */
-data class ImportConfirmation(val applicationId: UUID, val postingId: UUID, val created: Boolean, val postingExisted: Boolean)
+/** [created] is false when the caller had already imported the same link; [applicationId] is then the existing application. */
+data class ImportConfirmation(val applicationId: UUID, val created: Boolean)
 
 /** Fixed error codes of the import. The code is the only thing ever reported or logged about a failure. */
 enum class ImportError(val code: String) {
@@ -54,9 +54,9 @@ interface JobImportService {
     /** Fetches (or takes the pasted text), extracts and stores a draft; nothing is created yet. Throws [JobImportException]. */
     fun preview(sub: String, request: ImportRequest): ImportPreview
 
-    /** Turns the caller's unexpired draft into a shared posting and a tracked application. Throws [JobImportException]. */
+    /** Turns the caller's unexpired draft into an application of the caller only (no posting is created). Throws [JobImportException]. */
     fun confirm(sub: String, draftId: UUID, edits: ImportEdits = ImportEdits()): ImportConfirmation
 
-    /** Removes the user's drafts and import records (the postings stay). For the account deletion flow. */
+    /** Removes the user's drafts. For the account deletion flow (applications go with the user row). */
     fun removeUserData(sub: String)
 }

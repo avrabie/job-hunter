@@ -59,6 +59,9 @@ data class ApplicationPatch(
 /** The result of tracking a posting: [created] is false when the user already tracked it. */
 data class TrackResult(val application: ApplicationDetail, val created: Boolean)
 
+/** A job that has no posting: what the user imported, [url] already in canonical form. [language] is `en` or `de`. */
+data class JobData(val url: String, val title: String, val company: String, val description: String, val language: String)
+
 /** The user already has [ApplicationService.MAX_PER_USER] applications. */
 class ApplicationLimitException : RuntimeException("Application limit reached")
 
@@ -70,6 +73,12 @@ interface ApplicationService {
 
     /** Null when the posting does not exist. Idempotent. Throws [ApplicationLimitException] for the 501st. */
     fun track(sub: String, postingId: UUID): TrackResult?
+
+    /**
+     * Tracks a job without a posting (source IMPORT, stage INTERESTED, live status always OPEN). [TrackResult.created] is false
+     * when the user already imported the same [JobData.url]. Throws [ApplicationLimitException] for the 501st.
+     */
+    fun trackImported(sub: String, job: JobData): TrackResult
 
     fun get(sub: String, id: UUID): ApplicationDetail?
 

@@ -1,7 +1,6 @@
 package net.s4v3.backend.llm.internal
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.model.StructureFixingParser
@@ -104,7 +103,7 @@ internal class KoogProjectAnalyst(
     private fun elapsedMs(startedNanos: Long) = (System.nanoTime() - startedNanos) / 1_000_000
 
     private fun clientFailure(e: Exception): String =
-        if (e is LLMClientException) describeClientFailure(e.message) else origin(e)
+        origin(e)
 
     /** Where an unexpected exception was thrown (class and method only, never a message or data), to find the cause. */
     private fun origin(e: Exception): String =

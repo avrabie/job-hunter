@@ -30,7 +30,7 @@
 
 ## 5b. Rework after the security review (owner chose private imports)
 
-- [ ] 7.1 Backend: remove shared-posting creation (`PostingIngest` use, `posting_import`, `userAdded` in postings read model and API, related tests); edit changeset `moldo:018` in place (drop `posting_import`, add `application.source`, nullable `posting_id`, unique index on (owner, url) for imports); `ApplicationService.trackImported`; live status OPEN for imports; confirm returns `{applicationId, created}`; fix the review's M2, M3, M4 and Low items listed in design decision 7; update tests.
+- [x] 7.1 Backend: remove shared-posting creation (`PostingIngest` use, `posting_import`, `userAdded` in postings read model and API, related tests); edit changeset `moldo:018` in place (drop `posting_import`, add `application.source`, nullable `posting_id`, unique index on (owner, url) for imports); `ApplicationService.trackImported`; live status OPEN for imports; confirm returns `{applicationId, created}`; fix the review's M2, M3, M4 and Low items listed in design decision 7; update tests.
 - [ ] 7.2 UI: remove the "Added by a user" badge and `userAdded` type; update the review-form notice (the job stays private to you) and the confirm result handling (`created`).
 
 ## 6. Wrap-up

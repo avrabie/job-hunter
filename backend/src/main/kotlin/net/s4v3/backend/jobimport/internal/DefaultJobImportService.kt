@@ -2,6 +2,7 @@ package net.s4v3.backend.jobimport.internal
 
 import net.s4v3.backend.applications.ApplicationLimitException
 import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.jobimport.ImportConfirmation
 import net.s4v3.backend.jobimport.ImportEdits
 import net.s4v3.backend.jobimport.ImportError
@@ -12,15 +13,12 @@ import net.s4v3.backend.jobimport.JobImportService
 import net.s4v3.backend.llm.JobExtractor
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
-import net.s4v3.backend.postings.IngestOutcome
-import net.s4v3.backend.postings.PostingCandidate
-import net.s4v3.backend.postings.PostingIngest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
-import java.security.MessageDigest
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -41,9 +39,9 @@ internal class DefaultJobImportService(
     private val fetcher: PageFetcher,
     private val extractor: JobExtractor,
     private val drafts: ImportDrafts,
-    private val ingest: PostingIngest,
     private val applications: ApplicationService,
     private val previewLimiter: PreviewLimiter,
+    private val inFlight: InFlightLimiter,
     private val confirmLimiter: ConfirmLimiter,
 ) : JobImportService {
 
@@ -62,6 +60,16 @@ internal class DefaultJobImportService(
     }
 
     private fun doPreview(sub: String, request: ImportRequest): ImportPreview {
+        // Fetching and extracting hold a thread, memory and a paid model call: only a few at once, per user and in total.
+        if (!inFlight.tryEnter(sub)) throw JobImportException(ImportError.RATE_LIMITED, BUSY_RETRY)
+        try {
+            return previewWithin(sub, request)
+        } finally {
+            inFlight.leave(sub)
+        }
+    }
+
+    private fun previewWithin(sub: String, request: ImportRequest): ImportPreview {
         previewLimiter.tryAcquire(sub)?.let { throw JobImportException(ImportError.RATE_LIMITED, it) }
         val url = when (val check = UrlRules.check(request.url.orEmpty())) {
             is UrlCheck.Ok -> check.url
@@ -82,7 +90,9 @@ internal class DefaultJobImportService(
             throw JobImportException(if (e.kind == LlmFailureKind.NOT_CONFIGURED) ImportError.LLM_UNAVAILABLE else ImportError.EXTRACTION_FAILED)
         }
         if (!job.found) throw JobImportException(ImportError.NOT_A_JOB)
-        if (!Grounding.isGrounded(job.description, pageText)) throw JobImportException(ImportError.EXTRACTION_FAILED)
+        if (!Grounding.isGrounded(job.description, pageText) || !Grounding.isGrounded(job.title, pageText) ||
+            !Grounding.isGrounded(job.company, pageText)
+        ) throw JobImportException(ImportError.EXTRACTION_FAILED)
 
         val draft = Draft(UUID.randomUUID(), url.canonical, job.title, job.company, job.location, job.description, job.language.name)
         drafts.insert(sub, draft, Instant.now())
@@ -106,36 +116,19 @@ internal class DefaultJobImportService(
         val draft = drafts.find(sub, draftId, now) ?: throw JobImportException(ImportError.DRAFT_NOT_FOUND)
         val title = field(edits.title, draft.title, MAX_TITLE, required = true)!!
         val company = field(edits.company, draft.company, MAX_COMPANY, required = true)!!
-        val location = field(edits.location, draft.location, MAX_LOCATION, required = false)
+        field(edits.location, draft.location, MAX_LOCATION, required = false) // checked; a location is not kept on an application
         val description = field(edits.description, draft.description, MAX_DESCRIPTION, required = true)!!
         confirmLimiter.tryAcquire(sub, now)?.let { throw JobImportException(ImportError.RATE_LIMITED, it) }
 
-        // A URL that was imported before keeps its posting as it is: a second user must not rewrite it through ingest.
-        val sourcePostingId = sha256(draft.url)
-        val known = drafts.findImported(SOURCE_ID, sourcePostingId)
-        val postingId: UUID
-        val existed: Boolean
-        if (known != null) {
-            postingId = known
-            existed = true
-        } else {
-            val ingested = ingest.ingest(
-                PostingCandidate(
-                    sourceId = SOURCE_ID, sourcePostingId = sourcePostingId, url = draft.url, title = title, company = company,
-                    description = description, rawPayload = description, city = location,
-                ),
-            )
-            postingId = ingested.postingId
-            existed = ingested.outcome != IngestOutcome.CREATED || drafts.hasOtherSource(postingId, SOURCE_ID, sourcePostingId)
-        }
         val tracked = try {
-            applications.track(sub, postingId)
+            applications.trackImported(
+                sub, JobData(draft.url, title, company, description, draft.language.lowercase()),
+            )
         } catch (_: ApplicationLimitException) {
             throw JobImportException(ImportError.APPLICATION_LIMIT)
-        } ?: throw JobImportException(ImportError.DRAFT_NOT_FOUND)
-        drafts.recordImport(postingId, sub, draft.url, now)
+        }
         drafts.delete(sub, draftId)
-        return ImportConfirmation(tracked.application.id, postingId, tracked.created, existed)
+        return ImportConfirmation(tracked.application.id, tracked.created)
     }
 
     override fun removeUserData(sub: String) = drafts.deleteByOwner(sub)
@@ -159,16 +152,13 @@ internal class DefaultJobImportService(
 
     private fun millisSince(start: Long) = (System.nanoTime() - start) / 1_000_000
 
-    private fun sha256(text: String) =
-        MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
-
     private companion object {
-        const val SOURCE_ID = "user-import"
+        val BUSY_RETRY: Duration = Duration.ofSeconds(5)
         const val MAX_TITLE = 200
         const val MAX_COMPANY = 200
         const val MAX_LOCATION = 200
         const val MAX_DESCRIPTION = 20_000
-        val HTML = Regex("<[a-zA-Z/!]")
+        val HTML = Regex("<\\s*[a-zA-Z/!]")
     }
 }
 

@@ -1,6 +1,9 @@
 package net.s4v3.backend
 
 import com.jayway.jsonpath.JsonPath
+import net.s4v3.backend.applications.ApplicationLimitException
+import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.postings.PostingCandidate
 import net.s4v3.backend.postings.PostingIngest
 import org.junit.jupiter.api.Test
@@ -19,6 +22,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -29,11 +33,17 @@ internal class ApplicationsApiTests(
     @Autowired private val mvc: MockMvc,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val ingest: PostingIngest,
+    @Autowired private val applications: ApplicationService,
 ) {
 
     private val issuer get() = SharedMockIssuer.instance
     private fun bearer(sub: String) = "Bearer " + issuer.token(sub)
     private fun newSub() = "apps-api-" + UUID.randomUUID()
+
+    /** A new user whose row exists (any authenticated call creates it), for tests that call the service directly. */
+    private fun provisionedSub(): String = newSub().also {
+        mvc.perform(get("/api/applications").header("Authorization", bearer(it))).andExpect(status().isOk)
+    }
 
     private val body = "We are looking for an experienced engineer to build and run reliable services with Kotlin and PostgreSQL. " +
         "You will work in a small team, review code, and improve our delivery pipeline every week."
@@ -271,5 +281,65 @@ internal class ApplicationsApiTests(
         listOf("DESCMARKER7731", "NOTESMARKER7731", "Employer1 AG", "private thoughts").forEach {
             assertFalse(it in logged, "$it appears in the logs")
         }
+    }
+
+    private fun importedJob(url: String = "https://jobs.example.com/" + UUID.randomUUID()) =
+        JobData(url, "Imported Engineer", "Employer1 AG", body, "en")
+
+    @Test
+    fun `an imported job is an application without a posting, always open and unchanged`() {
+        val sub = provisionedSub()
+        val postings = jdbc.queryForObject("select count(*) from posting", Int::class.java)
+
+        val result = applications.trackImported(sub, importedJob())
+
+        assertTrue(result.created)
+        assertEquals(postings, jdbc.queryForObject("select count(*) from posting", Int::class.java))
+        read(sub, result.application.id.toString()).andExpect(status().isOk)
+            .andExpect(jsonPath("$.stage").value("INTERESTED")).andExpect(jsonPath("$.liveStatus").value("OPEN"))
+            .andExpect(jsonPath("$.liveChanged").value(false)).andExpect(jsonPath("$.postingId").doesNotExist())
+            .andExpect(jsonPath("$.description").value(body))
+        mvc.perform(get("/api/applications").header("Authorization", bearer(sub))).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].liveStatus").value("OPEN"))
+        assertEquals("IMPORT", jdbc.queryForObject("select source from application where id = ?", String::class.java, result.application.id))
+    }
+
+    @Test
+    fun `the same url imported twice by one user is one application, and another user has their own`() {
+        val a = provisionedSub()
+        val b = provisionedSub()
+        val job = importedJob()
+
+        val first = applications.trackImported(a, job)
+        val second = applications.trackImported(a, job.copy(title = "Other title"))
+        val others = applications.trackImported(b, job)
+
+        assertTrue(first.created)
+        assertFalse(second.created)
+        assertEquals(first.application.id, second.application.id)
+        assertEquals("Imported Engineer", second.application.title)
+        assertTrue(others.created)
+        assertNotEquals(first.application.id, others.application.id)
+    }
+
+    @Test
+    fun `another user's imported application answers 404 for every read and write`() {
+        val a = provisionedSub()
+        val b = provisionedSub()
+        val id = applications.trackImported(a, importedJob()).application.id.toString()
+
+        read(b, id).andExpect(status().isNotFound)
+        patchApp(b, id, """{"stage":"APPLIED"}""").andExpect(status().isNotFound)
+        mvc.perform(delete("/api/applications/$id").header("Authorization", bearer(b))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications").header("Authorization", bearer(b))).andExpect(jsonPath("$.length()").value(0))
+        read(a, id).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `an imported application counts towards the 500 limit`() {
+        val sub = provisionedSub()
+        repeat(ApplicationService.MAX_PER_USER) { applications.trackImported(sub, importedJob()) }
+
+        assertFailsWith<ApplicationLimitException> { applications.trackImported(sub, importedJob()) }
     }
 }
