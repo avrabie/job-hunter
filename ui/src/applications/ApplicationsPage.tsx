@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { ImportJob } from './ImportJob.tsx'
 import {
   listApplications,
   STAGE_LABEL,
@@ -85,6 +86,8 @@ function ApplicationsList() {
       <p>
         <Link to="/postings">Postings</Link>
       </p>
+
+      <ImportJob />
 
       {load.state === 'loading' && <p role="status">Loading applications…</p>}
       {load.state === 'failed' && (
