@@ -1,0 +1,28 @@
+/* Crawl schedule page: a status line, then one card with the settings form. */
+
+.admin-status {
+  margin: 0 0 var(--space-4);
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The checkbox row: a native label, so the whole line is the click and touch target. */
+.admin-form__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-medium);
+}
+
+.admin-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
