@@ -147,7 +147,7 @@ internal class LetterController(
     @GetMapping("/api/applications/{id}/letters/{version}/download")
     @Operation(
         summary = "Download one version of a letter",
-        description = "The Markdown text as `text/markdown; charset=utf-8`, an attachment named `motivation-<company>-<title>.md`.",
+        description = "The Markdown text as `text/markdown; charset=utf-8`, an attachment named `motivation-<company>-<title>-v<version>.md`.",
         responses = [
             ApiResponse(responseCode = "200", description = "The Markdown bytes"),
             ApiResponse(responseCode = "401", description = "No valid access token"),

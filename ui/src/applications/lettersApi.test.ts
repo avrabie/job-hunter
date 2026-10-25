@@ -147,14 +147,14 @@ describe('other letter calls', () => {
   it('downloads the bytes with the plain file name from the server', async () => {
     const spy = answer(200, '# Letter', {
       'Content-Disposition':
-        'attachment; filename="motivation-employer1-dev.md"',
+        'attachment; filename="motivation-employer1-dev-v1.md"',
     })
     const result = await downloadLetter(auth, 'app-1', 2)
     expect(spy.mock.calls[0]![0]).toBe(
       '/api/applications/app-1/letters/2/download',
     )
     if (result.kind !== 'done') throw new Error('not done')
-    expect(result.fileName).toBe('motivation-employer1-dev.md')
+    expect(result.fileName).toBe('motivation-employer1-dev-v1.md')
     expect(await result.blob.text()).toBe('# Letter')
   })
 

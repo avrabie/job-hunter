@@ -357,11 +357,16 @@ internal class LettersApiTests(
         val response = mvc.perform(get("/api/applications/$app/letters/2/download").header("Authorization", bearer(sub)))
             .andExpect(status().isOk)
             .andExpect(header().string("Content-Type", "text/markdown;charset=utf-8"))
-            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.matchesPattern("attachment; filename=\"motivation-employer1-ag-backend-engineer-[a-z0-9]{8}\\.md\"")))
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.matchesPattern("attachment; filename=\"motivation-employer1-ag-backend-engineer-[a-z0-9]{8}-v2\\.md\"")))
             .andExpect(header().string("X-Content-Type-Options", "nosniff"))
             .andExpect(header().string("Cache-Control", "no-store"))
             .andReturn().response
         assertContentEquals(text.toByteArray(Charsets.UTF_8), response.contentAsByteArray)
+        val first = mvc.perform(get("/api/applications/$app/letters/1/download").header("Authorization", bearer(sub)))
+            .andExpect(status().isOk)
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.matchesPattern("attachment; filename=\"motivation-employer1-ag-backend-engineer-[a-z0-9]{8}-v1\\.md\"")))
+            .andReturn().response
+        assertFalse(first.contentAsByteArray.contentEquals(response.contentAsByteArray), "each version downloads its own text")
         mvc.perform(get("/api/applications/$app/letters/7/download").header("Authorization", bearer(sub))).andExpect(status().isNotFound)
     }
 

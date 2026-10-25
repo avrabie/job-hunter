@@ -129,7 +129,7 @@ internal class DefaultLetterService(
     override fun file(sub: String, applicationId: UUID, version: Int): LetterFile? {
         val job = applications.frozenJob(sub, applicationId) ?: return null
         val row = repository.find(sub, applicationId, version) ?: return null
-        return LetterFile(row.text.toByteArray(Charsets.UTF_8), letterFileName(job.company, job.title))
+        return LetterFile(row.text.toByteArray(Charsets.UTF_8), letterFileName(job.company, job.title, version))
     }
 
     override fun delete(sub: String, applicationId: UUID, version: Int): Boolean =

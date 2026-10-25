@@ -8,6 +8,9 @@ internal fun slug(text: String, fallback: String, max: Int): String {
     return plain.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(max).trim('-').ifEmpty { fallback }
 }
 
-/** `motivation-<company>-<title>.md`, at most 95 characters of `[a-z0-9.-]`. */
-internal fun letterFileName(company: String, title: String): String =
-    "motivation-${slug(company, "company", 40)}-${slug(title, "job", 40)}.md"
+/**
+ * `motivation-<company>-<title>-v<version>.md`, at most 100 characters of `[a-z0-9.-]`. The version is in the name so that
+ * two versions never share a file name (browsers would otherwise save the second as "name (1).md").
+ */
+internal fun letterFileName(company: String, title: String, version: Int): String =
+    "motivation-${slug(company, "company", 40)}-${slug(title, "job", 40)}-v$version.md"
