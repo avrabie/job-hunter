@@ -39,13 +39,13 @@ internal class CvExtractController(
     @Operation(
         summary = "Draft a profile from the caller's master CV",
         description = "Reads the master CV with a language model and returns a profile in the shape of the profile's content. " +
-            "With `section` (experience, education or publications) the model is asked only for that section, every entry of " +
-            "it, and the answer fills only that field; every other list is empty. " +
+            "With `section` (experience, education, publications or contact) the model is asked only for that section, every entry of " +
+            "it, and the answer fills only that field; every other list is empty. For contact, a value the CV text does not contain is returned as null. " +
             "Nothing is saved: the client shows the draft, and the user saves it with PUT /api/profile. " +
             "At most a few calls per hour, and a section request counts the same as a whole-profile request.",
         responses = [
             ApiResponse(responseCode = "200", description = "The profile draft"),
-            ApiResponse(responseCode = "400", description = "The section is not experience, education or publications"),
+            ApiResponse(responseCode = "400", description = "The section is not experience, education, publications or contact"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "409", description = "The caller has not chosen a master CV"),
             ApiResponse(responseCode = "413", description = "The CV text is longer than the configured limit"),
@@ -56,7 +56,7 @@ internal class CvExtractController(
         ],
     )
     fun extract(
-        @Parameter(description = "Only this section: experience, education or publications (any letter case). Omit for the whole profile.")
+        @Parameter(description = "Only this section: experience, education, publications or contact (any letter case). Omit for the whole profile.")
         @RequestParam(name = "section", required = false) section: String?,
     ): ResponseEntity<*> {
         val wanted = if (section == null) null else ProfileSection.entries.firstOrNull { it.name.equals(section, ignoreCase = true) }

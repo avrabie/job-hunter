@@ -7,7 +7,7 @@ Purpose: everything that talks to a language model (Claude through Koog). The on
 - `ProjectAnalyst.analyze(RepositoryDigest)` returns a checked `ProjectAnalysis`.
 - `LetterWriter.write(LetterRequest)` returns Markdown letter text (request types `JobText`, `Candidate`, `PreviousLetter`, `ParagraphComment`, `LetterLanguage`); one plain-text request, answer cleaned (code fence stripped, empty, HTML or over 6 000 chars refused).
 - `LlmFailure(kind)` with `NOT_CONFIGURED` or `FAILED`: the only error; fixed message, never prompt or answer text.
-- `ProfileSection`: `EXPERIENCE`, `EDUCATION`, `PUBLICATIONS`.
+- `ProfileSection`: `EXPERIENCE`, `EDUCATION`, `PUBLICATIONS`, `CONTACT` (contact values are kept only if the CV text contains them: `ContactGrounding`).
 
 ## Internal (`internal/`)
 - `KoogCvReader`, `KoogProjectAnalyst`: one structured request each (manual JSON mode), timeout, repair parser on `Haiku_4_5`.

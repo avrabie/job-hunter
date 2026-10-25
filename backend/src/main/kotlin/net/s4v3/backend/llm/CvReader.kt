@@ -18,7 +18,7 @@ interface CvReader {
 }
 
 /** The sections of a profile that can be extracted on their own. */
-enum class ProfileSection { EXPERIENCE, EDUCATION, PUBLICATIONS }
+enum class ProfileSection { EXPERIENCE, EDUCATION, PUBLICATIONS, CONTACT }
 
 enum class LlmFailureKind { NOT_CONFIGURED, FAILED }
 

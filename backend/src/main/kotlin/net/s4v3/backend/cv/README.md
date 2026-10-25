@@ -6,7 +6,7 @@ Purpose: two features on the user's data. Extract: read the master CV into a pro
 - No classes in the base package. `ExportService` and its types are in the sub-package `cv/export` and used only inside this module. Whether Modulith exposes `cv.export`: unverified.
 
 ## Internal
-- `internal/CvExtractController`: `POST /api/cv/extract[?section=...]`; master CV from `files`, text with `CvText` (PDFBox, no OCR), `CvReader` from `llm`. Returns a draft, stores nothing.
+- `internal/CvExtractController`: `POST /api/cv/extract[?section=experience|education|publications|contact]`; master CV from `files`, text with `CvText` (PDFBox, no OCR), `CvReader` from `llm`. Returns a draft, stores nothing.
 - `internal/CvExportController`: `POST /api/cv/export`; strict request, `ExportLimiter`, `ExportService`.
 - `internal/ExtractionLimiter`, `ExportLimiter`: in-memory rolling hour per user.
 - `export/internal/DefaultExportService` (loads the saved profile by `sub`), `RenderGuard` (2 PDF renders, 5 s wait), `CvBuilder`, `Labels` (EN/DE), `MarkdownRenderer`, `HtmlRenderer`, `PdfRenderer` (openhtmltopdf, bundled fonts), `Templates`.

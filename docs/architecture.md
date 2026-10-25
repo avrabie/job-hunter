@@ -233,14 +233,14 @@ service) and the public CV (`cv/publiccv`).
 
 ### 3.3 Extract CV (profile draft from the master CV)
 
-`POST /api/cv/extract[?section=experience|education|publications]` (`K/cv/internal/CvExtractController.kt`):
+`POST /api/cv/extract[?section=experience|education|publications|contact]` (`K/cv/internal/CvExtractController.kt`):
 1. Unknown `section`: 400. Then `FileCabinet.masterCv(sub)`; none: 409 "Choose a master CV in your files first."
 2. Read the file (a size above 5 MB counts as no text), `CvText.of` extracts text (PDFBox for PDF, no OCR; UTF-8 otherwise); empty: 422.
 3. Text longer than `jobhunter.cv.max-text-chars`: 413 (never truncated).
 4. `ExtractionLimiter.tryAcquire(sub)` (default 20 per rolling hour): else 429. The check runs after the cheap checks, so a refused request does not use a slot.
 5. `CvReader.profileFrom(text)` or `sectionFrom(text, section)` is `KoogCvReader`: no key or unknown model name gives `LlmFailure(NOT_CONFIGURED)`; otherwise one structured Koog request
    (manual JSON mode, `CvProfileDraft` or a section draft), timeout `jobhunter.llm.timeout`, and a repair parser on `Haiku_4_5` with `jobhunter.llm.repairs` retries.
-6. `DraftMapper.toProfile` turns the draft into a `Profile`. The controller returns it; nothing is stored. The UI shows it and the user saves with `PUT /api/profile`.
+6. `DraftMapper.toProfile` turns the draft into a `Profile` (for `contact`, `ContactGrounding` then drops every value the CV text does not contain). The controller returns it; nothing is stored. The UI shows it and the user saves with `PUT /api/profile`.
 7. `NOT_CONFIGURED` becomes 503, `FAILED` becomes 502. Logs hold lengths, timings and class names only.
 
 ### 3.4 List and pick repositories, analyse one

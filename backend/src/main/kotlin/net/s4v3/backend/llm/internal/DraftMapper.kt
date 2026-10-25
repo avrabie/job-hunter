@@ -1,5 +1,6 @@
 package net.s4v3.backend.llm.internal
 
+import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Education
 import net.s4v3.backend.profile.Experience
 import net.s4v3.backend.profile.LanguageLevel
@@ -39,6 +40,19 @@ internal object DraftMapper {
     fun toProfile(section: EducationSection): Profile = Profile(education = section.education.mapNotNull(::education))
 
     fun toProfile(section: PublicationsSection): Profile = Profile(publications = section.publications.mapNotNull(::publication))
+
+    /** Trims only; [ContactGrounding] checks the values against the CV text and the save-time rules afterwards. */
+    fun toProfile(section: ContactSection): Profile =
+        Profile(
+            contact = Contact(
+                fullName = text(section.fullName),
+                headline = text(section.headline),
+                email = text(section.email),
+                phone = text(section.phone),
+                website = text(section.website),
+                linkedin = text(section.linkedin),
+            ),
+        )
 
     private fun location(draft: LocationDraft?): Location? {
         val city = text(draft?.city)

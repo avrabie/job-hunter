@@ -38,3 +38,24 @@ internal data class PublicationsSection(
     val publications: List<PublicationDraft> = emptyList(),
 )
 
+@Serializable
+@SerialName("ContactSection")
+@LLMDescription(
+    "The candidate's own contact details as the CV states them. Never use a referee's or a company's contact. " +
+        "Use only what the CV text says. Leave a field null if the CV does not state it.",
+)
+internal data class ContactSection(
+    @property:LLMDescription("The candidate's full name, as written in the CV header.")
+    val fullName: String? = null,
+    @property:LLMDescription("The professional headline under the name (for example a job title), if the CV has one.")
+    val headline: String? = null,
+    @property:LLMDescription("The candidate's own email address.")
+    val email: String? = null,
+    @property:LLMDescription("The candidate's own phone number, as written.")
+    val phone: String? = null,
+    @property:LLMDescription("The candidate's personal website address.")
+    val website: String? = null,
+    @property:LLMDescription("The candidate's LinkedIn profile address.")
+    val linkedin: String? = null,
+)
+

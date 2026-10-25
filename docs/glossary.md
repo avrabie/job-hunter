@@ -36,7 +36,7 @@ Domain terms as the code uses them. Read on 2026-10-25. `K/` = `backend/src/main
 - **orphan sweep**: daily job that deletes stored files no row refers to and older than a day. `K/files/internal/OrphanSweep.kt`.
 - **legacy CV**: the earlier single-CV feature (`cv_document` table), moved into the cabinet at startup. `K/files/internal/LegacyCvMover.kt`.
 - **draft** (profile draft): the `Profile` that extraction builds from the master CV (via `CvProfileDraft` and `DraftMapper`). It is returned, never stored; the user reviews it and saves it. `K/cv/internal/CvExtractController.kt`, `K/llm/internal/DraftMapper.kt`.
-- **section extraction**: extraction limited to experience, education or publications (`ProfileSection`). `K/llm/CvReader.kt`.
+- **section extraction**: extraction limited to experience, education, publications or contact (`ProfileSection`). `K/llm/CvReader.kt`.
 - **CV document**: the layout-neutral CV (`CvDocument`) built from the profile; renderers turn it into Markdown, HTML or PDF. `K/cv/export/CvDocument.kt`.
 - **template**: `CLASSIC`, `MODERN` or `COMPACT` layout; **language**: `EN` or `DE` labels. `K/cv/export/ExportTypes.kt`.
 - **render guard**: the limit of two parallel PDF renders. `K/cv/export/internal/DefaultExportService.kt`.
