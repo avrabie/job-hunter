@@ -31,10 +31,10 @@ export function ExportPage() {
       return <Landing returnTo="/export" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <ExportForm />
@@ -141,7 +141,7 @@ function ExportForm() {
   }
 
   return (
-    <main className="wide">
+    <div className="page">
       <h1>Export CV</h1>
       <p>
         <Link to="/">Back</Link>
@@ -323,7 +323,7 @@ function ExportForm() {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   )
 }
 

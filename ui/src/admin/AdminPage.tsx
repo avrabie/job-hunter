@@ -19,10 +19,10 @@ export function AdminPage() {
       return <Landing returnTo="/admin" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <ScheduleEditor />
@@ -86,7 +86,7 @@ function ScheduleEditor() {
   }
 
   return (
-    <main>
+    <div className="page page--narrow">
       <h1>Crawl schedule</h1>
       <p>
         <Link to="/">Back</Link>
@@ -146,6 +146,6 @@ function ScheduleEditor() {
           {saveError && <p role="alert">{saveError}</p>}
         </>
       )}
-    </main>
+    </div>
   )
 }

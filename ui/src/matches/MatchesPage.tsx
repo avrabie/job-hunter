@@ -16,10 +16,10 @@ export function MatchesPage() {
       return <Landing returnTo="/matches" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <MatchesList />
@@ -58,7 +58,7 @@ function MatchesList() {
   const matches = load.state === 'ready' ? load.matches : []
 
   return (
-    <main>
+    <div className="page">
       <h1>Matches</h1>
       <p>
         <Link to="/">Back</Link>
@@ -130,6 +130,6 @@ function MatchesList() {
           Next
         </button>
       </div>
-    </main>
+    </div>
   )
 }

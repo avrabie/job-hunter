@@ -22,10 +22,10 @@ export function PostingPage() {
       return <Landing returnTo={`/postings/${id}`} />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <PostingView id={id} />
@@ -62,16 +62,16 @@ function PostingView({ id }: { id: string }) {
   if (load.state === 'loading') return <p role="status">Loading posting…</p>
   if (load.state === 'notFound')
     return (
-      <main>
+      <div className="page page--narrow">
         <h1>Posting not found</h1>
         <p>
           <Link to="/postings">Back to the postings</Link>
         </p>
-      </main>
+      </div>
     )
   if (load.state === 'failed')
     return (
-      <main>
+      <div className="page page--narrow">
         <div role="alert">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchPosting()}>
@@ -81,12 +81,12 @@ function PostingView({ id }: { id: string }) {
         <p>
           <Link to="/postings">Back to the postings</Link>
         </p>
-      </main>
+      </div>
     )
 
   const p = load.posting
   return (
-    <main>
+    <div className="page page--narrow">
       <p>
         <Link to="/postings">Back to the postings</Link>
       </p>
@@ -100,6 +100,6 @@ function PostingView({ id }: { id: string }) {
       <OriginalLinks links={p.links} />
       <InterestedButton postingId={p.id} tracked={trackedOf(tracked, p.id)} />
       <pre className="description">{p.description}</pre>
-    </main>
+    </div>
   )
 }

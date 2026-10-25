@@ -36,10 +36,10 @@ export function ApplicationPage() {
       return <Landing returnTo={`/applications/${id}`} />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <ApplicationView id={id} alreadyTracked={alreadyTracked} />
@@ -83,16 +83,16 @@ function ApplicationView({
   if (load.state === 'loading') return <p role="status">Loading application…</p>
   if (load.state === 'notFound')
     return (
-      <main>
+      <div className="page page--narrow">
         <h1>Application not found</h1>
         <p>
           <Link to="/applications">Back to job tracking</Link>
         </p>
-      </main>
+      </div>
     )
   if (load.state === 'failed')
     return (
-      <main>
+      <div className="page page--narrow">
         <div role="alert">
           <p>{load.message}</p>
           <button type="button" onClick={() => void refresh()}>
@@ -102,13 +102,13 @@ function ApplicationView({
         <p>
           <Link to="/applications">Back to job tracking</Link>
         </p>
-      </main>
+      </div>
     )
 
   const a = load.application
   const original = safeHttpUrl(a.url)
   return (
-    <main>
+    <div className="page page--narrow">
       <p>
         <Link to="/applications">Back to job tracking</Link>
       </p>
@@ -140,7 +140,7 @@ function ApplicationView({
       <Editor key={a.id} application={a} onChanged={() => void refresh()} />
 
       <LetterWorkspace applicationId={a.id} />
-    </main>
+    </div>
   )
 }
 

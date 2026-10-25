@@ -27,10 +27,10 @@ export function ApplicationsPage() {
       return <Landing returnTo="/applications" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <ApplicationsList />
@@ -81,7 +81,7 @@ function ApplicationsList() {
   }
 
   return (
-    <main>
+    <div className="page">
       <h1>Job tracking</h1>
       <p>
         <Link to="/postings">Postings</Link>
@@ -158,6 +158,6 @@ function ApplicationsList() {
             </section>
           )
         })}
-    </main>
+    </div>
   )
 }
