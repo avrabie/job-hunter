@@ -139,7 +139,8 @@ function ReviewForm({
     <div className="import-job">
       <h2>Review the job</h2>
       <p className="notice">
-        {'This job will be visible to all users, marked "Added by a user".'}
+        This job is saved only in your own job tracking; other users cannot see
+        it.
       </p>
       <form onSubmit={(e) => void save(e)}>
         <label>

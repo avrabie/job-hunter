@@ -19,12 +19,10 @@ export interface JobEdits {
   description: string
 }
 
-/** The application and posting a confirmed import leads to. `created` is false when the user already tracked it. */
+/** The application a confirmed import leads to. `created` is false when the user already tracked it. */
 export interface ImportedJob {
   applicationId: string
-  postingId: string
   created: boolean
-  postingExisted: boolean
 }
 
 export const IMPORT_ERROR_CODES = [
@@ -40,6 +38,8 @@ export const IMPORT_ERROR_CODES = [
   'rate_limited',
   'llm_unavailable',
   'draft_not_found',
+  'invalid_edit',
+  'application_limit',
 ] as const
 
 export type ImportErrorCode = (typeof IMPORT_ERROR_CODES)[number]
@@ -68,6 +68,9 @@ const CODE_MESSAGES: Record<ImportErrorCode, string> = {
   llm_unavailable:
     'The import service is unavailable right now. Please try again later.',
   draft_not_found: 'This preview has expired. Preview the URL again.',
+  invalid_edit:
+    'Check the title, company and description: they must not be empty, too long or contain markup.',
+  application_limit: 'You have reached the limit of tracked jobs.',
 }
 
 export type Unauthorized = { kind: 'unauthorized' }

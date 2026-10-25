@@ -127,9 +127,7 @@ describe('confirmJobImport', () => {
   it('posts the draft id and the edits and returns the import', async () => {
     const imported = {
       applicationId: '0b6f2c1e-7d3a-4e8b-9f1a-2c3d4e5f6a7b',
-      postingId: '11111111-1111-1111-1111-111111111111',
       created: true,
-      postingExisted: false,
     }
     answer(201, imported)
     expect(await confirmJobImport(auth, DRAFT_ID, edits)).toEqual({
@@ -151,6 +149,21 @@ describe('confirmJobImport', () => {
       kind: 'failed',
       code: 'draft_not_found',
       message: 'This preview has expired. Preview the URL again.',
+    })
+  })
+
+  it.each([
+    [
+      'invalid_edit',
+      'Check the title, company and description: they must not be empty, too long or contain markup.',
+    ],
+    ['application_limit', 'You have reached the limit of tracked jobs.'],
+  ])('maps %s to its fixed message', async (code, message) => {
+    answer(422, { error: code, secret: 'SECRET-BODY' })
+    expect(await confirmJobImport(auth, DRAFT_ID, edits)).toEqual({
+      kind: 'failed',
+      code,
+      message,
     })
   })
 

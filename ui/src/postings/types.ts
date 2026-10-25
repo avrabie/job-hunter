@@ -15,8 +15,6 @@ export interface PostingSummary {
   firstSeen: string
   lastSeen: string
   links: PostingLink[]
-  /** True for a posting a user added by URL; crawled postings are false. */
-  userAdded: boolean
 }
 
 export interface PostingDetail extends PostingSummary {

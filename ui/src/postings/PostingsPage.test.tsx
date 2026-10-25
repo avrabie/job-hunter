@@ -24,7 +24,6 @@ const posting = (over: Partial<PostingSummary> = {}): PostingSummary => ({
       primary: true,
     },
   ],
-  userAdded: false,
   ...over,
 })
 
@@ -89,24 +88,6 @@ describe('the list', () => {
     expect(link).toHaveAttribute('target', '_blank')
     expect(link.getAttribute('rel')).toContain('noopener')
     expect(link.getAttribute('rel')).toContain('noreferrer')
-  })
-
-  it('shows the added-by-a-user badge on a user-added row only', async () => {
-    stubFetch(() =>
-      json(200, [
-        posting({ id: 'user', title: 'Added job', userAdded: true }),
-        posting({ id: 'crawled', title: 'Crawled job' }),
-        posting({ id: 'missing', title: 'Old job', userAdded: undefined }),
-      ]),
-    )
-    mount('/postings')
-
-    await screen.findByRole('link', { name: 'Added job' })
-    expect(screen.getAllByText('Added by a user')).toHaveLength(1)
-    const row = screen.getByRole('link', { name: 'Added job' }).closest('li')
-    expect(
-      within(row as HTMLElement).getByText('Added by a user'),
-    ).toBeVisible()
   })
 
   it('shows one link per source', async () => {
@@ -268,26 +249,6 @@ describe('the detail page', () => {
     expect(
       screen.getByRole('link', { name: 'Open original (greenhouse-acme)' }),
     ).toBeInTheDocument()
-  })
-
-  it('shows the added-by-a-user badge when the posting was added by a user', async () => {
-    stubFetch(() => json(200, detail({ userAdded: true })))
-    mount('/postings/11111111-1111-1111-1111-111111111111')
-
-    expect(
-      await screen.findByRole('heading', { name: 'Backend Engineer' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Added by a user')).toBeInTheDocument()
-  })
-
-  it('hides the badge for a crawled posting or a response without the flag', async () => {
-    stubFetch(() => json(200, { ...detail(), userAdded: undefined }))
-    mount('/postings/11111111-1111-1111-1111-111111111111')
-
-    expect(
-      await screen.findByRole('heading', { name: 'Backend Engineer' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByText('Added by a user')).not.toBeInTheDocument()
   })
 
   it('shows not found with a way back', async () => {

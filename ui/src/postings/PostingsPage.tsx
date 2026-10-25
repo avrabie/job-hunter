@@ -10,7 +10,6 @@ import { Landing } from '../pages/Landing.tsx'
 import { OriginalLinks } from './OriginalLinks.tsx'
 import { loadPostings } from './postingsApi.ts'
 import { PAGE_SIZE, type ListQuery, type PostingSummary } from './types.ts'
-import { UserAddedBadge } from './UserAddedBadge.tsx'
 
 const CANTONS = [
   'AG',
@@ -190,7 +189,6 @@ function PostingsList() {
               <h2>
                 <Link to={`/postings/${p.id}`}>{p.title}</Link>
               </h2>
-              <UserAddedBadge userAdded={p.userAdded} />
               <p>
                 {p.company}
                 {p.city ? ` · ${p.city}` : ''}

@@ -19,9 +19,7 @@ const draft = {
 
 const imported = {
   applicationId: '0b6f2c1e-7d3a-4e8b-9f1a-2c3d4e5f6a7b',
-  postingId: '11111111-1111-1111-1111-111111111111',
   created: true,
-  postingExisted: false,
 }
 
 const json = (status: number, body: unknown) =>
@@ -102,7 +100,7 @@ describe('Add job from URL: preview', () => {
     )
     expect(
       screen.getByText(
-        'This job will be visible to all users, marked "Added by a user".',
+        'This job is saved only in your own job tracking; other users cannot see it.',
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save and track' })).toBeEnabled()
@@ -142,6 +140,11 @@ describe('Add job from URL: fixed messages per error code', () => {
       'llm_unavailable',
       'The import service is unavailable right now. Please try again later.',
     ],
+    [
+      'invalid_edit',
+      'Check the title, company and description: they must not be empty, too long or contain markup.',
+    ],
+    ['application_limit', 'You have reached the limit of tracked jobs.'],
   ])(
     'shows the message for %s without revealing the paste field',
     async (code, text) => {
@@ -297,7 +300,7 @@ describe('Add job from URL: confirm', () => {
     stubFetch((url) =>
       url === '/api/job-imports/preview'
         ? json(200, draft)
-        : json(201, { ...imported, created: false, postingExisted: true }),
+        : json(201, { ...imported, created: false }),
     )
     mount()
     await previewUrl()
