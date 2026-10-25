@@ -3,8 +3,8 @@
 @import './styles/components.css';
 
 /*
- * Legacy page rules from before the design system. Pages move to the shared components one by one; a rule goes when
- * no page uses it any more.
+ * Rules still used by the profile page and the file cabinet, which keep their plain form markup. A rule goes when no
+ * page uses it any more.
  */
 
 .actions {
@@ -117,132 +117,10 @@ section {
   margin-bottom: 2rem;
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: end;
-}
-
-.postings {
-  list-style: none;
-  padding: 0;
-}
-
-.postings li {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.original-links,
-.reasons {
-  list-style: none;
-  padding: 0;
-}
-
-.postings .reasons li,
-.postings .original-links li {
-  padding: 0;
-  border-bottom: none;
-}
-
-.description {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: inherit;
-}
-
-.cv-section {
-  margin-bottom: 2rem;
-}
-
-/* Letter workspace: a paragraph keeps the line breaks it was written with. */
-.letter-paragraphs p {
-  white-space: pre-wrap;
-}
-
-/* Export page: options on the left, preview and download on the right; one column on narrow screens. */
-.export-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  gap: 1.5rem;
-  align-items: start;
-}
-
 .export-field label {
   margin-bottom: 0.25rem;
 }
 
 .export-field select {
   margin-bottom: 1rem;
-}
-
-.export-sections {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.export-sections li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.export-sections label.inline {
-  flex: 1;
-  margin-right: 0;
-}
-
-.export-sections button {
-  padding: 0.25rem 0.6rem;
-}
-
-.export-preview {
-  width: 100%;
-  min-height: 70vh;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 0.4rem;
-  background: var(--color-paper);
-}
-
-@media (max-width: 40rem) {
-  .export-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Public CV page: the sections list, the buttons under the form and the address. */
-.public-cv-sections {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.public-cv-sections li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.public-cv-sections label.inline {
-  flex: 1;
-  margin-right: 0;
-}
-
-.public-cv-sections button {
-  padding: 0.25rem 0.6rem;
-}
-
-.public-cv-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-
-.public-cv-address {
-  overflow-wrap: anywhere;
 }

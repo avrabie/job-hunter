@@ -28,7 +28,7 @@
 - [x] 4.3 Job tracking list, import form, application page and letter workspace.
 - [x] 4.4 Export CV and Public CV pages.
 - [x] 4.5 Admin and Register/Callback/error pages.
-- [ ] 4.6 Delete the unused legacy rules from `index.css`.
+- [x] 4.6 Delete the unused legacy rules from `index.css`.
 
 ## 5. Wrap-up
 
