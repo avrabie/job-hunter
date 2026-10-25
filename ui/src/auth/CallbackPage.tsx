@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { PageHeader } from '../ui/PageHeader.tsx'
+import '../styles/account.css'
 import { useAuth } from './authContext.ts'
 
 /**
@@ -23,14 +25,23 @@ export function CallbackPage() {
     )
   }, [completeSignIn, navigate])
 
-  if (!failed) return <p>Signing you in…</p>
+  if (!failed)
+    return (
+      <div className="page page--narrow">
+        <p role="status">Signing you in…</p>
+      </div>
+    )
   return (
     <div className="page page--narrow">
-      <h1>Sign-in failed</h1>
-      <p>We could not complete the sign-in.</p>
-      <button type="button" onClick={() => void signIn()}>
-        Try again
-      </button>
+      <PageHeader
+        title="Sign-in failed"
+        lead="We could not complete the sign-in."
+      />
+      <div className="account-actions">
+        <button type="button" onClick={() => void signIn()}>
+          Try again
+        </button>
+      </div>
     </div>
   )
 }

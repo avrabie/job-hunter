@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { Alert } from '../ui/Alert.tsx'
+import { Card } from '../ui/Card.tsx'
+import { FormField } from '../ui/FormField.tsx'
+import { PageHeader } from '../ui/PageHeader.tsx'
+import '../styles/admin.css'
 import {
   loadSchedule,
   saveSchedule,
@@ -20,8 +25,10 @@ export function AdminPage() {
     case 'error':
       return (
         <div className="page page--narrow">
-          <h1>Sign-in failed</h1>
-          <p>We could not reach the sign-in service.</p>
+          <PageHeader
+            title="Sign-in failed"
+            lead="We could not reach the sign-in service."
+          />
         </div>
       )
     case 'signedIn':
@@ -87,25 +94,29 @@ function ScheduleEditor() {
 
   return (
     <div className="page page--narrow">
-      <h1>Crawl schedule</h1>
-      <p>
-        <Link to="/">Back</Link>
-      </p>
+      <PageHeader
+        title="Crawl schedule"
+        actions={
+          <Link className="button button--secondary" to="/">
+            Back
+          </Link>
+        }
+      />
       {load.state === 'loading' && <p role="status">Loading the schedule…</p>}
       {load.state === 'forbidden' && (
-        <p role="alert">This page is for administrators.</p>
+        <Alert tone="danger">This page is for administrators.</Alert>
       )}
       {load.state === 'failed' && (
-        <div role="alert">
+        <Alert tone="danger">
           <p>{load.message}</p>
           <button type="button" onClick={() => void fetchSchedule()}>
             Try again
           </button>
-        </div>
+        </Alert>
       )}
       {load.state === 'ready' && (
         <>
-          <p>
+          <p className="admin-status">
             {load.schedule.enabled
               ? `Crawling is on. Next run: ${load.schedule.nextFire ?? 'unknown'}.`
               : 'Crawling is off.'}
@@ -113,37 +124,49 @@ function ScheduleEditor() {
               ? ` Last changed: ${load.schedule.updatedAt}.`
               : ''}
           </p>
-          <form onSubmit={(e) => void submit(e)} className="filters">
-            <label>
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-              />{' '}
-              Enabled
-            </label>
-            <label>
-              Cron (with seconds, for example 0 0 * * * *)
-              <input
-                type="text"
-                value={cron}
-                onChange={(e) => setCron(e.target.value)}
-              />
-            </label>
-            <label>
-              Time zone
-              <input
-                type="text"
-                value={zone}
-                onChange={(e) => setZone(e.target.value)}
-              />
-            </label>
-            <button type="submit" disabled={saving}>
-              Save
-            </button>
-          </form>
-          {rejected && <p role="alert">{rejected}</p>}
-          {saveError && <p role="alert">{saveError}</p>}
+          <Card>
+            <form
+              onSubmit={(e) => void submit(e)}
+              className="admin-form"
+              aria-label="Crawl schedule settings"
+            >
+              <label className="admin-form__check">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => setEnabled(e.target.checked)}
+                />
+                Enabled
+              </label>
+              <FormField label="Cron (with seconds, for example 0 0 * * * *)">
+                {(control) => (
+                  <input
+                    {...control}
+                    type="text"
+                    value={cron}
+                    onChange={(e) => setCron(e.target.value)}
+                  />
+                )}
+              </FormField>
+              <FormField label="Time zone">
+                {(control) => (
+                  <input
+                    {...control}
+                    type="text"
+                    value={zone}
+                    onChange={(e) => setZone(e.target.value)}
+                  />
+                )}
+              </FormField>
+              {rejected && <Alert tone="danger">{rejected}</Alert>}
+              {saveError && <Alert tone="danger">{saveError}</Alert>}
+              <div className="admin-form__actions">
+                <button type="submit" disabled={saving}>
+                  Save
+                </button>
+              </div>
+            </form>
+          </Card>
         </>
       )}
     </div>

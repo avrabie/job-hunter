@@ -88,12 +88,16 @@ describe('RegisterPage', () => {
     expect(
       await screen.findByText('must be 8 to 72 characters'),
     ).toBeInTheDocument()
-    expect(
-      screen.getByLabelText(/^Password/).closest('label'),
-    ).toHaveTextContent('must be 8 to 72 characters')
-    expect(screen.getByLabelText(/^Email/).closest('label')).toHaveTextContent(
+    // The message is linked to its field and the field is marked invalid, without becoming part of the name.
+    const password = screen.getByLabelText(/^Password/)
+    expect(password).toHaveAccessibleDescription('must be 8 to 72 characters')
+    expect(password).toHaveAttribute('aria-invalid', 'true')
+    expect(password).toHaveAccessibleName('Password')
+    const email = screen.getByLabelText(/^Email/)
+    expect(email).toHaveAccessibleDescription(
       'must be a well-formed email address',
     )
+    expect(email).toHaveAccessibleName('Email')
     expect(signIn).not.toHaveBeenCalled()
   })
 

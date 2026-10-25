@@ -66,6 +66,16 @@ describe('the schedule', () => {
     expect(screen.getByLabelText('Time zone')).toHaveValue('Europe/Zurich')
   })
 
+  it('has one heading and a named settings form', async () => {
+    stubFetch(() => json(200, enabled))
+    mountAdmin()
+    await screen.findByText(/Crawling is on/)
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(
+      screen.getByRole('form', { name: 'Crawl schedule settings' }),
+    ).toBeInTheDocument()
+  })
+
   it('says crawling is off and shows no next run when disabled', async () => {
     stubFetch(() => json(200, { ...enabled, enabled: false, nextFire: null }))
     mountAdmin()
