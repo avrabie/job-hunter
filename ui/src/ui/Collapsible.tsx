@@ -9,7 +9,8 @@ import {
 } from 'react'
 
 interface GroupApi {
-  isOpen: (id: string) => boolean
+  /** `fallback` is the section's own default, used until "Expand all" or "Collapse all" is pressed. */
+  isOpen: (id: string, fallback: boolean) => boolean
   setOpen: (id: string, open: boolean) => void
   expandAll: () => void
   collapseAll: () => void
@@ -20,20 +21,21 @@ const GroupContext = createContext<GroupApi | null>(null)
 /**
  * Holds the open state of the `Collapsible`s inside it that have an `id`, so `ExpandCollapseAll` can open or close them
  * together. "Expand all" changes the default and forgets each section's own choice; sections need not register.
+ * Without `defaultOpen`, each section starts at its own `defaultOpen` until the first "Expand all" or "Collapse all".
  */
 export function CollapsibleGroup({
-  defaultOpen = false,
+  defaultOpen,
   children,
 }: {
   defaultOpen?: boolean
   children: ReactNode
 }) {
-  const [all, setAll] = useState(defaultOpen)
+  const [all, setAll] = useState<boolean | null>(defaultOpen ?? null)
   const [own, setOwn] = useState<Record<string, boolean>>({})
 
   const api = useMemo<GroupApi>(
     () => ({
-      isOpen: (id) => own[id] ?? all,
+      isOpen: (id, fallback) => own[id] ?? all ?? fallback,
       setOpen: (id, open) =>
         setOwn((prev) => (prev[id] === open ? prev : { ...prev, [id]: open })),
       expandAll: () => {
@@ -78,6 +80,8 @@ export function ExpandCollapseAll() {
  */
 export function Collapsible({
   title,
+  titleAs: Title = 'span',
+  titleId,
   summary,
   id,
   open,
@@ -88,6 +92,12 @@ export function Collapsible({
   children,
 }: {
   title: ReactNode
+  /**
+   * The element of the title. A heading inside the summary keeps the page outline (and a `section` labelled by it)
+   * while the section is closed; `summary` allows one heading as its content.
+   */
+  titleAs?: 'span' | 'h2' | 'h3'
+  titleId?: string
   /** One line shown next to the title, such as a count or a status. */
   summary?: ReactNode
   id?: string
@@ -100,8 +110,11 @@ export function Collapsible({
 }) {
   const group = useContext(GroupContext)
   const [ownOpen, setOwnOpen] = useState(defaultOpen)
+  // The default counts at mount only, so a section whose default depends on its content (such as "closed when it
+  // holds many entries") does not snap shut while the user adds to it.
+  const [initial] = useState(defaultOpen)
   const grouped = group !== null && id !== undefined
-  const isOpen = open ?? (grouped ? group.isOpen(id) : ownOpen)
+  const isOpen = open ?? (grouped ? group.isOpen(id, initial) : ownOpen)
 
   const change = useCallback(
     (next: boolean) => {
@@ -132,7 +145,9 @@ export function Collapsible({
       }}
     >
       <summary className="collapsible__summary">
-        <span className="collapsible__title">{title}</span>
+        <Title id={titleId} className="collapsible__title">
+          {title}
+        </Title>
         {summary !== undefined && (
           <span className="collapsible__meta">{summary}</span>
         )}

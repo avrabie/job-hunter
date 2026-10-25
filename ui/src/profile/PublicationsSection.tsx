@@ -1,23 +1,31 @@
 import type { ReactNode } from 'react'
+import { ProfileSection } from './ProfileSection.tsx'
+import { LONG_LIST, countOf, hasErrorAt } from './sectionSummary.ts'
 import { NumberInput, Repeater, TextInput } from './fields.tsx'
 import { blankPublication, type Publication } from './types.ts'
 
 /** Papers, talks and the like. */
 export function PublicationsSection({
-  heading,
+  fill,
   publications,
   onChange,
   errors,
 }: {
-  /** The heading with its "Fill from CV" control; the form builds it. */
-  heading: ReactNode
+  /** The "Fill from CV" control; the form builds it. */
+  fill: ReactNode
   publications: Publication[]
   onChange: (publications: Publication[]) => void
   errors: Record<string, string>
 }) {
   return (
-    <section aria-labelledby="publications-heading">
-      {heading}
+    <ProfileSection
+      name="publications"
+      title="Publications"
+      summary={countOf(publications.length, 'publication', 'publications')}
+      defaultOpen={publications.length <= LONG_LIST}
+      hasError={hasErrorAt(errors, ['publications['])}
+    >
+      {fill}
       <Repeater
         title="Publication"
         items={publications}
@@ -67,6 +75,6 @@ export function PublicationsSection({
           )
         }}
       </Repeater>
-    </section>
+    </ProfileSection>
   )
 }

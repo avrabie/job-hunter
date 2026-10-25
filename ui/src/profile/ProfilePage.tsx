@@ -9,6 +9,7 @@ import {
 import { FileCabinet } from '../files/FileCabinet.tsx'
 import { loadMaster } from '../files/filesApi.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { revealAndFocus } from '../ui/revealAndFocus.ts'
 import { analyzeProject, type AnalysisResult } from './analysisApi.ts'
 import { ProfileForm, type FillState } from './ProfileForm.tsx'
 import { listRepositories } from './repositoriesApi.ts'
@@ -142,7 +143,8 @@ function ProfileEditor() {
     [draft],
   )
 
-  // After a failed save, move to the first field (in page order) that has a message.
+  // After a failed save, move to the first field (in page order) that has a message, opening the collapsed sections
+  // around it: a field inside a closed `details` cannot take focus.
   const [focusFirst, setFocusFirst] = useState(0)
   useEffect(() => {
     if (focusFirst === 0) return
@@ -150,8 +152,9 @@ function ProfileEditor() {
     const first = Array.from(fields ?? []).find(
       (el) => errors[el.dataset['path']!],
     )
-    first?.focus()
-    first?.scrollIntoView?.({ block: 'center' })
+    if (!first) return
+    revealAndFocus(first)
+    first.scrollIntoView?.({ block: 'center' })
     // Only a new failed save moves focus, not later edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusFirst])

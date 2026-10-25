@@ -1,28 +1,24 @@
-import type { ProfileSectionName } from '../cv/cvApi.ts'
-
 export interface FillState {
   loading: boolean
   error: string | null
 }
 
-/** A section heading with its "Fill from CV" button, status and hint. */
-export function SectionHeading({
-  section,
-  title,
+/**
+ * The "Fill from CV" button of a section, with its status and hint. The section's heading sits in the summary line of
+ * its collapsible section, where a button does not belong, so the control is the first thing inside the section.
+ */
+export function FillFromCv({
   canFillFromCv,
   onFill,
   state,
 }: {
-  section: ProfileSectionName
-  title: string
   /** Whether the user has a master CV; without one the button is disabled. */
   canFillFromCv: boolean
   onFill: () => void
   state: FillState
 }) {
   return (
-    <div className="section-heading">
-      <h2 id={`${section}-heading`}>{title}</h2>
+    <div className="fill-from-cv">
       <button
         type="button"
         className="secondary"

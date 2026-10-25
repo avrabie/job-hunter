@@ -1,4 +1,6 @@
 import { Field, Select, TextInput } from './fields.tsx'
+import { ProfileSection } from './ProfileSection.tsx'
+import { hasErrorAt } from './sectionSummary.ts'
 import { WORK_AUTHORISATIONS, type Location, type Profile } from './types.ts'
 
 /** Where you live, work authorisation and the summary. */
@@ -19,9 +21,21 @@ export function AboutSection({
   onSummaryChange: (summary: string) => void
   errors: Record<string, string>
 }) {
+  const place = [location.city, location.canton]
+    .map((v) => v?.trim())
+    .filter(Boolean)
+    .join(', ')
   return (
-    <section>
-      <h2>About you</h2>
+    <ProfileSection
+      name="about"
+      title="About you"
+      summary={place || 'Not set'}
+      hasError={hasErrorAt(errors, [
+        'location.',
+        'workAuthorisation',
+        'summary',
+      ])}
+    >
       <TextInput
         label="City"
         value={location.city}
@@ -52,6 +66,6 @@ export function AboutSection({
           onChange={(e) => onSummaryChange(e.target.value)}
         />
       </Field>
-    </section>
+    </ProfileSection>
   )
 }

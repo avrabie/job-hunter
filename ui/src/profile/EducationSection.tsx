@@ -1,23 +1,31 @@
 import type { ReactNode } from 'react'
+import { ProfileSection } from './ProfileSection.tsx'
+import { LONG_LIST, countOf, hasErrorAt } from './sectionSummary.ts'
 import { Repeater, TextInput } from './fields.tsx'
 import { blankEducation, type Education } from './types.ts'
 
 /** Schools and degrees. */
 export function EducationSection({
-  heading,
+  fill,
   education,
   onChange,
   errors,
 }: {
-  /** The heading with its "Fill from CV" control; the form builds it. */
-  heading: ReactNode
+  /** The "Fill from CV" control; the form builds it. */
+  fill: ReactNode
   education: Education[]
   onChange: (education: Education[]) => void
   errors: Record<string, string>
 }) {
   return (
-    <section aria-labelledby="education-heading">
-      {heading}
+    <ProfileSection
+      name="education"
+      title="Education"
+      summary={countOf(education.length, 'entry', 'entries')}
+      defaultOpen={education.length <= LONG_LIST}
+      hasError={hasErrorAt(errors, ['education['])}
+    >
+      {fill}
       <Repeater
         title="Education entry"
         items={education}
@@ -71,6 +79,6 @@ export function EducationSection({
           )
         }}
       </Repeater>
-    </section>
+    </ProfileSection>
   )
 }
