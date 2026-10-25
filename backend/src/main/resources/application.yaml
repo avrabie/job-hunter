@@ -52,6 +52,9 @@ jobhunter:
   import:
     # Model for importing a job from a URL (same names as above). Empty = use jobhunter.llm.model.
     model: ""
+    # Per user: previews (fetch plus one model call) per hour, and confirms (a shared posting is created) per day.
+    previews-per-hour: 20
+    confirms-per-day: 10
   cv:
     # Maximum CV text length sent to the model; a longer CV is refused, never truncated.
     max-text-chars: 120000
