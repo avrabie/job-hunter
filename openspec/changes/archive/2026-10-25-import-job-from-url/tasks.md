@@ -1,7 +1,7 @@
 ## 0. Lead checks
 
-- [ ] 0.1 Pin the jsoup version from Maven Central and check it works in the linux/amd64 image.
-- [ ] 0.2 Owner confirms the assumptions: no robots.txt check for one user-initiated fetch, no admin removal yet, limits 20 previews/hour and 10 confirms/day.
+- [x] 0.1 Pin the jsoup version from Maven Central and check it works in the linux/amd64 image.
+- [x] 0.2 Owner confirms the assumptions: no robots.txt check for one user-initiated fetch, no admin removal yet, limits 20 previews/hour and 10 confirms/day.
 
 ## 1. Fetcher (independent)
 
@@ -35,4 +35,4 @@
 
 ## 6. Wrap-up
 
-- [ ] 6.1 Merge, full `./gradlew clean verify`, UI tests/tsc/oxlint/prettier, `openspec validate --all`, independent security review (SSRF, rebinding, redirects, injection, logs, limits), docs (`docs/architecture.md`, `docs/glossary.md`, module README), deploy only after the owner says so; archive after the owner tests.
+- [x] 6.1 Merge, full `./gradlew clean verify`, UI tests/tsc/oxlint/prettier, `openspec validate --all`, independent security review (SSRF, rebinding, redirects, injection, logs, limits), docs (`docs/architecture.md`, `docs/glossary.md`, module README), deploy only after the owner says so; archive after the owner tests.
