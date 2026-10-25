@@ -50,6 +50,7 @@ Domain terms as the code uses them. Read on 2026-10-24. `K/` = `backend/src/main
 - **executor source**: the seam that creates the model client, replaced by a fake in tests. `ExecutorSource`, `K/llm/internal/KoogCvReader.kt`.
 - **LetterWriter**: the `llm` service that writes a motivation letter (Markdown) from a job and the chosen profile parts. `K/llm/LetterWriter.kt`.
 - **letter version**: one stored text of an application's letter (GENERATED, REGENERATED or EDITED), numbered from 1, at most 20 per application. `K/applications/LetterService.kt`, table `motivation_letter`.
+- **imported application**: an application created from a pasted job URL (or text) with no posting behind it (`source = IMPORT`); private to its owner, live status always OPEN. `K/jobimport/`, `K/applications/`.
 - **paragraphs**: the one split rule (blank lines) that numbers the paragraphs for review comments, in Kotlin and in the UI with a shared case table. `K/applications/Paragraphs.kt`, `ui/src/applications/paragraphs.ts`.
 
 ## Postings and sources

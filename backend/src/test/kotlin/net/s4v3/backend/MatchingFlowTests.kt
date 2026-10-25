@@ -130,6 +130,19 @@ internal class MatchingFlowTests(
     }
 
     @Test
+    fun `a result of an older profile version never replaces one of a newer version`() {
+        val posting = support.newPosting(canton = "ZH")
+        val user = support.newUser()
+        store.upsert(user, posting, result(passed = true, score = 80), profileVersion = 2)
+
+        store.upsert(user, posting, result(passed = false, score = 10), profileVersion = 1)
+
+        val row = support.match(user, posting)!!
+        assertEquals(2L, row["profile_version"])
+        assertEquals(true, row["passed"])
+    }
+
+    @Test
     fun `no result is stored for a user without a profile`() {
         val user = support.newUser()
 

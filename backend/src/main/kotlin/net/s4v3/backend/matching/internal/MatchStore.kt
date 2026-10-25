@@ -22,6 +22,7 @@ internal data class MatchItem(
 @Component
 internal class MatchStore(private val jdbc: JdbcClient) {
 
+    /** A result from an older profile version never replaces one from a newer version (concurrent re-evaluations). */
     fun upsert(sub: String, postingId: UUID, result: MatchResult, profileVersion: Long, at: Instant = Instant.now()) {
         require(result.reasons.all { it.matches(Regex("[A-Z_0-9]+")) }) { "reason codes only" }
         jdbc.sql(
@@ -30,6 +31,7 @@ internal class MatchStore(private val jdbc: JdbcClient) {
             VALUES (:sub, :posting, :passed, :score, CAST(:reasons AS text[]), :version, :at)
             ON CONFLICT (user_sub, posting_id) DO UPDATE SET passed = EXCLUDED.passed, score = EXCLUDED.score,
                 reasons = EXCLUDED.reasons, profile_version = EXCLUDED.profile_version, evaluated_at = EXCLUDED.evaluated_at
+            WHERE posting_match.profile_version <= EXCLUDED.profile_version
             """.trimIndent(),
         )
             .param("sub", sub).param("posting", postingId).param("passed", result.passed).param("score", result.score)

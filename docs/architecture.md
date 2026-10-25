@@ -54,7 +54,7 @@ Everything under `<module>/internal/` (and any other sub-package) is private to 
 (section 8). The `notifications` module has only a `package-info.java` and no code
 (`backend/src/main/java/net/s4v3/backend/notifications/package-info.java`); `applications` has Kotlin sources (below).
 `cv` and `files` have no `package-info.java` but are still modules (Modulith treats every top-level package as one;
-`ModularityTests.kt` asserts the eleven names).
+`ModularityTests.kt` asserts the twelve names).
 
 "May call" below comes from the `import net.s4v3.backend.<other>` lines I counted in each module's main sources, not from a declared
 `allowedDependencies` (none exists: grep found no `allowedDependencies` or `@NamedInterface` in `backend/src`).
@@ -184,6 +184,9 @@ Event edges (dotted, see section 5): `postings` publishes `JobIngested`, `profil
 - Internal (`K/applications/internal/`): `ApplicationController` (`/api/applications`, `/by-posting`, `/{id}`), `DefaultApplicationService`, `ApplicationRepository`, `ErrorResponses`, `LetterController` (`/api/applications/{id}/letters...`), `DefaultLetterService`, `LetterRepository`, `LetterLimiter`, `LetterFileName`.
 - Events: none. Tables: `application`, `motivation_letter` (`db/changelog/011-applications.sql`).
 - May call: `accounts`, `postings`, `profile`, `llm`. No other module calls it.
+
+### jobimport
+Imports a job from a URL into the caller's own job tracking, never into the shared postings. `SafeFetcher` (https/443 only, public addresses only, connects to the validated address, 3 manual redirects, 10 s, 1 MB) fetches the page, `PageText` (jsoup) reduces it, `llm.JobExtractor` extracts title, company, location and description, a grounding check rejects invented text, and the user reviews a server-held draft (1 h) before `ApplicationService.trackImported` creates an application with `source = IMPORT`. Pasted text can replace the fetch. Limits: 20 previews/hour, 10 confirms/day, 2 concurrent previews per user, 8 overall. `K/jobimport/`, spec `job-import`, review `handoff/import-review.report.md`.
 
 ### notifications
 
@@ -400,7 +403,7 @@ Required in every non-test run: `spring.security.oauth2.resourceserver.jwt.issue
 ## 8. How Modulith verification works here
 
 - `BackendApplication` (`K/BackendApplication.kt`) is the root; each direct sub-package is a module. `package-info.java` with `@ApplicationModule(displayName=...)` and `@NullMarked` exists for the modules that have one.
-- `ModularityTests.kt`: `ApplicationModules.of(BackendApplication::class.java).verify()` (no cycles, no use of another module's non-exposed types) and an assertion that the module set is exactly the eleven names.
+- `ModularityTests.kt`: `ApplicationModules.of(BackendApplication::class.java).verify()` (no cycles, no use of another module's non-exposed types) and an assertion that the module set is exactly the twelve names.
 - `ModuleViolationTests.kt` proves the check bites: it verifies a deliberately broken fixture (`backend/src/test/kotlin/net/s4v3/fixture/modules/`, modules `alpha` and `beta`) and asserts the error names both modules, for "non-exposed" access and for a cycle.
 - `KoogBoundaryTests.kt` and `TokenAccessBoundaryTests.kt` are plain ArchUnit rules, each with a failing fixture (`fixture/koog`, `fixture/token`).
 - None of these four needs Docker or a Spring context (by reading: they build models from classes). Declared `allowedDependencies`: none, so any module may use any other module's public API as long as there is no cycle.
