@@ -1,6 +1,7 @@
 import type { ProfileSectionName } from '../cv/cvApi.ts'
 import type { CodeProvider, OpenSourceProject, Profile } from './types.ts'
 import type { AnalysisResult } from './analysisApi.ts'
+import { CollapsibleGroup, ExpandCollapseAll } from '../ui/Collapsible.tsx'
 import { AboutSection } from './AboutSection.tsx'
 import { ContactSection } from './ContactSection.tsx'
 import { EducationSection } from './EducationSection.tsx'
@@ -11,7 +12,7 @@ import { PreferencesSection } from './PreferencesSection.tsx'
 import { type PublicCvState } from './publicCvNotice.ts'
 import { PublicationsSection } from './PublicationsSection.tsx'
 import type { RepositoriesResult } from './repositoriesApi.ts'
-import { SectionHeading, type FillState } from './SectionHeading.tsx'
+import { FillFromCv, type FillState } from './FillFromCv.tsx'
 import { SkillsSection } from './SkillsSection.tsx'
 import { skillsAfterProjectChange } from './skills.ts'
 
@@ -43,7 +44,10 @@ interface Props {
   publicCv: PublicCvState
 }
 
-/** All sections of the profile as editable fields. Holds no state of its own. */
+/**
+ * All sections of the profile as editable fields, each a collapsible section under one "Expand all / Collapse all".
+ * Holds no profile state of its own; which sections are open is display only.
+ */
 export function ProfileForm({
   profile,
   onChange,
@@ -66,11 +70,9 @@ export function ProfileForm({
     ...profile.experience.flatMap((e) => e.technologies),
   ]
 
-  /** The heading of a section that can be filled from the CV. */
-  const heading = (section: ProfileSectionName, title: string) => (
-    <SectionHeading
-      section={section}
-      title={title}
+  /** The "Fill from CV" control of a section that can be filled from the CV. */
+  const fill = (section: ProfileSectionName) => (
+    <FillFromCv
       canFillFromCv={canFillFromCv}
       onFill={() => onFillSection(section)}
       state={fillState[section]}
@@ -78,89 +80,92 @@ export function ProfileForm({
   )
 
   return (
-    <div
-      onBlur={(e) => {
-        const path = (e.target as HTMLElement).dataset['path']
-        if (path) onLeave?.(path)
-      }}
-    >
-      <ContactSection
-        contact={profile.contact}
-        onChange={(v) => set('contact', v)}
-        errors={errors}
-        publicCv={publicCv}
-      />
+    <CollapsibleGroup>
+      <div
+        onBlur={(e) => {
+          const path = (e.target as HTMLElement).dataset['path']
+          if (path) onLeave?.(path)
+        }}
+      >
+        <ExpandCollapseAll />
+        <ContactSection
+          contact={profile.contact}
+          onChange={(v) => set('contact', v)}
+          errors={errors}
+          publicCv={publicCv}
+        />
 
-      <AboutSection
-        location={location}
-        workAuthorisation={profile.workAuthorisation}
-        summary={profile.summary}
-        onLocationChange={(v) => set('location', v)}
-        onWorkAuthorisationChange={(v) => set('workAuthorisation', v)}
-        onSummaryChange={(v) => set('summary', v)}
-        errors={errors}
-      />
+        <AboutSection
+          location={location}
+          workAuthorisation={profile.workAuthorisation}
+          summary={profile.summary}
+          onLocationChange={(v) => set('location', v)}
+          onWorkAuthorisationChange={(v) => set('workAuthorisation', v)}
+          onSummaryChange={(v) => set('summary', v)}
+          errors={errors}
+        />
 
-      <LanguagesSection
-        languages={profile.languages}
-        onChange={(v) => set('languages', v)}
-        errors={errors}
-      />
+        <LanguagesSection
+          languages={profile.languages}
+          onChange={(v) => set('languages', v)}
+          errors={errors}
+        />
 
-      <ExperienceSection
-        heading={heading('experience', 'Experience')}
-        experience={profile.experience}
-        onChange={(v) => set('experience', v)}
-        errors={errors}
-        suggestions={suggestions}
-      />
+        <ExperienceSection
+          fill={fill('experience')}
+          experience={profile.experience}
+          onChange={(v) => set('experience', v)}
+          errors={errors}
+          suggestions={suggestions}
+        />
 
-      <EducationSection
-        heading={heading('education', 'Education')}
-        education={profile.education}
-        onChange={(v) => set('education', v)}
-        errors={errors}
-      />
+        <EducationSection
+          fill={fill('education')}
+          education={profile.education}
+          onChange={(v) => set('education', v)}
+          errors={errors}
+        />
 
-      <PublicationsSection
-        heading={heading('publications', 'Publications')}
-        publications={profile.publications}
-        onChange={(v) => set('publications', v)}
-        errors={errors}
-      />
+        <PublicationsSection
+          fill={fill('publications')}
+          publications={profile.publications}
+          onChange={(v) => set('publications', v)}
+          errors={errors}
+        />
 
-      <OpenSourceSection
-        accounts={profile.codeAccounts}
-        onAccountsChange={(v) => set('codeAccounts', v)}
-        projects={profile.openSourceProjects}
-        onProjectsChange={(v) =>
-          onChange({
-            ...profile,
-            openSourceProjects: v,
-            skills: skillsAfterProjectChange(
-              profile.skills,
-              profile.openSourceProjects,
-              v,
-            ),
-          })
-        }
-        saved={savedProjects}
-        onAnalyze={onAnalyze}
-        errors={errors}
-        onLoad={onLoadRepositories}
-      />
+        <OpenSourceSection
+          accounts={profile.codeAccounts}
+          onAccountsChange={(v) => set('codeAccounts', v)}
+          projects={profile.openSourceProjects}
+          onProjectsChange={(v) =>
+            onChange({
+              ...profile,
+              openSourceProjects: v,
+              skills: skillsAfterProjectChange(
+                profile.skills,
+                profile.openSourceProjects,
+                v,
+              ),
+            })
+          }
+          saved={savedProjects}
+          onAnalyze={onAnalyze}
+          errors={errors}
+          onLoad={onLoadRepositories}
+        />
 
-      <SkillsSection
-        skills={profile.skills}
-        onChange={(v) => set('skills', v)}
-        errors={errors}
-      />
+        <SkillsSection
+          skills={profile.skills}
+          onChange={(v) => set('skills', v)}
+          errors={errors}
+        />
 
-      <PreferencesSection
-        prefs={profile.preferences}
-        onChange={(v) => set('preferences', v)}
-        errors={errors}
-      />
-    </div>
+        <PreferencesSection
+          prefs={profile.preferences}
+          onChange={(v) => set('preferences', v)}
+          errors={errors}
+        />
+      </div>
+    </CollapsibleGroup>
   )
 }

@@ -658,8 +658,14 @@ textarea[aria-invalid='true'] {
 }
 
 .collapsible__title {
+  /* Also used on an h2 or h3 in the summary line, which keeps the size and rhythm of the plain title. */
+  margin: 0;
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
+}
+
+.collapsible .collapsible .collapsible__title {
+  font-size: var(--text-md);
 }
 
 .collapsible__meta {
@@ -681,6 +687,65 @@ textarea[aria-invalid='true'] {
   justify-content: flex-end;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+}
+
+/* ---- Profile ---- */
+
+/* The collapsible section carries the spacing; the legacy rule for bare sections would double it. */
+.profile-section {
+  margin-bottom: 0;
+}
+
+.fill-from-cv {
+  margin-bottom: var(--space-4);
+}
+
+.skills-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.skills-toolbar__filter {
+  flex: 1 1 14rem;
+}
+
+/* A label in a form has a bottom margin; in the toolbar the gap spaces it and the button lines up with the input. */
+form .skills-toolbar__filter {
+  margin-bottom: 0;
+}
+
+.skill-row {
+  background: var(--color-surface);
+}
+
+/*
+ * Tag chips: the shared button height (the touch target) made the "×" in a chip as tall as an input. The button keeps
+ * a 2rem square hit area and pulls the chip's padding in, so the chip stays one text line high.
+ */
+.tag-list li {
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.tag-list button {
+  min-width: var(--space-8);
+  min-height: var(--space-8);
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-2))
+    calc(-1 * var(--space-1)) 0;
+  border-color: transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+.tag-list button:hover {
+  border-color: transparent;
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 /* ---- Tables ---- */

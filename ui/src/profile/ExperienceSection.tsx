@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { ProfileSection } from './ProfileSection.tsx'
+import { LONG_LIST, countOf, hasErrorAt } from './sectionSummary.ts'
 import { Repeater, StringList, TextInput } from './fields.tsx'
 import { TagInput } from './TagInput.tsx'
 import { blankExperience, type Experience } from './types.ts'
@@ -16,14 +18,14 @@ function listError(
 
 /** Positions held. */
 export function ExperienceSection({
-  heading,
+  fill,
   experience,
   onChange,
   errors,
   suggestions,
 }: {
-  /** The heading with its "Fill from CV" control; the form builds it. */
-  heading: ReactNode
+  /** The "Fill from CV" control; the form builds it. */
+  fill: ReactNode
   experience: Experience[]
   onChange: (experience: Experience[]) => void
   errors: Record<string, string>
@@ -31,8 +33,14 @@ export function ExperienceSection({
   suggestions: string[]
 }) {
   return (
-    <section aria-labelledby="experience-heading">
-      {heading}
+    <ProfileSection
+      name="experience"
+      title="Experience"
+      summary={countOf(experience.length, 'position', 'positions')}
+      defaultOpen={experience.length <= LONG_LIST}
+      hasError={hasErrorAt(errors, ['experience['])}
+    >
+      {fill}
       <Repeater
         title="Position"
         items={experience}
@@ -99,6 +107,6 @@ export function ExperienceSection({
           )
         }}
       </Repeater>
-    </section>
+    </ProfileSection>
   )
 }

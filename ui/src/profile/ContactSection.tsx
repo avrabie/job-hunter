@@ -1,6 +1,8 @@
 import { Link } from 'react-router'
 import { publicCvAddress, type PublicCvState } from './publicCvNotice.ts'
 import { TextInput } from './fields.tsx'
+import { ProfileSection } from './ProfileSection.tsx'
+import { hasErrorAt } from './sectionSummary.ts'
 import type { Contact } from './types.ts'
 
 /** Next to Contact: the live address with a link to the settings, or a link to them; nothing while unknown. */
@@ -41,8 +43,13 @@ export function ContactSection({
   publicCv: PublicCvState
 }) {
   return (
-    <section id="contact" aria-labelledby="contact-heading">
-      <h2 id="contact-heading">Contact</h2>
+    <ProfileSection
+      name="contact"
+      sectionId="contact"
+      title="Contact"
+      summary={contact.fullName?.trim() || 'Not set'}
+      hasError={hasErrorAt(errors, ['contact.'])}
+    >
       <p className="hint">
         The full name is needed to export a CV.{' '}
         <Link to="/export">Export CV</Link>
@@ -90,6 +97,6 @@ export function ContactSection({
         path={'contact.linkedin'}
         onChange={(linkedin) => onChange({ ...contact, linkedin })}
       />
-    </section>
+    </ProfileSection>
   )
 }

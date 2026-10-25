@@ -18,8 +18,8 @@
 ## 3. Profile page (after 1)
 
 - [x] 3.1 `skillGroups.ts` + shared `skillGroups.cases.json`, UI test, and the backend `SkillGroupsTests` reading the same fixture.
-- [ ] 3.2 Profile sections as `Collapsible` with summaries and Expand/Collapse all; error-opens-section and focus; unsaved-edits behaviour kept.
-- [ ] 3.3 Grouped, collapsible, filterable Skills section (start collapsed over 20 skills); the existing 1 578-line profile test stays green or is adapted only where wrappers moved.
+- [x] 3.2 Profile sections as `Collapsible` with summaries and Expand/Collapse all; error-opens-section and focus; unsaved-edits behaviour kept.
+- [x] 3.3 Grouped, collapsible, filterable Skills section (start collapsed over 20 skills); the existing 1 578-line profile test stays green or is adapted only where wrappers moved.
 
 ## 4. Convert the remaining pages (after the owner approves deploy A; Haiku, one page per agent, in parallel)
 

@@ -988,8 +988,9 @@ describe('Technology tags', () => {
 describe('Analyze a picked project', () => {
   const oss = () =>
     within(screen.getByRole('region', { name: 'Open Source Projects' }))
+  // The Skills heading now sits in the summary line of a collapsible section, so the section is found as a region.
   const skillsSection = () =>
-    within(screen.getByRole('heading', { name: 'Skills' }).parentElement!)
+    within(screen.getByRole('region', { name: 'Skills' }))
   const ANALYZE = '/api/profile/open-source-projects/analyze'
 
   const PROJECT: OpenSourceProject = {
@@ -1196,8 +1197,9 @@ describe('Analyze a picked project', () => {
 describe('Traceable skills from analysis', () => {
   const oss = () =>
     within(screen.getByRole('region', { name: 'Open Source Projects' }))
+  // The Skills heading now sits in the summary line of a collapsible section, so the section is found as a region.
   const skillsSection = () =>
-    within(screen.getByRole('heading', { name: 'Skills' }).parentElement!)
+    within(screen.getByRole('region', { name: 'Skills' }))
   const ANALYZE = '/api/profile/open-source-projects/analyze'
 
   const PROJECT: OpenSourceProject = {

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { AnalysisResult } from './analysisApi.ts'
 import { Repeater, Select, TextInput } from './fields.tsx'
 import type { RepositoriesResult } from './repositoriesApi.ts'
+import { ProfileSection } from './ProfileSection.tsx'
+import { LONG_LIST, hasErrorAt, plural } from './sectionSummary.ts'
 import { isValidUsername } from './rules.ts'
 import {
   CODE_PROVIDERS,
@@ -127,8 +129,17 @@ export function OpenSourceSection({
   }
 
   return (
-    <section aria-labelledby="open-source-heading">
-      <h2 id="open-source-heading">Open Source Projects</h2>
+    <ProfileSection
+      name="open-source"
+      title="Open Source Projects"
+      summary={
+        projects.length + accounts.length === 0
+          ? 'None'
+          : `${plural(projects.length, 'project', 'projects')} · ${plural(accounts.length, 'account', 'accounts')}`
+      }
+      defaultOpen={projects.length <= LONG_LIST}
+      hasError={hasErrorAt(errors, ['codeAccounts[', 'openSourceProjects['])}
+    >
       <h3>Code accounts</h3>
       <Repeater
         title="Code account"
@@ -333,6 +344,6 @@ export function OpenSourceSection({
           </fieldset>
         )
       })}
-    </section>
+    </ProfileSection>
   )
 }

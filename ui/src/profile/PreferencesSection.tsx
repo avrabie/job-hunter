@@ -1,4 +1,6 @@
 import { NumberInput, StringList } from './fields.tsx'
+import { ProfileSection } from './ProfileSection.tsx'
+import { countOf, hasErrorAt } from './sectionSummary.ts'
 import { REMOTE_MODES, type Preferences, type RemoteMode } from './types.ts'
 
 function toggle(modes: RemoteMode[], mode: RemoteMode, on: boolean) {
@@ -19,9 +21,27 @@ export function PreferencesSection({
   const setPrefs = (patch: Partial<Preferences>) =>
     onChange({ ...prefs, ...patch })
 
+  const roles = prefs.targetRoles.filter((r) => r.trim() !== '').length
+  const anySet =
+    roles > 0 ||
+    prefs.workloadMin !== null ||
+    prefs.workloadMax !== null ||
+    prefs.remoteModes.length > 0 ||
+    prefs.cantons.length > 0 ||
+    prefs.minSalaryChf !== null
   return (
-    <section>
-      <h2>Preferences</h2>
+    <ProfileSection
+      name="preferences"
+      title="Preferences"
+      summary={
+        roles > 0
+          ? countOf(roles, 'target role', 'target roles')
+          : anySet
+            ? 'Set'
+            : 'Not set'
+      }
+      hasError={hasErrorAt(errors, ['preferences.'])}
+    >
       <StringList
         title="Target role"
         items={prefs.targetRoles}
@@ -78,6 +98,6 @@ export function PreferencesSection({
         path={'preferences.minSalaryChf'}
         onChange={(minSalaryChf) => setPrefs({ minSalaryChf })}
       />
-    </section>
+    </ProfileSection>
   )
 }

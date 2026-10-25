@@ -1,4 +1,6 @@
 import { Repeater, Select, TextInput } from './fields.tsx'
+import { ProfileSection } from './ProfileSection.tsx'
+import { LONG_LIST, countOf, hasErrorAt } from './sectionSummary.ts'
 import { LANGUAGE_LEVELS, blankLanguage, type LanguageSkill } from './types.ts'
 
 /** Spoken languages with their level. */
@@ -12,8 +14,13 @@ export function LanguagesSection({
   errors: Record<string, string>
 }) {
   return (
-    <section>
-      <h2>Languages</h2>
+    <ProfileSection
+      name="languages"
+      title="Languages"
+      summary={countOf(languages.length, 'language', 'languages')}
+      defaultOpen={languages.length <= LONG_LIST}
+      hasError={hasErrorAt(errors, ['languages['])}
+    >
       <Repeater
         title="Language"
         items={languages}
@@ -40,6 +47,6 @@ export function LanguagesSection({
           </>
         )}
       </Repeater>
-    </section>
+    </ProfileSection>
   )
 }
