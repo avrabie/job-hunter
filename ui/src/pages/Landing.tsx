@@ -5,7 +5,7 @@ import { useAuth } from '../auth/authContext.ts'
 export function Landing({ returnTo }: { returnTo?: string }) {
   const { signIn } = useAuth()
   return (
-    <main>
+    <div className="page page--narrow">
       <h1>Job Hunter</h1>
       <p>
         Finds Swiss software-engineering jobs that fit you and drafts your
@@ -19,6 +19,6 @@ export function Landing({ returnTo }: { returnTo?: string }) {
           Register
         </Link>
       </div>
-    </main>
+    </div>
   )
 }

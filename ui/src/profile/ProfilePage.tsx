@@ -35,10 +35,10 @@ export function ProfilePage() {
       return <Landing returnTo="/profile" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <ProfileEditor />
@@ -267,18 +267,18 @@ function ProfileEditor() {
   if (load.state === 'loading') return <p>Loading your profile…</p>
   if (load.state === 'failed') {
     return (
-      <main>
+      <div className="page page--narrow">
         <h1>Your profile</h1>
         <p role="alert">{load.message}</p>
         <button type="button" onClick={() => void fetchStored()}>
           Try again
         </button>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="wide">
+    <div className="page page--narrow">
       <p>
         <Link
           to="/"
@@ -356,6 +356,6 @@ function ProfileEditor() {
           </button>
         </div>
       </form>
-    </main>
+    </div>
   )
 }

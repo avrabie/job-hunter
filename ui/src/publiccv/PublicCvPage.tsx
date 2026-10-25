@@ -44,10 +44,10 @@ export function PublicCvPage() {
       return <Landing returnTo="/publish" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <PublicCvForm />
@@ -263,18 +263,18 @@ function PublicCvForm() {
 
   if (loadError !== null) {
     return (
-      <main className="wide">
+      <div className="page page--narrow">
         <h1>Public CV</h1>
         <p role="alert">{loadError}</p>
-      </main>
+      </div>
     )
   }
   if (!loaded) {
     return (
-      <main className="wide">
+      <div className="page page--narrow">
         <h1>Public CV</h1>
         <p role="status">Loading…</p>
-      </main>
+      </div>
     )
   }
 
@@ -286,7 +286,7 @@ function PublicCvForm() {
   const busyNow = busy !== null
 
   return (
-    <main className="wide">
+    <div className="page page--narrow">
       <h1>Public CV</h1>
       <p>
         <Link to="/">Back</Link>
@@ -626,7 +626,7 @@ function PublicCvForm() {
           )}
         </p>
       )}
-    </main>
+    </div>
   )
 }
 

@@ -5,10 +5,10 @@
 
 ## 1. Design system and layout (Opus; everything else waits for this)
 
-- [ ] 1.1 `ui/src/styles/{tokens,base,components}.css` with tokens, light/dark themes, base typography, focus ring, and component styles; remove duplicated rules from `index.css` only when no page needs them yet (keep it importing the new files).
-- [ ] 1.2 Shared components (`Collapsible` with Expand/Collapse all support, `Card`, `PageHeader`, `Badge`, `Alert`, `EmptyState`, form field wrappers) with tests (keyboard, aria, error-opens-section).
-- [ ] 1.3 `Layout`, `NavBar` (hamburger, aria-current, skip link, admin role, sign out, identity), `Footer` (service status); route wiring in `App.tsx` for signed-in and signed-out layouts; tests.
-- [ ] 1.4 Build checks: no inline style in the built output, CSP-safe fonts, `ui/test-image.sh` passes; a contrast test of the token pairs.
+- [x] 1.1 `ui/src/styles/{tokens,base,components}.css` with tokens, light/dark themes, base typography, focus ring, and component styles; remove duplicated rules from `index.css` only when no page needs them yet (keep it importing the new files).
+- [x] 1.2 Shared components (`Collapsible` with Expand/Collapse all support, `Card`, `PageHeader`, `Badge`, `Alert`, `EmptyState`, form field wrappers) with tests (keyboard, aria, error-opens-section).
+- [x] 1.3 `Layout`, `NavBar` (hamburger, aria-current, skip link, admin role, sign out, identity), `Footer` (service status); route wiring in `App.tsx` for signed-in and signed-out layouts; tests.
+- [x] 1.4 Build checks: no inline style in the built output, CSP-safe fonts, `ui/test-image.sh` passes; a contrast test of the token pairs.
 
 ## 2. Landing and home (after 1)
 

@@ -50,10 +50,10 @@ export function PostingsPage() {
       return <Landing returnTo="/postings" />
     case 'error':
       return (
-        <main>
+        <div className="page page--narrow">
           <h1>Sign-in failed</h1>
           <p>We could not reach the sign-in service.</p>
-        </main>
+        </div>
       )
     case 'signedIn':
       return <PostingsList />
@@ -124,7 +124,7 @@ function PostingsList() {
   const sourceChoices = [...new Set([...sources, query.source].filter(Boolean))]
 
   return (
-    <main>
+    <div className="page">
       <h1>Postings</h1>
       <p>
         <Link to="/">Back</Link>
@@ -224,6 +224,6 @@ function PostingsList() {
           Next
         </button>
       </div>
-    </main>
+    </div>
   )
 }

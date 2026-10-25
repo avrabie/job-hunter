@@ -205,7 +205,10 @@ framework: one `src/index.css`.
 | `main.tsx`, `App.tsx` | entry (providers) and the route table |
 | `auth/` | `AuthProvider`, `authContext` (`useAuth`), `CallbackPage`, `config` (oidc settings), `hint`, `returnTo` |
 | `api/` | `apiFetch` (the one HTTP client), `messages` (status/error to text) |
-| `pages/` | `Home`, `Landing` (signed out), `Shell` (signed-in home) |
+| `pages/` | `Home` (signed-in overview), `Landing` (signed out) |
+| `layout/` | `Layout` (skip link, header, `main#content`, footer), `NavBar` (signed-in top bar), `Footer` (service status) |
+| `ui/` | shared components: `Collapsible` (+ `CollapsibleGroup`, `ExpandCollapseAll`), `revealAndFocus`, `Card`, `PageHeader`, `Badge`, `Alert`, `EmptyState`, `FormField` |
+| `styles/` | `tokens.css` (design tokens, light and dark), `base.css`, `components.css`; `index.css` imports them and keeps the legacy page rules |
 | `register/` | `RegisterPage`, `register.ts` |
 | `profile/` | `ProfilePage`, `ProfileForm`, `fields`, `OpenSourceSection`, `TagInput`, `types`, `rules`, `skills`, `profileApi`, `repositoriesApi`, `analysisApi`, `fixtures/` |
 | `cv/` | `cvApi` (extract from the master CV) |
@@ -222,8 +225,9 @@ Pattern per feature: `<x>Page.tsx` (UI + state) + `<x>Api.ts` (calls, returns a 
 
 `/` Home, `/profile`, `/postings`, `/postings/:id`, `/matches`, `/export`, `/admin`, `/register`, `/callback`, and `*` -> Home.
 There is no route guard component: each page switches on `useAuth().state` and renders `Landing returnTo=...` when signed
-out (e.g. `ProfilePage.tsx`, `PostingsPage.tsx`). `Home` renders Landing or `Shell` by state. The admin link in `Shell`
-is shown if the access token has role `ADMIN` (`admin/roles.ts` decodes the JWT without checking the signature; the
+out (e.g. `ProfilePage.tsx`, `PostingsPage.tsx`). Every route renders inside the `Layout` route, which shows the
+`NavBar` when signed in and a minimal header (Sign in, Register) otherwise. `Home` renders Landing or the overview by
+state. The Admin link in `NavBar` is shown if the access token has role `ADMIN` (`admin/roles.ts` decodes the JWT without checking the signature; the
 backend enforces roles).
 
 ### 4.3 Auth flow (oidc-client-ts, PKCE)
@@ -316,7 +320,7 @@ sequenceDiagram
 
 | Route | Page | Calls |
 |---|---|---|
-| `/` | `Home` -> `Landing` or `Shell` | `Shell`: `GET /api/` (health-style check) |
+| `/` | `Home` -> `Landing` or the overview | none; the signed-in `Footer` calls `GET /api/` once per visit (service status) |
 | `/register` | `RegisterPage` | `POST /auth/api/register` (no token) |
 | `/callback` | `CallbackPage` | token endpoint via oidc-client-ts |
 | `/profile` | `ProfilePage` (+ `FileCabinet`, `OpenSourceSection`) | `GET/PUT /api/profile`, `GET /api/profile/repositories?provider&username`, `POST /api/profile/open-source-projects/analyze`, `POST /api/cv/extract[?section=]`, files calls below |
@@ -334,7 +338,7 @@ sequenceDiagram
 React `useState`/`useEffect` per page; no store, no data cache, no query library. The only shared state is the auth
 context (`AuthProvider`). Filters and paging for postings and matches live in the URL (`useSearchParams`). Every loader
 sets a small state union (`loading` / `failed` / `ready`). Because the context value changes with sign-in state, several
-pages disable `react-hooks/exhaustive-deps` on purpose so a load runs once per mount (comments in `Shell.tsx`,
+pages disable `react-hooks/exhaustive-deps` on purpose so a load runs once per mount (comments in `layout/Footer.tsx`,
 `ProfilePage.tsx`).
 
 ### 4.7 Profile form architecture (`ui/src/profile/`)

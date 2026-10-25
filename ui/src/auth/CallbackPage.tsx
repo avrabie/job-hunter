@@ -25,12 +25,12 @@ export function CallbackPage() {
 
   if (!failed) return <p>Signing you in…</p>
   return (
-    <main>
+    <div className="page page--narrow">
       <h1>Sign-in failed</h1>
       <p>We could not complete the sign-in.</p>
       <button type="button" onClick={() => void signIn()}>
         Try again
       </button>
-    </main>
+    </div>
   )
 }

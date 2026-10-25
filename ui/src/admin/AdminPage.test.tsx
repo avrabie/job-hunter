@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthApi } from '../auth/authContext.ts'
-import { Shell } from '../pages/Shell.tsx'
+import { NavBar } from '../layout/NavBar.tsx'
 import { fakeAuth, signedIn } from '../test/fakeAuth.ts'
 import { AdminPage } from './AdminPage.tsx'
 
@@ -159,7 +159,7 @@ describe('changing the schedule', () => {
   })
 })
 
-describe('the Admin link in the shell', () => {
+describe('the Admin link in the navigation bar', () => {
   const mountShell = (roles: string[]) => {
     stubFetch(() => json(200, {}))
     render(
@@ -167,7 +167,7 @@ describe('the Admin link in the shell', () => {
         value={fakeAuth(signedIn(), { getAccessToken: () => tokenWith(roles) })}
       >
         <MemoryRouter>
-          <Shell identity="a@example.org" />
+          <NavBar />
         </MemoryRouter>
       </AuthContext.Provider>,
     )

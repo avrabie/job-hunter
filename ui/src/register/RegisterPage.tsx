@@ -37,7 +37,7 @@ export function RegisterPage() {
   const fields = problem?.kind === 'invalid' ? problem.fields : {}
 
   return (
-    <main>
+    <div className="page page--narrow">
       <h1>Create an account</h1>
       <form onSubmit={(e) => void onSubmit(e)} noValidate>
         <Field label="Email" error={fields.email}>
@@ -89,7 +89,7 @@ export function RegisterPage() {
       <p>
         <Link to="/">Back</Link>
       </p>
-    </main>
+    </div>
   )
 }
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -259,9 +259,8 @@ describe('the detail page', () => {
       await screen.findByRole('heading', { name: 'Posting not found' }),
     ).toBeInTheDocument()
     expect(
-      within(screen.getByRole('main')).getByRole('link', {
-        name: 'Back to the postings',
-      }),
+      // The page renders inside the layout's `main`, which this test does not mount.
+      screen.getByRole('link', { name: 'Back to the postings' }),
     ).toHaveAttribute('href', '/postings')
   })
 })

@@ -46,7 +46,7 @@ Open http://localhost:5173, choose Register, create an account and sign in. `bac
 the dev proxy, so keep `pnpm dev` running while you call `/api`. The `dev` profile of `auth` already allows the
 redirect addresses `http://localhost:5173/callback` and `http://localhost:5173/`.
 
-After signing in, the shell shows the postings, matches, profile and files pages; the backend endpoints they call are listed in `backend/README.md`.
+After signing in, the navigation bar links the postings, matches, job tracking, CV and profile pages; the backend endpoints they call are listed in `backend/README.md`.
 
 ## Production check
 
@@ -67,7 +67,7 @@ per source. Search (title or company), canton and source filters and the page li
 open in a new tab with `rel="noopener noreferrer"`. A signed-out visitor sees the landing page and returns here after
 signing in. The "next" button is enabled while a page is full, so the last page can be empty when the total is a multiple of 20.
 
-`/admin` shows the crawl schedule (enabled, cron, time zone, next run, last change) from `GET /api/admin/crawl-schedule` and saves changes with `POST` to the same path, using the signed-in user's own token. The "Admin" button in the shell appears only when the access token's `roles` claim contains `ADMIN`; the token's signature is not checked in the browser, so this decides what to show and nothing else. The backend enforces the role, and the page shows "This page is for administrators." when the API answers 403. The result of the last crawl run is not shown, because the API does not offer it.
+`/admin` shows the crawl schedule (enabled, cron, time zone, next run, last change) from `GET /api/admin/crawl-schedule` and saves changes with `POST` to the same path, using the signed-in user's own token. The "Admin" link in the navigation bar appears only when the access token's `roles` claim contains `ADMIN`; the token's signature is not checked in the browser, so this decides what to show and nothing else. The backend enforces the role, and the page shows "This page is for administrators." when the API answers 403. The result of the last crawl run is not shown, because the API does not offer it.
 
 ## Publications (profile page)
 
@@ -100,7 +100,7 @@ their source links and evidence, and each skill and source can be removed. Analy
 ## Contact and CV export
 
 The profile page starts with a **Contact** section (full name, headline, email, phone, website, LinkedIn; checked in the browser when a
-field is left, the server stays the authority). The full name is needed to export. **Export CV** (shell and profile page) opens `/export`:
+field is left, the server stays the authority). The full name is needed to export. **Export CV** (navigation bar under CV, and the profile page) opens `/export`:
 choose format (Markdown, HTML, PDF), template (Classic, Modern, Compact), language (English, Deutsch), the sections (tick, move up/down)
 and the options for open source projects, analysis summaries and work authorisation. The preview is the HTML version in a sandboxed
 `iframe` (`srcdoc`, no permissions), refreshed shortly after a change; **Download** saves the file the server names. If the server answers
@@ -108,7 +108,7 @@ and the options for open source projects, analysis summaries and work authorisat
 
 ## Public CV page
 
-`/publish` (linked as **Public CV** in the shell; signed-out visitors see the sign-in page first) is the owner's control for the
+`/publish` (linked as **Public page** under CV in the navigation bar; signed-out visitors see the sign-in page first) is the owner's control for the
 public CV page of the `cv-public` spec. Code: `ui/src/publiccv/` (`PublicCvPage.tsx`, `publicCvApi.ts`, `options.ts`).
 
 - **Handle.** The field lower-cases what is typed. After a short pause (400 ms) the server checks it (`GET /api/cv/public/handle`) and
