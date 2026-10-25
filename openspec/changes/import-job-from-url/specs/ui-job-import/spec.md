@@ -15,9 +15,9 @@ The Job tracking page SHALL offer "Add job from URL" with a URL field and, after
 - **WHEN** the user presses "Save and track"
 - **THEN** the app opens the new application's page, or the existing one with a note that it was already tracked
 
-#### Scenario: Shared notice
+#### Scenario: Privacy notice
 - **WHEN** the review form is shown
-- **THEN** it states that the job will be visible to all users as "Added by a user"
+- **THEN** it states that the job stays private to the user
 
 #### Scenario: Rate limited
 - **WHEN** the server answers `rate_limited`

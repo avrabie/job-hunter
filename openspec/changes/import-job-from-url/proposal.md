@@ -9,12 +9,13 @@ Postings only come from the crawled boards. A job the user finds elsewhere (a co
 - **Saved twice, by decision of the owner**: confirming creates a **shared posting** (visible in `/postings` to all users, marked "Added by a user") and tracks it as an **INTERESTED application** with the frozen job description. If the job already exists (same URL, or same company/title/city), the existing posting is tracked instead and nothing is duplicated.
 - **Safety**: SSRF-hardened fetching, size and time limits, per-user rate limits, fixed error codes, nothing from the page or the URL in logs.
 - Two new endpoints (`preview`, `confirm`), a new `jobimport` module, one new LLM service (`JobExtractor`), one Liquibase changeset, a new dependency for HTML-to-text (jsoup).
+- Applications can exist without a posting: a new `source` (`POSTING` or `IMPORT`) on an application; imported ones have no live status comparison (always OPEN).
 
 ## Out of scope
 
 - Scraping behind a login, running JavaScript, or headless browsers; LinkedIn and Indeed URLs are refused (project rule).
 - Re-fetching an imported job later to detect changes (the posting's `last_seen` is not refreshed by imports).
-- Admin tooling to remove user-added postings (flagged as a follow-up; see design Risks).
+- Sharing imported jobs with other users (a later change would need verified fetching, takedown and per-company ownership).
 - Importing several URLs at once, browser extension or bookmarklet.
 - Salary, workload and remote-mode extraction (fields stay empty).
 
@@ -25,14 +26,13 @@ Postings only come from the crawled boards. A job the user finds elsewhere (a co
 - `ui-job-import`: the import form and review step on the Job tracking page.
 
 ### Modified Capabilities
-- `postings`: a user-added source and the "added by a user" marker in the read model.
+- `applications`: tracking an imported job without a posting.
 - `llm`: `JobExtractor` service.
-- `ui-postings`: the "Added by a user" badge.
 
 ## Impact
 
-- Modules: new `jobimport` (depends on `postings`, `applications`, `llm`, `accounts` for the user id); `postings` and `llm` gain public API; `applications` is only called, not changed.
-- Personal data and scoping: previews are per user and invisible to others; the imported posting is deliberately shared. The importing user's id is stored only for abuse handling and is never returned by any API.
+- Modules: new `jobimport` (depends on `applications`, `llm`); `applications` gains `trackImported`; `llm` gains `JobExtractor`; `postings` is not touched.
+- Personal data and scoping: previews and imported jobs are per user and invisible to others.
 - Claude cost: one small extraction call per preview (Haiku by default), limited per user per hour.
 - New dependency: jsoup. Database: changeset `moldo:018` (tables `job_import_draft`, `posting_import`).
-- Security surface: the server now makes outbound requests to user-given URLs (SSRF), and user-submitted text enters a shared list (spam and prompt-injection carriers). Both are treated in design.
+- Security surface: the server now makes outbound requests to user-given URLs (SSRF), and imported text is untrusted and reaches the letter model. Both are treated in design.

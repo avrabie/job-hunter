@@ -28,6 +28,11 @@
 - [x] 5.1 `ui/src/applications/ImportJob*` form, review step, paste fallback, error messages; tests.
 - [x] 5.2 "Added by a user" badge in `PostingsPage` and `PostingPage`; tests.
 
+## 5b. Rework after the security review (owner chose private imports)
+
+- [ ] 7.1 Backend: remove shared-posting creation (`PostingIngest` use, `posting_import`, `userAdded` in postings read model and API, related tests); edit changeset `moldo:018` in place (drop `posting_import`, add `application.source`, nullable `posting_id`, unique index on (owner, url) for imports); `ApplicationService.trackImported`; live status OPEN for imports; confirm returns `{applicationId, created}`; fix the review's M2, M3, M4 and Low items listed in design decision 7; update tests.
+- [ ] 7.2 UI: remove the "Added by a user" badge and `userAdded` type; update the review-form notice (the job stays private to you) and the confirm result handling (`created`).
+
 ## 6. Wrap-up
 
 - [ ] 6.1 Merge, full `./gradlew clean verify`, UI tests/tsc/oxlint/prettier, `openspec validate --all`, independent security review (SSRF, rebinding, redirects, injection, logs, limits), docs (`docs/architecture.md`, `docs/glossary.md`, module README), deploy only after the owner says so; archive after the owner tests.

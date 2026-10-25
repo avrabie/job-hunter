@@ -54,23 +54,23 @@ The system SHALL only fetch https URLs on port 443 whose host resolves exclusive
 - **THEN** the response is 400 `unsupported_site` and nothing is fetched
 
 ### Requirement: Confirm an import
-The system SHALL turn the caller's own unexpired draft into a shared posting (source `user-import`) and an INTERESTED application with the frozen description, applying any edits to title, company, location and description within their length limits.
+The system SHALL turn the caller's own unexpired draft into an INTERESTED application owned by that user, with the frozen description and `source = IMPORT`, applying any edits to title, company, location and description within their length limits. It SHALL NOT create or change any shared posting.
 
 #### Scenario: New job
-- **WHEN** a user confirms a draft whose URL is unknown
-- **THEN** the response is 201 with `created=true` and `postingExisted=false`, the posting appears in the postings list marked as added by a user, and the application is INTERESTED with the draft's text
+- **WHEN** a user confirms a draft whose URL they do not yet track
+- **THEN** the response is 201 with `created=true`, the application is INTERESTED with the draft's text, and the shared postings table is unchanged
 
-#### Scenario: Job already known
-- **WHEN** the same canonical URL, or the same company, title and city, already exists as a posting
-- **THEN** no second posting is created, the existing posting is tracked and `postingExisted=true`
-
-#### Scenario: Already tracked
-- **WHEN** the user already tracks that posting
+#### Scenario: Already tracked by this user
+- **WHEN** the user already has an imported application with the same canonical URL
 - **THEN** `created=false` and the existing application is returned
 
 #### Scenario: Canonical URL
 - **WHEN** two URLs differ only by `utm_source`, a fragment or a trailing slash
-- **THEN** they produce the same posting
+- **THEN** they count as the same job for that user
+
+#### Scenario: Not visible to others
+- **WHEN** user B lists applications, reads the application by id, or lists postings
+- **THEN** user A's imported job appears nowhere and the id answers 404
 
 #### Scenario: Another user's draft
 - **WHEN** user B confirms a draft id created by user A
@@ -80,6 +80,14 @@ The system SHALL turn the caller's own unexpired draft into a shared posting (so
 - **WHEN** a draft is older than 1 hour
 - **THEN** confirm returns 404 `draft_not_found`
 
+#### Scenario: Invalid edits
+- **WHEN** an edit is blank, over its length limit, or contains markup
+- **THEN** the response is 400 `invalid_edit` and nothing is created
+
+#### Scenario: Letters work on imported jobs
+- **WHEN** the user generates a letter for an imported application
+- **THEN** it uses the frozen copy exactly like for a posting-based application
+
 ### Requirement: Limits
 The system SHALL allow each user at most 20 previews per hour and 10 confirms per day.
 
@@ -87,17 +95,20 @@ The system SHALL allow each user at most 20 previews per hour and 10 confirms pe
 - **WHEN** a user makes a 21st preview within an hour
 - **THEN** the response is 429 `rate_limited` and no fetch or model call is made
 
-### Requirement: Privacy and attribution
-The system SHALL record which user added a posting only for abuse handling, never return it, and never log URLs, page text, extracted text or model output.
-
-#### Scenario: Attribution is hidden
-- **WHEN** any user reads a user-added posting through any endpoint
-- **THEN** the response contains no user id or import record
+### Requirement: Privacy
+The system SHALL never log URLs, page text, extracted text or model output, and SHALL remove a user's drafts when that user's data is removed.
 
 #### Scenario: Logs
 - **WHEN** an import fails or succeeds
 - **THEN** the log lines contain only the error code, draft id and duration
 
-#### Scenario: Account deletion
-- **WHEN** the importing user's account is deleted
-- **THEN** their drafts and `posting_import` rows are removed and the posting stays
+#### Scenario: Data removal
+- **WHEN** `removeUserData(sub)` is called
+- **THEN** that user's drafts are deleted
+
+### Requirement: Concurrency
+The system SHALL allow at most 2 concurrent previews per user and 8 overall, answering 429 `rate_limited` beyond that, and SHALL limit the request body size of the import endpoints.
+
+#### Scenario: Parallel previews
+- **WHEN** a user starts a third preview while two are running
+- **THEN** the response is 429 `rate_limited` and no fetch is made
