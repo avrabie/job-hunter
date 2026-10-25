@@ -27,6 +27,7 @@ internal data class PostingSummary(
     val firstSeen: Instant,
     val lastSeen: Instant,
     val links: List<LinkView>,
+    val userAdded: Boolean,
 )
 
 internal data class PostingDetail(
@@ -40,6 +41,7 @@ internal data class PostingDetail(
     val lastSeen: Instant,
     val description: String,
     val links: List<LinkView>,
+    val userAdded: Boolean,
 )
 
 /**
@@ -101,11 +103,12 @@ internal class PostingsController(private val postings: PostingQuery) {
     private fun links(links: List<PostingLink>) = links.map { LinkView(it.sourceId, it.url, it.primary) }
 
     private fun summary(p: Posting) = PostingSummary(
-        p.id, p.title, p.company, p.city, p.canton, p.language, p.firstSeen, p.lastSeen, links(p.links),
+        p.id, p.title, p.company, p.city, p.canton, p.language, p.firstSeen, p.lastSeen, links(p.links), p.userAdded,
     )
 
     private fun detail(p: Posting) = PostingDetail(
         p.id, p.title, p.company, p.city, p.canton, p.language, p.firstSeen, p.lastSeen, p.description, links(p.links),
+        p.userAdded,
     )
 
     private companion object {

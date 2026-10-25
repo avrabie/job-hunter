@@ -15,8 +15,8 @@
 
 ## 3. Postings read model and schema
 
-- [ ] 3.1 Liquibase `moldo:018-job-import` (`job_import_draft`, `posting_import`); update `DatabaseBaselineTests`.
-- [ ] 3.2 `PostingQuery.userAdded`; tests.
+- [x] 3.1 Liquibase `moldo:018-job-import` (`job_import_draft`, `posting_import`); update `DatabaseBaselineTests`.
+- [x] 3.2 `PostingQuery.userAdded`; tests.
 
 ## 4. Service and API (after 1, 2, 3)
 

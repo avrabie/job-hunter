@@ -102,6 +102,21 @@ class PostingSearchTests(
     }
 
     @Test
+    fun `userAdded is true only when the primary source is user-import`() {
+        val tag = unique()
+        val company = "Marker " + unique()
+        val crawled = add("Dev $tag", company = company, source = "search-src-" + unique())
+        val imported = add("Imported $tag", source = "user-import")
+        val importedOnCrawled = add("Dev $tag", company = company, source = "user-import")
+
+        assertEquals(crawled, importedOnCrawled)
+        assertEquals(false, query.find(crawled)!!.userAdded)
+        assertEquals(true, query.find(imported)!!.userAdded)
+        assertEquals(listOf(false), query.search(PostingSearch(text = company)).map { it.userAdded })
+        assertEquals(listOf(true), query.search(PostingSearch(text = "Imported $tag")).map { it.userAdded })
+    }
+
+    @Test
     fun `a blank text does not filter and nothing matches an unknown word`() {
         assertEquals(emptyList(), ids(PostingSearch(text = "nomatch" + unique())))
     }
