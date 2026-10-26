@@ -27,4 +27,4 @@
 
 - [x] 5.1 Docs: `applications/README.md`, `llm/README.md` (new input, evidence rule, status derivation), PLAN.md line. Verify: docs mention the four statuses and what the model is sent.
 - [x] 5.2 `./gradlew test integrationTest`, `ApplicationModules.verify()`, UI checks (vitest, tsc, oxlint, prettier), `openspec validate --all`.
-- [ ] 5.3 Archive `letter-skill-gaps` first so the deltas apply; deploy backend and ui only after the owner says so; archive this change after the owner tests on prod.
+- [x] 5.3 Archive `letter-skill-gaps` first so the deltas apply; deploy backend and ui only after the owner says so; archive this change after the owner tests on prod.
