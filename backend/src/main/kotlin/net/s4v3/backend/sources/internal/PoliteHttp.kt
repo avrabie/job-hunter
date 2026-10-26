@@ -32,13 +32,16 @@ internal class PoliteHttp(private val settings: SourcesSettings) {
 
     private val hosts = ConcurrentHashMap<String, HostState>()
 
-    /** [requireJson] rejects any other content type. [etag] is sent back as `If-None-Match`. */
-    fun get(uri: URI, maxBytes: Int, requireJson: Boolean = true, etag: String? = null): Fetched {
+    /**
+     * [requireJson] rejects any other content type. [etag] is sent back as `If-None-Match`. [accept] replaces the
+     * default `Accept` value (JSON, or plain text when [requireJson] is false), for example to ask for an XML feed.
+     */
+    fun get(uri: URI, maxBytes: Int, requireJson: Boolean = true, etag: String? = null, accept: String? = null): Fetched {
         val state = hosts.computeIfAbsent(uri.authority) { HostState() }
         synchronized(state) {
             waitForPause(state)
             try {
-                return fetch(uri, maxBytes, requireJson, etag)
+                return fetch(uri, maxBytes, requireJson, etag, accept)
             } finally {
                 state.lastFinished = System.nanoTime()
             }
@@ -51,11 +54,11 @@ internal class PoliteHttp(private val settings: SourcesSettings) {
         if (remaining > 0) Thread.sleep(remaining / 1_000_000, (remaining % 1_000_000).toInt())
     }
 
-    private fun fetch(uri: URI, maxBytes: Int, requireJson: Boolean, etag: String?): Fetched {
+    private fun fetch(uri: URI, maxBytes: Int, requireJson: Boolean, etag: String?, accept: String?): Fetched {
         val request = HttpRequest.newBuilder(uri)
             .timeout(settings.readTimeout)
             .header("User-Agent", settings.userAgent)
-            .header("Accept", if (requireJson) "application/json" else "text/plain, */*")
+            .header("Accept", accept ?: if (requireJson) "application/json" else "text/plain, */*")
             .apply { if (etag != null) header("If-None-Match", etag) }
             .GET()
             .build()

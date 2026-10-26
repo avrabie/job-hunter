@@ -20,6 +20,7 @@ internal data class SourcesSettings(
     val maxListBytes: Int = 8 * 1024 * 1024,
     val maxJobBytes: Int = 1024 * 1024,
     val greenhouse: Greenhouse = Greenhouse(),
+    val swissdevjobs: SwissDevJobs = SwissDevJobs(),
     val schedule: Schedule = Schedule(),
 ) {
     /** The initial crawl schedule; a schedule stored through the API replaces it. */
@@ -27,6 +28,12 @@ internal data class SourcesSettings(
         val enabled: Boolean = false,
         val cron: String = "0 0 * * * *",
         val zone: String = "Europe/Zurich",
+    )
+
+    /** The SwissDevJobs board: its JSON job list and RSS feed under [baseUrl]. */
+    data class SwissDevJobs(
+        val enabled: Boolean = true,
+        val baseUrl: String = "https://swissdevjobs.ch",
     )
 
     data class Greenhouse(

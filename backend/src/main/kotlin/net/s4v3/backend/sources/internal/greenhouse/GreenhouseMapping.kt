@@ -65,7 +65,7 @@ internal object GreenhouseMapping {
 /** Never carries the response text, which could end up in logs. */
 internal class MalformedResponse : RuntimeException("The response is not the expected JSON")
 
-/** Plain text from the HTML that the API delivers escaped inside its JSON `content` field. */
+/** Plain text from job-ad HTML; shared by the adapters. */
 internal object DescriptionText {
 
     private val scriptLike = Regex("<(script|style)\\b[^>]*>.*?</\\1\\s*>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
@@ -77,8 +77,13 @@ internal object DescriptionText {
     fun fromContent(content: String): String {
         if (content.isBlank()) return ""
         // The API escapes the HTML once for JSON transport, so it is unescaped first, then stripped, then unescaped again.
-        var text = HtmlUtils.htmlUnescape(content)
-        text = scriptLike.replace(text, "")
+        return fromHtml(HtmlUtils.htmlUnescape(content))
+    }
+
+    /** Plain text from HTML as it is, for sources that deliver it unescaped (such as an RSS item's description). */
+    fun fromHtml(html: String): String {
+        if (html.isBlank()) return ""
+        var text = scriptLike.replace(html, "")
         text = itemOpen.replace(text, "\n\u0001")
         text = lineBreak.replace(text, "\n")
         text = blockEdge.replace(text, "\n\n")

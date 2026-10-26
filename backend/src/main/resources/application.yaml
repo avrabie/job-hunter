@@ -39,6 +39,11 @@ management:
           include: readinessState,db
 
 jobhunter:
+  sources:
+    swissdevjobs:
+      # Crawl the SwissDevJobs list (/api/jobsLight) and RSS feed (/rss) with the other sources.
+      enabled: true
+      base-url: https://swissdevjobs.ch
   llm:
     # The key is read from the environment and never logged; without it a CV extraction fails with a clear message.
     api-key: ${ANTHROPIC_API_KEY:}
