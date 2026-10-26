@@ -15,4 +15,4 @@
 ## 3. Wrap-up
 
 - [x] 3.1 `./gradlew test integrationTest`, UI checks (vitest, tsc, oxlint, prettier), `openspec validate --all`.
-- [ ] 3.2 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.
+- [x] 3.2 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.
