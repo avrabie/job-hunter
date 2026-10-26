@@ -1,12 +1,16 @@
 package net.s4v3.backend
 
 import com.jayway.jsonpath.JsonPath
+import net.s4v3.backend.llm.AskedEvidence
 import net.s4v3.backend.llm.AskedSkill
+import net.s4v3.backend.llm.EvidenceKind
+import net.s4v3.backend.llm.EvidencedSkill
 import net.s4v3.backend.llm.JobText
 import net.s4v3.backend.llm.LetterRequest
 import net.s4v3.backend.llm.LetterWriter
 import net.s4v3.backend.llm.LlmFailure
 import net.s4v3.backend.llm.LlmFailureKind
+import net.s4v3.backend.llm.SkillEvidenceInput
 import net.s4v3.backend.llm.SkillExtractor
 import net.s4v3.backend.llm.SkillImportance
 import net.s4v3.backend.postings.PostingCandidate
@@ -48,7 +52,7 @@ internal class SkillAnalysisApiTests(
 ) {
 
     class RecordingExtractor : SkillExtractor {
-        val calls = CopyOnWriteArrayList<Pair<JobText, List<String>>>()
+        val calls = CopyOnWriteArrayList<Pair<JobText, SkillEvidenceInput>>()
         var answer: () -> List<AskedSkill> = DEFAULT
 
         companion object {
@@ -62,8 +66,8 @@ internal class SkillAnalysisApiTests(
             }
         }
 
-        override fun extract(job: JobText, savedSkillNames: List<String>): List<AskedSkill> {
-            calls += job to savedSkillNames
+        override fun extract(job: JobText, evidenceInput: SkillEvidenceInput): List<AskedSkill> {
+            calls += job to evidenceInput
             return answer()
         }
     }
@@ -171,7 +175,7 @@ internal class SkillAnalysisApiTests(
             .andExpect(jsonPath("$.other[0].profileIndex").value(2))
 
         // Only the description and the skill names went to the extractor.
-        assertEquals(listOf("Kotlin", "PostgreSQL", "Gradle"), extractor.calls.single().second)
+        assertEquals(listOf("Kotlin", "PostgreSQL", "Gradle"), extractor.calls.single().second.savedSkillNames)
         assertTrue(extractor.calls.single().first.description.startsWith(description))
     }
 
@@ -362,5 +366,200 @@ internal class SkillAnalysisApiTests(
         assertTrue(relevant.any { it.loggerName.startsWith("net.s4v3.backend.applications") }, "our own code logged nothing")
         listOf("DESCWORD5521", "SKILLWORD5521", "NOTEWORD5521").forEach { assertFalse(it in logged, "$it appears in the logs") }
         assertFalse("NOTEWORD5521" in bodies.toString().substringAfter("\"error\"", ""), "a marker appears in an error body")
+    }
+
+    // ---- evidence ----
+
+    private val quote = "Built an LLM-based triage assistant"
+
+    /** One position (index 0) with an LLM achievement and a project (index 0); the skills list has Kotlin only. */
+    private fun saveEvidenceProfile(sub: String, achievement: String = quote, skills: String = """[{"name":"Kotlin"}]""") {
+        val profile = """{"contact":{"fullName":"Ada Example","email":"ada-secret@example.org"},
+            "experience":[{"employer":"Employer1 AG","title":"Engineer","start":"2019-01","achievements":["$achievement","Second line"],"technologies":["Python"]}],
+            "openSourceProjects":[{"provider":"GITHUB","fullName":"o/bot","name":"triage-bot","url":"https://github.com/o/bot","description":"A Kafka consumer for alerts"}],
+            "skills":$skills}"""
+        val version = JsonPath.read<Number>(
+            mvc.perform(get("/api/profile").header("Authorization", bearer(sub))).andReturn().response.contentAsString, "$.version",
+        ).toLong()
+        mvc.perform(
+            put("/api/profile").header("Authorization", bearer(sub)).contentType(MediaType.APPLICATION_JSON).content("""{"version":$version,"profile":$profile}"""),
+        ).andExpect(status().isOk)
+    }
+
+    private fun ev(kind: String, index: Int, q: String) = AskedEvidence(EvidenceKind.valueOf(kind), index, q)
+
+    private fun answerAi(evidence: AskedEvidence? = ev("EXPERIENCE", 0, quote)) {
+        extractor.answer = {
+            listOf(
+                AskedSkill("Kotlin", SkillImportance.REQUIRED, evidence = ev("EXPERIENCE", 0, quote)),
+                AskedSkill("AI", SkillImportance.REQUIRED, evidence = evidence),
+                AskedSkill("Kafka", SkillImportance.NICE_TO_HAVE, evidence = ev("PROJECT", 0, "A Kafka consumer for alerts")),
+                AskedSkill("Terraform", SkillImportance.NICE_TO_HAVE, evidence = ev("EXPERIENCE", 0, "Second line")),
+            )
+        }
+    }
+
+    @Test
+    fun `evidenced skills carry source and quote from the profile, listed ignores evidence, the others are gaps`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        answerAi()
+        analyse(sub, app).andExpect(status().isOk)
+            .andExpect(jsonPath("$.include.length()").value(1)).andExpect(jsonPath("$.include[0].name").value("Kotlin"))
+            .andExpect(jsonPath("$.evidenced.length()").value(2))
+            .andExpect(jsonPath("$.evidenced[0].name").value("AI")).andExpect(jsonPath("$.evidenced[0].importance").value("REQUIRED"))
+            .andExpect(jsonPath("$.evidenced[0].kind").value("EXPERIENCE")).andExpect(jsonPath("$.evidenced[0].index").value(0))
+            .andExpect(jsonPath("$.evidenced[0].source").value("Engineer at Employer1 AG")).andExpect(jsonPath("$.evidenced[0].quote").value(quote))
+            .andExpect(jsonPath("$.evidenced[1].name").value("Kafka")).andExpect(jsonPath("$.evidenced[1].kind").value("PROJECT"))
+            .andExpect(jsonPath("$.evidenced[1].source").value("triage-bot"))
+            // Terraform: the quote is real but its entry does not name the skill.
+            .andExpect(jsonPath("$.gaps.length()").value(1)).andExpect(jsonPath("$.gaps[0].name").value("Terraform"))
+        getSkills(sub, app).andExpect(jsonPath("$.evidenced.length()").value(2))
+        assertEquals(1, extractor.calls.size)
+    }
+
+    @Test
+    fun `a fabricated quote makes a gap`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        answerAi(ev("EXPERIENCE", 0, "Led the AI division of the company"))
+        analyse(sub, app).andExpect(jsonPath("$.evidenced[?(@.name=='AI')]").isEmpty).andExpect(jsonPath("$.gaps[?(@.name=='AI')]").isNotEmpty)
+    }
+
+    @Test
+    fun `editing the profile turns evidenced into gap and into listed without a model call`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        answerAi()
+        analyse(sub, app).andExpect(jsonPath("$.evidenced.length()").value(2))
+
+        saveEvidenceProfile(sub, achievement = "Something else entirely")
+        getSkills(sub, app).andExpect(jsonPath("$.evidenced.length()").value(1)).andExpect(jsonPath("$.evidenced[0].name").value("Kafka"))
+            .andExpect(jsonPath("$.gaps[?(@.name=='AI')]").isNotEmpty)
+        saveEvidenceProfile(sub, skills = """[{"name":"Kotlin"},{"name":"AI"}]""")
+        getSkills(sub, app).andExpect(jsonPath("$.include[?(@.name=='AI')]").isNotEmpty)
+        assertEquals(1, extractor.calls.size)
+    }
+
+    @Test
+    fun `an old stored row reads with an empty evidenced list`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        analyse(sub, app).andExpect(status().isOk)
+        jdbc.update("update letter_skill_analysis set analysis = ?::jsonb where application_id = ?::uuid", """[{"name":"Kafka","importance":"REQUIRED","related":[]}]""", app)
+        getSkills(sub, app).andExpect(status().isOk).andExpect(jsonPath("$.evidenced.length()").value(0)).andExpect(jsonPath("$.gaps[0].name").value("Kafka"))
+    }
+
+    @Test
+    fun `the model gets the description, skill names and numbered evidence and none of the excluded profile fields`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        analyse(sub, app).andExpect(status().isOk)
+        val input = extractor.calls.single().second
+        assertEquals(listOf("Kotlin"), input.savedSkillNames)
+        assertEquals(listOf(0), input.positions.map { it.index })
+        assertEquals(listOf(quote, "Second line"), input.positions.single().achievements)
+        assertEquals(listOf("Python"), input.positions.single().technologies)
+        assertEquals("triage-bot", input.projects.single().name)
+        assertFalse(input.toString().let { "Ada" in it || "ada-secret" in it })
+    }
+
+    @Test
+    fun `notes are for gaps only, not for evidenced skills`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        answerAi()
+        analyse(sub, app)
+        notes(sub, app, """{"notes":[${note("AI", "x")}]}""").andExpect(status().isBadRequest).andExpect(jsonPath("$.error").value("notes_invalid"))
+        notes(sub, app, """{"notes":[${note("Terraform", "x")}]}""").andExpect(status().isOk).andExpect(jsonPath("$.evidenced.length()").value(2))
+    }
+
+    @Test
+    fun `a letter resolves evidenced names on the server, states them with source and quote and stores them`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        answerAi()
+        analyse(sub, app)
+
+        generate(sub, app, """{"experience":[0],"skills":[0],"evidencedSkills":["ai"],"evidence":[{"name":"AI","quote":"INJECTEDQUOTE"}]}""")
+            .andExpect(status().isCreated).andExpect(jsonPath("$.selection.evidenced[0]").value("AI")).andExpect(jsonPath("$.selection.skills[0]").value(0))
+        val request = writer.requests.last()
+        assertEquals(listOf(EvidencedSkill("AI", "Engineer at Employer1 AG", quote)), request.candidate.evidencedSkills)
+        assertEquals(listOf("Kotlin"), request.candidate.skills.map { it.name })
+        assertFalse(request.toString().contains("INJECTEDQUOTE"))
+        mvc.perform(get("/api/applications/$app/letters/1").header("Authorization", bearer(sub))).andExpect(jsonPath("$.selection.evidenced[0]").value("AI"))
+
+        // An old version without the key reads with an empty list.
+        jdbc.update("update motivation_letter set selection = ?::jsonb where application_id = ?::uuid", """{"experience":[0],"projects":[],"skills":[0]}""", app)
+        mvc.perform(get("/api/applications/$app/letters/1").header("Authorization", bearer(sub)))
+            .andExpect(status().isOk).andExpect(jsonPath("$.selection.evidenced.length()").value(0))
+
+        // No evidenced names: as before.
+        generate(sub, app).andExpect(status().isCreated).andExpect(jsonPath("$.selection.evidenced.length()").value(0))
+        assertTrue(writer.requests.last().candidate.evidencedSkills.isEmpty())
+    }
+
+    @Test
+    fun `a letter refuses a name that is a gap, unknown, or no longer evidenced, with no model call`() {
+        val sub = newSub()
+        saveEvidenceProfile(sub)
+        val app = newApplication(sub)
+        generate(sub, app, """{"experience":[0],"evidencedSkills":["AI"]}""").andExpect(status().isBadRequest) // no analysis yet
+        answerAi()
+        analyse(sub, app)
+        writer.requests.clear()
+        fun bad(names: String) = generate(sub, app, """{"experience":[0],"evidencedSkills":$names}""")
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.error").value("selection_invalid"))
+        bad("""["Terraform"]""")
+        bad("""["Nope"]""")
+        bad("""["Kotlin"]""")
+        bad("""["AI","ai"]""")
+        saveEvidenceProfile(sub, achievement = "Something else entirely")
+        bad("""["AI"]""")
+        assertTrue(writer.requests.isEmpty())
+    }
+
+    @Test
+    fun `another user cannot use the evidenced names of the owner`() {
+        val a = newSub()
+        saveEvidenceProfile(a)
+        val app = newApplication(a)
+        answerAi()
+        analyse(a, app)
+        val b = newSub()
+        saveEvidenceProfile(b)
+        generate(b, app, """{"experience":[0],"evidencedSkills":["AI"]}""").andExpect(status().isNotFound)
+        getSkills(b, app).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `marker words of profile entries, quotes, skills and notes never reach the logs`() {
+        val sub = newSub()
+        val marker = "ENTRYWORD7731"
+        saveEvidenceProfile(sub, achievement = "$marker built an LLM-based thing", skills = """[{"name":"SKILLWORD7731"}]""")
+        val app = newApplication(sub)
+        extractor.answer = { listOf(AskedSkill("AI", SkillImportance.REQUIRED, evidence = ev("EXPERIENCE", 0, "$marker built an LLM-based thing")), AskedSkill("Kafka", SkillImportance.REQUIRED)) }
+        val bodies = StringBuilder()
+        val events = captureAppLogs {
+            org.slf4j.LoggerFactory.getLogger("net.s4v3.test").info("capture alive")
+            analyse(sub, app).andExpect(status().isOk)
+            notes(sub, app, """{"notes":[${note("Kafka", "NOTEWORD7731")}]}""").andExpect(status().isOk)
+            generate(sub, app, """{"experience":[0],"evidencedSkills":["AI"]}""").andExpect(status().isCreated)
+            generate(sub, app, """{"experience":[0],"evidencedSkills":["Nope"]}""").andExpect(status().isBadRequest).also { bodies.append(it.andReturn().response.contentAsString) }
+            saveEvidenceProfile(sub, achievement = "gone")
+            generate(sub, app, """{"experience":[0],"evidencedSkills":["AI"]}""").andExpect(status().isBadRequest).also { bodies.append(it.andReturn().response.contentAsString) }
+        }
+        val relevant = events.filter { e -> listOf("org.springframework.jdbc.core.", "org.postgresql.").none { e.loggerName.startsWith(it) } }
+        val logged = relevant.joinToString("\n") { it.fullText() }
+        assertTrue("capture alive" in logged)
+        listOf(marker, "SKILLWORD7731", "NOTEWORD7731", "LLM-based").forEach { assertFalse(it in logged, "$it appears in the logs") }
+        assertFalse(marker in bodies.toString())
     }
 }

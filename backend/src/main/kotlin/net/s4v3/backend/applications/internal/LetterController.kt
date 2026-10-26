@@ -33,6 +33,7 @@ internal data class GenerateLetterRequest(
     val experience: List<Int>? = null,
     val projects: List<Int>? = null,
     val skills: List<Int>? = null,
+    val evidencedSkills: List<String>? = null,
     val instructions: String? = null,
     val basedOnVersion: Int? = null,
     val comments: LetterComments? = null,
@@ -54,12 +55,14 @@ internal class LetterController(
         summary = "Generate or regenerate a motivation letter",
         description = "Writes a letter with the language model from the application's frozen description and only the chosen parts " +
             "of the saved profile (`experience`, `projects`, `skills` are indexes into the saved lists; the full name is the only " +
-            "contact data sent). `language` is EN or DE (default: the posting's). With `basedOnVersion` the new version is " +
+            "contact data sent). `evidencedSkills` are names of skills the stored analysis shows as evidenced by the current profile; " +
+            "the server takes the position or project and the quote from the profile (text in the body is ignored) and a name that is " +
+            "not currently evidenced is refused. `language` is EN or DE (default: the posting's). With `basedOnVersion` the new version is " +
             "written from that version's text and the `comments` (`general` and `paragraphs` of `{n, text}`); the old version " +
             "stays unchanged. Counts against `jobhunter.letters.per-hour`. The answer is the new version.",
         responses = [
             ApiResponse(responseCode = "201", description = "The new version"),
-            ApiResponse(responseCode = "400", description = "Unknown index, too many parts, bad language or over-long text (`selection_invalid`)"),
+            ApiResponse(responseCode = "400", description = "Unknown index, an evidenced skill name that is not currently evidenced, too many parts, bad language or over-long text (`selection_invalid`)"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "404", description = "No such application or `basedOnVersion` of the caller's"),
             ApiResponse(responseCode = "409", description = "The application already has 20 versions (`letter_limit`)"),
@@ -72,7 +75,7 @@ internal class LetterController(
         val r = request ?: GenerateLetterRequest()
         val command = GenerateLetterCommand(
             language = r.language,
-            selection = LetterSelection(r.experience.orEmpty(), r.projects.orEmpty(), r.skills.orEmpty()),
+            selection = LetterSelection(r.experience.orEmpty(), r.projects.orEmpty(), r.skills.orEmpty(), r.evidencedSkills.orEmpty()),
             instructions = r.instructions,
             basedOnVersion = r.basedOnVersion,
             comments = r.comments,

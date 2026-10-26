@@ -13,6 +13,15 @@ export interface IncludedSkill extends ProfileSkillRef {
   profileName?: string
 }
 
+export interface EvidencedSkill {
+  name: string
+  importance: Importance
+  kind: 'EXPERIENCE' | 'PROJECT'
+  index: number
+  source: string
+  quote: string
+}
+
 export interface GapSkill {
   name: string
   importance: Importance
@@ -26,6 +35,8 @@ export type SkillAnalysis =
       analysed: true
       createdAt: string
       include: IncludedSkill[]
+      /** Missing from an old backend: treated as empty. */
+      evidenced?: EvidencedSkill[]
       gaps: GapSkill[]
       other: ProfileSkillRef[]
     }

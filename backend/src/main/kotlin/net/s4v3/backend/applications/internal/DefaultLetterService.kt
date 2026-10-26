@@ -15,6 +15,7 @@ import net.s4v3.backend.applications.LetterSummary
 import net.s4v3.backend.applications.LetterTextInvalidException
 import net.s4v3.backend.applications.SkillAnalysisService
 import net.s4v3.backend.llm.Candidate
+import net.s4v3.backend.llm.EvidencedSkill as LetterEvidencedSkill
 import net.s4v3.backend.llm.GapNote
 import net.s4v3.backend.llm.JobText
 import net.s4v3.backend.llm.LetterLanguage
@@ -64,6 +65,12 @@ internal class DefaultLetterService(
         val projects = selection.projects.map { stored.openSourceProjects.getOrNull(it) ?: throw LetterSelectionInvalidException() }
         val skills = selection.skills.map { stored.skills.getOrNull(it) ?: throw LetterSelectionInvalidException() }
 
+        // Names only come from the client; the text comes from the stored analysis checked against the profile as it is now.
+        val evidencedSkills = if (selection.evidenced.isEmpty()) emptyList() else {
+            val current = skillAnalysis.evidenced(sub, applicationId).associateBy { it.name.lowercase() }
+            selection.evidenced.map { current[it.trim().lowercase()] ?: throw LetterSelectionInvalidException() }
+        }
+
         val comments = command.comments?.takeIf { previousRow != null && (!it.general.isNullOrBlank() || it.paragraphs.isNotEmpty()) }
         val previous = previousRow?.let {
             PreviousLetter(
@@ -74,7 +81,10 @@ internal class DefaultLetterService(
         }
         val request = LetterRequest(
             job = JobText(job.title, job.company, job.description),
-            candidate = Candidate(stored.contact.fullName.orEmpty(), experience, projects, skills),
+            candidate = Candidate(
+                stored.contact.fullName.orEmpty(), experience, projects, skills,
+                evidencedSkills.map { LetterEvidencedSkill(it.name, it.source, it.quote) },
+            ),
             language = language,
             instructions = command.instructions?.takeIf { it.isNotBlank() },
             previous = previous,
@@ -97,7 +107,7 @@ internal class DefaultLetterService(
         val saved = store(
             sub, applicationId,
             LetterRow(
-                version = 0, how = how, language = language.name, text = text, selection = json.writeValueAsString(selection),
+                version = 0, how = how, language = language.name, text = text, selection = json.writeValueAsString(selection.copy(evidenced = evidencedSkills.map { it.name })),
                 instructions = request.instructions, comments = comments?.let { json.writeValueAsString(it) },
                 basedOnVersion = previousRow?.version, createdAt = Instant.now(clock),
             ),
@@ -161,6 +171,7 @@ internal class DefaultLetterService(
             throw LetterSelectionInvalidException()
         }
         if (listOf(s.experience, s.projects, s.skills).any { it.toSet().size != it.size }) throw LetterSelectionInvalidException()
+        if (s.evidenced.size > LetterService.MAX_SKILLS || s.evidenced.map { it.trim().lowercase() }.toSet().size != s.evidenced.size) throw LetterSelectionInvalidException()
         if ((command.instructions?.length ?: 0) > LetterService.MAX_INSTRUCTIONS) throw LetterSelectionInvalidException()
         val c = command.comments
         if (c != null) {

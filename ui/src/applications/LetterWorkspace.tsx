@@ -75,14 +75,16 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
   const [skillsMessage, setSkillsMessage] = useState<string | null>(null)
   const [skillsStatus, setSkillsStatus] = useState<string | null>(null)
   const [ticked, setTicked] = useState<number[]>([])
+  const [tickedEvidenced, setTickedEvidenced] = useState<string[]>([])
   const [notes, setNotes] = useState<Record<string, string>>({})
 
-  /** Shows an analysis: advised skills ticked, the others not, notes as saved. */
+  /** Shows an analysis: nothing ticked, notes as saved. */
   const applyAnalysis = useCallback((result: SkillsResult) => {
     if (result.kind === 'done' && result.analysis.analysed) {
       const a = result.analysis
       setAnalysis(a)
-      setTicked(a.include.map((s) => s.profileIndex).sort((x, y) => x - y))
+      setTicked([])
+      setTickedEvidenced([])
       setNotes(Object.fromEntries(a.gaps.map((g) => [g.name, g.note ?? ''])))
     } else if (result.kind === 'done') {
       setAnalysis(null)
@@ -196,6 +198,22 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
       'Notes saved. They stay with this application.',
     )
 
+  const onMatch = () => {
+    if (!analysis) return
+    setTicked((t) =>
+      [...new Set([...t, ...analysis.include.map((s) => s.profileIndex)])].sort(
+        (a, b) => a - b,
+      ),
+    )
+    setTickedEvidenced((t) => [
+      ...new Set([...t, ...(analysis.evidenced ?? []).map((s) => s.name)]),
+    ])
+  }
+  const onClear = () => {
+    setTicked([])
+    setTickedEvidenced([])
+  }
+
   const skillIndexes = analysis ? ticked : selection.skills
 
   const request = (basedOn: LetterDetail | null): GenerateRequest => {
@@ -209,6 +227,7 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
       experience: selection.experience,
       projects: selection.projects,
       skills: skillIndexes,
+      ...(analysis ? { evidencedSkills: tickedEvidenced } : {}),
       instructions: instructions.trim() === '' ? null : instructions.trim(),
       basedOnVersion: basedOn?.version ?? null,
       comments: basedOn
@@ -274,7 +293,8 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
   const chosen =
     selection.experience.length +
     selection.projects.length +
-    skillIndexes.length
+    skillIndexes.length +
+    (analysis ? tickedEvidenced.length : 0)
   const lines = current ? paragraphs(current.text) : []
 
   return (
@@ -345,9 +365,19 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
           message={skillsMessage}
           status={skillsStatus}
           ticked={ticked}
+          tickedEvidenced={tickedEvidenced}
           notes={notes}
           onAnalyse={onAnalyse}
           onTick={(index, on) => setTicked((t) => toggled(t, index, on))}
+          onTickEvidenced={(name, on) =>
+            setTickedEvidenced((t) =>
+              on
+                ? [...t.filter((n) => n !== name), name]
+                : t.filter((n) => n !== name),
+            )
+          }
+          onMatch={onMatch}
+          onClear={onClear}
           onNote={(skill, text) => setNotes((n) => ({ ...n, [skill]: text }))}
           onSaveNotes={onSaveNotes}
         />

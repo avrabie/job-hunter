@@ -33,9 +33,13 @@ export function SkillsStep({
   message,
   status,
   ticked,
+  tickedEvidenced,
   notes,
   onAnalyse,
   onTick,
+  onTickEvidenced,
+  onMatch,
+  onClear,
   onNote,
   onSaveNotes,
 }: {
@@ -45,9 +49,13 @@ export function SkillsStep({
   message: string | null
   status: string | null
   ticked: number[]
+  tickedEvidenced: string[]
   notes: Record<string, string>
   onAnalyse: () => void
   onTick: (profileIndex: number, on: boolean) => void
+  onTickEvidenced: (name: string, on: boolean) => void
+  onMatch: () => void
+  onClear: () => void
   onNote: (skill: string, text: string) => void
   onSaveNotes: () => void
 }) {
@@ -59,6 +67,7 @@ export function SkillsStep({
       onChange={(e) => onTick(profileIndex, e.target.checked)}
     />
   )
+  const evidenced = analysis?.evidenced ?? []
   return (
     <section aria-labelledby="skills-step-heading" className="skills-step">
       <h3 id="skills-step-heading">Skills for this job</h3>
@@ -79,6 +88,22 @@ export function SkillsStep({
 
       {analysis && (
         <>
+          <div className="application-actions">
+            <button
+              type="button"
+              className="button--secondary"
+              onClick={onMatch}
+            >
+              Match
+            </button>
+            <button
+              type="button"
+              className="button--secondary"
+              onClick={onClear}
+            >
+              Clear
+            </button>
+          </div>
           <fieldset className="choice">
             <legend className="choice__legend">Advised to include</legend>
             {analysis.include.length === 0 && (
@@ -90,6 +115,30 @@ export function SkillsStep({
                 {s.profileName ?? s.name}{' '}
                 <ImportanceBadge value={s.importance} />
               </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="choice">
+            <legend className="choice__legend">
+              Evidenced in your CV and projects
+            </legend>
+            {evidenced.length === 0 && <p>No skills evidenced.</p>}
+            {evidenced.map((s) => (
+              <div className="skills-step__evidence" key={s.name}>
+                <label className="choice__option">
+                  <input
+                    type="checkbox"
+                    aria-label={s.name}
+                    checked={tickedEvidenced.includes(s.name)}
+                    onChange={(e) => onTickEvidenced(s.name, e.target.checked)}
+                  />
+                  {s.name} <ImportanceBadge value={s.importance} />
+                </label>
+                <p className="choice__count">{s.source}</p>
+                <blockquote className="skills-step__quote">
+                  {s.quote}
+                </blockquote>
+              </div>
             ))}
           </fieldset>
 

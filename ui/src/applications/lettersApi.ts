@@ -34,6 +34,8 @@ export interface LetterDetail extends LetterSummary {
 export interface GenerateRequest extends LetterSelection {
   language: LetterLanguage | null
   instructions: string | null
+  /** Names of ticked skills the CV or projects evidence; never quotes or notes. */
+  evidencedSkills?: string[]
   basedOnVersion: number | null
   comments: LetterComments | null
 }

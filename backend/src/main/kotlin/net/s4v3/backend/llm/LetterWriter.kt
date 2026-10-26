@@ -18,12 +18,16 @@ enum class LetterLanguage { EN, DE }
 /** The job as stored: [description] is untrusted text and is sent to the model as quoted data only. */
 data class JobText(val title: String, val company: String, val description: String)
 
+/** A skill the profile supports through [source] (a position as "title at employer", or a project name), with [quote] of the user's own text. */
+data class EvidencedSkill(val name: String, val source: String, val quote: String)
+
 /** The only facts about the person that may reach the model: the name and the chosen parts. */
 data class Candidate(
     val fullName: String,
     val experience: List<Experience> = emptyList(),
     val projects: List<OpenSourceProject> = emptyList(),
     val skills: List<Skill> = emptyList(),
+    val evidencedSkills: List<EvidencedSkill> = emptyList(),
 )
 
 /** A comment on one paragraph (numbered from 1, as the user sees them) of the previous letter. */

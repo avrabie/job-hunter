@@ -27,6 +27,16 @@ const analysed = (note: string | null = null): SkillAnalysis => ({
       profileName: 'Kotlin',
     },
   ],
+  evidenced: [
+    {
+      name: 'Docker',
+      importance: 'REQUIRED',
+      kind: 'EXPERIENCE',
+      index: 0,
+      source: 'Acme, Developer',
+      quote: 'Shipped <b>Docker</b> images',
+    },
+  ],
   gaps: [
     {
       name: 'Rust',
@@ -134,22 +144,84 @@ describe('the skills step', () => {
     expect(
       screen.getByText(/Related skills of yours: C\+\+/),
     ).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'Kotlin' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Kotlin' })).not.toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Kafka' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Docker' })).not.toBeChecked()
     expect(screen.getByLabelText('Note on Rust')).toHaveValue('I learn fast')
     expect(screen.getByText('12 / 500')).toBeInTheDocument()
 
     await user.click(screen.getByRole('checkbox', { name: 'Kafka' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Kotlin' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Docker' }))
     await user.click(screen.getByRole('button', { name: 'Generate' }))
     await screen.findByText('Dear team')
     const post = calls.find(
       (c) => c.method === 'POST' && c.url.endsWith('/letters'),
     )!
-    expect((post.body as { skills: number[] }).skills).toEqual([0, 1])
+    const sent = post.body as { skills: number[]; evidencedSkills: string[] }
+    expect(sent.skills).toEqual([0, 1])
+    expect(sent.evidencedSkills).toEqual(['Docker'])
+    expect(JSON.stringify(post.body)).not.toContain('Shipped')
+    expect(JSON.stringify(post.body)).not.toContain('Acme')
     expect(JSON.stringify(post.body)).not.toContain('I learn fast')
     expect(
       calls.some((c) => c.url === '/api/profile' && c.method !== 'GET'),
     ).toBe(false)
+  })
+
+  it('shows evidence as text', async () => {
+    stub({ initial: analysed() })
+    mount()
+    expect(
+      await screen.findByText('Evidenced in your CV and projects'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Acme, Developer')).toBeInTheDocument()
+    expect(screen.getByText('Shipped <b>Docker</b> images')).toBeInTheDocument()
+  })
+
+  it('Match ticks advised and evidenced only, twice the same, Clear unticks', async () => {
+    stub({ initial: analysed() })
+    const user = userEvent.setup()
+    mount()
+    const box = (n: string) => screen.getByRole('checkbox', { name: n })
+    await screen.findByText('Gaps')
+    await user.click(screen.getByRole('button', { name: 'Match' }))
+    await user.click(screen.getByRole('button', { name: 'Match' }))
+    expect(box('Kotlin')).toBeChecked()
+    expect(box('Docker')).toBeChecked()
+    expect(box('Kafka')).not.toBeChecked()
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    for (const n of ['Kotlin', 'Docker', 'Kafka'])
+      expect(box(n)).not.toBeChecked()
+  })
+
+  it('unticks everything after a repeated analysis and after saving notes', async () => {
+    stub({ initial: analysed() })
+    const user = userEvent.setup()
+    mount()
+    await user.click(await screen.findByRole('button', { name: 'Match' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Analyse the job again' }),
+    )
+    await screen.findByText('Gaps')
+    expect(screen.getByRole('checkbox', { name: 'Kotlin' })).not.toBeChecked()
+    await user.click(screen.getByRole('button', { name: 'Match' }))
+    await user.type(screen.getByLabelText('Note on Rust'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Save notes' }))
+    await screen.findByText(/stay with this application/, {
+      selector: '[role=status]',
+    })
+    expect(screen.getByRole('checkbox', { name: 'Docker' })).not.toBeChecked()
+  })
+
+  it('tolerates a missing evidenced list', async () => {
+    const old = { ...analysed() } as Record<string, unknown>
+    delete old.evidenced
+    stub({ initial: old as unknown as SkillAnalysis })
+    mount()
+    expect(
+      await screen.findByText('Evidenced in your CV and projects'),
+    ).toBeInTheDocument()
   })
 
   it('analyses on request', async () => {

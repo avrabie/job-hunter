@@ -29,7 +29,7 @@ internal class SkillAnalysisDefaultLimitTests(
         @Bean
         @Primary
         fun noSkills(): SkillExtractor = object : SkillExtractor {
-            override fun extract(job: JobText, savedSkillNames: List<String>): List<AskedSkill> = emptyList()
+            override fun extract(job: JobText, evidenceInput: net.s4v3.backend.llm.SkillEvidenceInput): List<AskedSkill> = emptyList()
         }
     }
 

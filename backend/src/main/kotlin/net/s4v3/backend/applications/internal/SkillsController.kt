@@ -37,10 +37,13 @@ internal class SkillsController(
     @GetMapping("/api/applications/{id}/skills")
     @Operation(
         summary = "Read the stored skill analysis of an application",
-        description = "Answers `{\"analysed\":false}` when there is none, otherwise `{analysed:true, createdAt, include, gaps, other}`: " +
-            "`include` are skills the job asks for and the saved profile has (with `importance` REQUIRED or NICE_TO_HAVE, `profileIndex` " +
-            "and `profileName`), `gaps` those it lacks (with `related` saved skills and the candidate's `note` or null), `other` the saved " +
-            "skills the job does not ask for. The lists are derived from the current saved profile on every read; no model call, no limit.",
+        description = "Answers `{\"analysed\":false}` when there is none, otherwise `{analysed:true, createdAt, include, evidenced, gaps, other}`: " +
+            "`include` are skills the job asks for and the saved skills list has (with `importance` REQUIRED or NICE_TO_HAVE, `profileIndex` " +
+            "and `profileName`), `evidenced` those not in the skills list that a position or project supports (with `kind` EXPERIENCE or " +
+            "PROJECT, `index` in the saved list, `source` \"<title> at <employer>\" or the project name, and the `quote` from the profile; " +
+            "an analysis stored before evidence existed has none), `gaps` those nothing supports (with `related` saved skills and the candidate's `note` or null), `other` the saved " +
+            "skills the job does not ask for. The lists are derived from the current saved profile on every read (a claim that no longer holds " +
+            "becomes a gap); no model call, no limit.",
         responses = [
             ApiResponse(responseCode = "200", description = "The analysis, or `{\"analysed\":false}`"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
@@ -53,8 +56,9 @@ internal class SkillsController(
     @PostMapping("/api/applications/{id}/skills/analyse")
     @Operation(
         summary = "Analyse the skills a job asks for",
-        description = "One model call on the application's frozen description and the names of the saved skills; the match with the " +
-            "profile is decided by the server. Replaces a stored analysis and keeps the notes whose skill is still a gap. " +
+        description = "One model call on the application's frozen description, the names of the saved skills and the text of positions " +
+            "(title, employer, achievements, technologies) and projects (name, description, summary); never name, contact data, salary, " +
+            "preferences or work authorisation. Listed and evidenced are decided by the server, which checks every quote against the profile. Replaces a stored analysis and keeps the notes whose skill is still a gap. " +
             "Counts against `jobhunter.letters.skills-per-hour`, separate from the letter limit. The answer is the same as the read.",
         responses = [
             ApiResponse(responseCode = "200", description = "The new analysis"),

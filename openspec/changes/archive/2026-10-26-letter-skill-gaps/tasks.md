@@ -26,4 +26,4 @@
 
 - [x] 5.1 Docs: `applications/README.md`, `llm/README.md`, `application.yaml` comment for the new setting, PLAN.md line. Verify: docs mention the endpoints and the separate limit.
 - [x] 5.2 `./gradlew test integrationTest`, `ApplicationModules.verify()`, UI checks (vitest, tsc, oxlint, prettier), `openspec validate --all`.
-- [ ] 5.3 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.
+- [x] 5.3 Deploy backend and ui only after the owner says so; archive after the owner tests on prod.

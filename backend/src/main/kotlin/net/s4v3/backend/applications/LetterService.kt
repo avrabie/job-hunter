@@ -19,6 +19,8 @@ data class LetterSelection(
     val experience: List<Int> = emptyList(),
     val projects: List<Int> = emptyList(),
     val skills: List<Int> = emptyList(),
+    /** Names of evidenced skills (see [SkillAnalysisService.evidenced]); resolved by the server, never carrying text. */
+    val evidenced: List<String> = emptyList(),
 )
 
 /** A comment on paragraph [n] (from 1, see [paragraphs]). */

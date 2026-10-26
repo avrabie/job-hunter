@@ -1,5 +1,6 @@
 package net.s4v3.backend.applications
 
+import net.s4v3.backend.llm.EvidenceKind
 import net.s4v3.backend.llm.SkillImportance
 import java.time.Instant
 import java.util.UUID
@@ -9,6 +10,16 @@ data class IncludedSkill(val name: String, val importance: SkillImportance, val 
 
 /** A saved skill of the profile. */
 data class SavedSkillRef(val name: String, val profileIndex: Int)
+
+/** A skill the job asks for, not in the skills list, that a position or project of the current profile supports ([quote] is the user's own text). */
+data class EvidencedSkill(
+    val name: String,
+    val importance: SkillImportance,
+    val kind: EvidenceKind,
+    val index: Int,
+    val source: String,
+    val quote: String,
+)
 
 /** A skill the job asks for and the profile lacks, with related saved skills and the candidate's note. */
 data class GapSkill(val name: String, val importance: SkillImportance, val related: List<SavedSkillRef>, val note: String?)
@@ -25,6 +36,7 @@ sealed interface SkillsState {
     data class Analysed(
         val createdAt: Instant,
         val include: List<IncludedSkill>,
+        val evidenced: List<EvidencedSkill>,
         val gaps: List<GapSkill>,
         val other: List<SavedSkillRef>,
     ) : SkillsState {
@@ -54,6 +66,9 @@ interface SkillAnalysisService {
 
     /** Replaces all notes. Null when there is no such application or no analysis. Throws [SkillNotesInvalidException]. */
     fun saveNotes(sub: String, applicationId: UUID, notes: List<SkillNoteInput>): SkillsState.Analysed?
+
+    /** The skills currently EVIDENCED by the caller's profile for this application, for the letter. Empty without analysis. */
+    fun evidenced(sub: String, applicationId: UUID): List<EvidencedSkill>
 
     /** The notes of the application's current gaps, for the letter writer. Empty without analysis. */
     fun gapNotes(sub: String, applicationId: UUID): List<SkillNoteInput>

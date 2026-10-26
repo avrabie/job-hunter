@@ -1,6 +1,7 @@
 package net.s4v3.backend.applications.internal
 
 import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.EvidencedSkill
 import net.s4v3.backend.applications.SkillAnalysisService
 import net.s4v3.backend.applications.SkillNoteInput
 import net.s4v3.backend.applications.SkillNotesInvalidException
@@ -8,6 +9,7 @@ import net.s4v3.backend.applications.SkillsRateLimitedException
 import net.s4v3.backend.applications.SkillsState
 import net.s4v3.backend.llm.JobText
 import net.s4v3.backend.llm.SkillExtractor
+import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.ProfileService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -17,7 +19,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * The skill analysis rules. The model call runs outside any transaction. The split into include / gaps / other is derived
+ * The skill analysis rules. The model call runs outside any transaction. The split into include / evidenced / gaps / other is derived
  * from the current saved profile on every read. Logs outcome and duration only, never a skill name, note or description.
  */
 @Service
@@ -41,22 +43,23 @@ internal class DefaultSkillAnalysisService(
 
     override fun analyse(sub: String, applicationId: UUID): SkillsState.Analysed? {
         val job = applications.frozenJob(sub, applicationId) ?: return null
-        val saved = savedNames(sub)
+        val profile = profiles.get(sub).profile
+        val input = EvidenceInputBuilder.build(profile)
         if (!limiter.tryAcquire(sub)) {
             log.info("Skill analysis refused: hourly limit reached")
             throw SkillsRateLimitedException()
         }
         val started = System.nanoTime()
         val asked = try {
-            extractor.extract(JobText(job.title, job.company, job.description), saved)
+            extractor.extract(JobText(job.title, job.company, job.description), input)
         } catch (e: Exception) {
             log.info("Skill analysis failed after {} ms", (System.nanoTime() - started) / 1_000_000)
             throw e
         }
-        val stored = asked.map { StoredAsked(it.name, it.importance, it.related) }
+        val stored = asked.map { StoredAsked(it.name, it.importance, it.related, it.evidence) }
         // Notes are kept when their skill is still a gap of the new analysis (against the profile as it is now).
         val oldNotes = repository.find(sub, applicationId)?.let { readNotes(it) }.orEmpty()
-        val gapNames = SkillMatcher.match(stored, saved).gaps.map { it.name }.toSet()
+        val gapNames = derive(profile, stored).gaps.map { it.name }.toSet()
         val kept = oldNotes.filter { it.skill in gapNames }
         val row = SkillAnalysisRow(json.writeValueAsString(stored), json.writeValueAsString(kept), Instant.now(clock))
         repository.upsert(sub, applicationId, row)
@@ -68,7 +71,7 @@ internal class DefaultSkillAnalysisService(
         applications.frozenJob(sub, applicationId) ?: return null
         val row = repository.find(sub, applicationId) ?: return null
         if (notes.size > SkillAnalysisService.MAX_NOTES) throw SkillNotesInvalidException()
-        val gaps = SkillMatcher.match(readAsked(row), savedNames(sub)).gaps.associateBy { it.name.lowercase() }
+        val gaps = derive(profiles.get(sub).profile, readAsked(row)).gaps.associateBy { it.name.lowercase() }
         val seen = HashSet<String>()
         val clean = notes.map { n ->
             val text = n.text.trim()
@@ -88,7 +91,14 @@ internal class DefaultSkillAnalysisService(
         return view(sub, row).gaps.mapNotNull { g -> g.note?.let { SkillNoteInput(g.name, it) } }
     }
 
-    private fun savedNames(sub: String): List<String> = profiles.get(sub).profile.skills.map { it.name }
+    override fun evidenced(sub: String, applicationId: UUID): List<EvidencedSkill> {
+        val row = repository.find(sub, applicationId) ?: return emptyList()
+        return view(sub, row).evidenced
+    }
+
+    /** LISTED first (by name, in code), then EVIDENCED if the claim passes against [profile] as it is now, else GAP. */
+    private fun derive(profile: Profile, asked: List<StoredAsked>, notes: Map<String, String> = emptyMap()): Matched =
+        SkillMatcher.match(asked, profile.skills.map { it.name }, notes, EvidenceCheck(profile))
 
     private fun readAsked(row: SkillAnalysisRow): List<StoredAsked> = json.readValue(row.analysis, Array<StoredAsked>::class.java).toList()
 
@@ -96,8 +106,8 @@ internal class DefaultSkillAnalysisService(
 
     private fun view(sub: String, row: SkillAnalysisRow): SkillsState.Analysed {
         val notes = readNotes(row).associate { it.skill to it.text }
-        val m = SkillMatcher.match(readAsked(row), savedNames(sub), notes)
-        return SkillsState.Analysed(row.createdAt, m.include, m.gaps, m.other)
+        val m = derive(profiles.get(sub).profile, readAsked(row), notes)
+        return SkillsState.Analysed(row.createdAt, m.include, m.evidenced, m.gaps, m.other)
     }
 
     private companion object {
