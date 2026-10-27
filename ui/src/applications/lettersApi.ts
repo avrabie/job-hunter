@@ -220,3 +220,24 @@ export function downloadLetter(
     }
   })
 }
+
+/** The same version as an A4 PDF made by the server, and its plain file name (or a fallback). */
+export function downloadLetterPdf(
+  auth: TokenSource,
+  applicationId: string,
+  version: number,
+): Promise<LetterFileResult> {
+  return guarded<LetterFileResult>(async () => {
+    const res = await apiFetch(auth, `${base(applicationId)}/${version}/pdf`)
+    if (!res.ok)
+      return { kind: 'failed', message: messageForStatus(res.status) }
+    const match = res.headers
+      .get('Content-Disposition')
+      ?.match(/filename="([A-Za-z0-9._-]{1,120})"/)
+    return {
+      kind: 'done',
+      blob: await res.blob(),
+      fileName: match?.[1] ?? 'motivation-letter.pdf',
+    }
+  })
+}

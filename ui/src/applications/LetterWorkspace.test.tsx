@@ -97,6 +97,13 @@ function stub(
         if (res.ok) store.push((await res.clone().json()) as LetterDetail)
         return res
       }
+      if (/\/letters\/\d+\/pdf$/.test(url))
+        return new Response('%PDF', {
+          status: 200,
+          headers: {
+            'Content-Disposition': 'attachment; filename="motivation-x.pdf"',
+          },
+        })
       const download = url.match(/\/letters\/(\d+)\/download$/)
       if (download) {
         const v = store.find((l) => l.version === Number(download[1]))!
@@ -327,6 +334,18 @@ describe('the letter workspace', () => {
     await waitFor(() => expect(clicks).toHaveLength(1))
     expect(clicks[0]!.download).toBe('motivation-x.md')
     expect(calls.some((c) => c.url === `${BASE}/1/download`)).toBe(true)
+  })
+
+  it('downloads the version as a PDF', async () => {
+    const calls = stub([detail()])
+    const user = userEvent.setup()
+    mount()
+    await user.click(
+      await screen.findByRole('button', { name: 'Download PDF' }),
+    )
+    await waitFor(() => expect(clicks).toHaveLength(1))
+    expect(clicks[0]!.download).toBe('motivation-x.pdf')
+    expect(calls.some((c) => c.url === `${BASE}/1/pdf`)).toBe(true)
   })
 
   it.each([

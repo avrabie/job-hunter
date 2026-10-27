@@ -7,6 +7,8 @@ import net.s4v3.backend.accounts.CurrentUser
 import net.s4v3.backend.applications.GenerateLetterCommand
 import net.s4v3.backend.applications.LetterComments
 import net.s4v3.backend.applications.LetterLimitException
+import net.s4v3.backend.applications.LetterPdfBusyException
+import net.s4v3.backend.applications.LetterPdfFailedException
 import net.s4v3.backend.applications.LetterRateLimitedException
 import net.s4v3.backend.applications.LetterSelection
 import net.s4v3.backend.applications.LetterSelectionInvalidException
@@ -161,6 +163,35 @@ internal class LetterController(
         val file = letters.file(currentUser.id(), id, version) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType("text/markdown; charset=utf-8"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${file.fileName}\"")
+            .header("X-Content-Type-Options", "nosniff")
+            .cacheControl(CacheControl.noStore())
+            .body(file.bytes)
+    }
+
+    @GetMapping("/api/applications/{id}/letters/{version}/pdf")
+    @Operation(
+        summary = "Download one version of a letter as a PDF",
+        description = "The Markdown text rendered to an A4 PDF with embedded fonts, as `application/pdf`, an attachment named " +
+            "`motivation-<company>-<title>-v<version>.pdf`. HTML in the text is shown as written, never interpreted.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "The PDF bytes"),
+            ApiResponse(responseCode = "401", description = "No valid access token"),
+            ApiResponse(responseCode = "404", description = "No such application or version of the caller's"),
+            ApiResponse(responseCode = "500", description = "`render_failed`"),
+            ApiResponse(responseCode = "503", description = "`busy`: PDF rendering is at its limit"),
+        ],
+    )
+    fun pdf(@PathVariable id: UUID, @PathVariable version: Int): ResponseEntity<Any> {
+        val file = try {
+            letters.pdf(currentUser.id(), id, version)
+        } catch (_: LetterPdfBusyException) {
+            return codeError(HttpStatus.SERVICE_UNAVAILABLE, "busy")
+        } catch (_: LetterPdfFailedException) {
+            return codeError(HttpStatus.INTERNAL_SERVER_ERROR, "render_failed")
+        } ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${file.fileName}\"")
             .header("X-Content-Type-Options", "nosniff")
             .cacheControl(CacheControl.noStore())

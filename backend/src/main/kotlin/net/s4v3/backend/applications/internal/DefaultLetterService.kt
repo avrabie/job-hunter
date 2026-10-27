@@ -44,6 +44,7 @@ internal class DefaultLetterService(
     private val writer: LetterWriter,
     private val skillAnalysis: SkillAnalysisService,
     private val limiter: LetterLimiter,
+    private val pdfs: LetterPdf,
     private val transactions: TransactionTemplate,
     private val json: JsonMapper,
     private val clock: Clock = Clock.systemUTC(),
@@ -145,6 +146,12 @@ internal class DefaultLetterService(
         val job = applications.frozenJob(sub, applicationId) ?: return null
         val row = repository.find(sub, applicationId, version) ?: return null
         return LetterFile(row.text.toByteArray(Charsets.UTF_8), letterFileName(job.company, job.title, version))
+    }
+
+    override fun pdf(sub: String, applicationId: UUID, version: Int): LetterFile? {
+        val job = applications.frozenJob(sub, applicationId) ?: return null
+        val row = repository.find(sub, applicationId, version) ?: return null
+        return LetterFile(pdfs.render(row.text), letterFileName(job.company, job.title, version).removeSuffix(".md") + ".pdf")
     }
 
     override fun delete(sub: String, applicationId: UUID, version: Int): Boolean =

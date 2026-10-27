@@ -65,6 +65,12 @@ class LetterRateLimitedException : RuntimeException("Letter generation limit rea
 /** A rendered file for download. */
 class LetterFile(val bytes: ByteArray, val fileName: String)
 
+/** All PDF renders are busy. */
+class LetterPdfBusyException : RuntimeException("Too many PDF renders at the moment")
+
+/** The PDF could not be rendered. */
+class LetterPdfFailedException(cause: Throwable) : RuntimeException("The letter PDF could not be rendered", cause)
+
 /**
  * Motivation letters of the caller's applications. Null results mean "no such application or version of the caller's".
  * [generate] throws [net.s4v3.backend.llm.LlmFailure] when the model cannot be used.
@@ -80,6 +86,9 @@ interface LetterService {
     fun get(sub: String, applicationId: UUID, version: Int): LetterDetail?
 
     fun file(sub: String, applicationId: UUID, version: Int): LetterFile?
+
+    /** The version as an A4 PDF. Throws [LetterPdfBusyException] or [LetterPdfFailedException]. */
+    fun pdf(sub: String, applicationId: UUID, version: Int): LetterFile?
 
     fun delete(sub: String, applicationId: UUID, version: Int): Boolean
 

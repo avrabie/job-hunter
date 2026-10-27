@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   deleteLetter,
   downloadLetter,
+  downloadLetterPdf,
   generateLetter,
   LETTER_MESSAGES,
   listLetters,
@@ -162,6 +163,29 @@ describe('other letter calls', () => {
     answer(200, 'x', { 'Content-Disposition': 'attachment; filename="../a"' })
     const result = await downloadLetter(auth, 'app-1', 1)
     expect(result).toMatchObject({ fileName: 'motivation-letter.md' })
+  })
+
+  it('downloads the PDF from the pdf endpoint with the server file name', async () => {
+    const spy = answer(200, '%PDF', {
+      'Content-Disposition': 'attachment; filename="motivation-x-v2.pdf"',
+    })
+    const result = await downloadLetterPdf(auth, 'app-1', 2)
+    expect(spy.mock.calls[0]![0]).toBe('/api/applications/app-1/letters/2/pdf')
+    expect(result).toMatchObject({
+      kind: 'done',
+      fileName: 'motivation-x-v2.pdf',
+    })
+  })
+
+  it('uses a fallback PDF file name and reports failures', async () => {
+    answer(200, 'x')
+    expect(await downloadLetterPdf(auth, 'app-1', 1)).toMatchObject({
+      fileName: 'motivation-letter.pdf',
+    })
+    answer(503, {})
+    expect(await downloadLetterPdf(auth, 'app-1', 1)).toMatchObject({
+      kind: 'failed',
+    })
   })
 
   it('returns unauthorized when there is no token', async () => {

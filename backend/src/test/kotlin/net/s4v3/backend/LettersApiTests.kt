@@ -371,6 +371,28 @@ internal class LettersApiTests(
     }
 
     @Test
+    fun `pdf download gives a PDF with the safe headers and only for the owner`() {
+        val sub = newSub()
+        saveProfile(sub)
+        val app = newApplication(sub)
+        generate(sub, app).andExpect(status().isCreated)
+        edited(sub, app, "# Brief\n\nÜber uns – Grüße, ß.").andExpect(status().isCreated)
+
+        val response = mvc.perform(get("/api/applications/$app/letters/2/pdf").header("Authorization", bearer(sub)))
+            .andExpect(status().isOk)
+            .andExpect(header().string("Content-Type", "application/pdf"))
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.matchesPattern("attachment; filename=\"motivation-employer1-ag-backend-engineer-[a-z0-9]{8}-v2\\.pdf\"")))
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andReturn().response
+        val text = org.apache.pdfbox.Loader.loadPDF(response.contentAsByteArray).use { org.apache.pdfbox.text.PDFTextStripper().getText(it) }
+        assertTrue(text.contains("Über uns – Grüße, ß."))
+        mvc.perform(get("/api/applications/$app/letters/7/pdf").header("Authorization", bearer(sub))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications/$app/letters/2/pdf").header("Authorization", bearer(newSub()))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications/$app/letters/2/pdf")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `another user's ids and unknown ids answer 404 everywhere`() {
         val owner = newSub()
         saveProfile(owner)

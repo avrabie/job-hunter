@@ -9,6 +9,7 @@ import '../styles/applications.css'
 import {
   deleteLetter,
   downloadLetter,
+  downloadLetterPdf,
   generateLetter,
   listLetters,
   readLetter,
@@ -290,6 +291,13 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
     else setMessage(result.kind === 'failed' ? result.message : SIGN_IN_AGAIN)
   }
 
+  const onDownloadPdf = async () => {
+    if (!current) return
+    const result = await downloadLetterPdf(auth, applicationId, current.version)
+    if (result.kind === 'done') saveFile(result.blob, result.fileName)
+    else setMessage(result.kind === 'failed' ? result.message : SIGN_IN_AGAIN)
+  }
+
   const chosen =
     selection.experience.length +
     selection.projects.length +
@@ -480,6 +488,13 @@ export function LetterWorkspace({ applicationId }: { applicationId: string }) {
                   onClick={() => void onDownload()}
                 >
                   Download .md
+                </button>
+                <button
+                  type="button"
+                  className="button--secondary"
+                  onClick={() => void onDownloadPdf()}
+                >
+                  Download PDF
                 </button>
               </div>
             </>

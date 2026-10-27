@@ -43,6 +43,8 @@ dependencies {
     implementation("org.apache.pdfbox:pdfbox:3.0.8")
     // Renders the CV HTML to PDF (LGPL 2.1+, used unmodified; same PDFBox version as above).
     implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.100")
+    // Renders a motivation letter's Markdown to XHTML for the PDF (BSD-2-Clause).
+    implementation("org.commonmark:commonmark:0.24.0")
     // Turns a fetched job page into plain text (job import); 1.23.2 is the latest release on Maven Central.
     implementation("org.jsoup:jsoup:1.23.2")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
