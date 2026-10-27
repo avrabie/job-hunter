@@ -33,6 +33,7 @@ class MockIssuer {
         sub: String?,
         roles: List<String> = listOf("USER"),
         issuer: String = this.issuer,
+        signingKey: RSAKey = key,
         expiresAt: Instant = Instant.now().plusSeconds(900),
         extraClaims: Map<String, Any> = emptyMap(),
     ): String {
@@ -43,8 +44,8 @@ class MockIssuer {
             .expirationTime(Date.from(expiresAt))
             .claim("roles", roles)
         extraClaims.forEach { (name, value) -> claims.claim(name, value) }
-        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(key.keyID).build(), claims.build())
-        jwt.sign(RSASSASigner(key))
+        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(signingKey.keyID).build(), claims.build())
+        jwt.sign(RSASSASigner(signingKey))
         return jwt.serialize()
     }
 

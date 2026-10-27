@@ -1,5 +1,6 @@
 package net.s4v3.backend
 
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.web.servlet.MockMvc
@@ -28,6 +29,12 @@ class ResourceServerTests(@Autowired private val mvc: MockMvc) {
     @Test
     fun `an expired token is rejected with 401`() {
         api(issuer.token("user-1", expiresAt = Instant.now().minusSeconds(600))).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `a token signed with a key the issuer does not publish is rejected with 401`() {
+        val forgedKey = RSAKeyGenerator(2048).keyID("test-key").generate()
+        api(issuer.token("user-1", signingKey = forgedKey)).andExpect(status().isUnauthorized)
     }
 
     @Test
