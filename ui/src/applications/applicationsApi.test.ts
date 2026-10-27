@@ -3,6 +3,7 @@ import {
   listApplications,
   loadApplication,
   loadPostingStages,
+  loadRavProof,
   removeApplication,
   trackPosting,
   updateApplication,
@@ -104,6 +105,42 @@ describe('loadApplication', () => {
   it('uses a fixed message for a server error', async () => {
     answer(500, { secret: 'SECRET-BODY' })
     expect(await loadApplication(auth, ID)).toEqual({
+      kind: 'failed',
+      message: 'The request failed (status 500).',
+    })
+  })
+})
+
+describe('loadRavProof', () => {
+  const proof = {
+    companyAddress: null,
+    position: 'Backend Engineer',
+    contactPerson: null,
+    contactPhone: null,
+    contactEmail: null,
+    postalCode: null,
+    postingUrl: 'https://example.org/jobs/1',
+  }
+
+  it('maps 200 to the proof fields and keeps the nulls', async () => {
+    answer(200, proof)
+    expect(await loadRavProof(auth, ID)).toEqual({ kind: 'loaded', proof })
+    expect(lastCall()[0]).toBe(`/api/applications/${ID}/rav`)
+  })
+
+  it('maps 409 to not applied', async () => {
+    answer(409, { error: 'not_applied' })
+    expect(await loadRavProof(auth, ID)).toEqual({ kind: 'notApplied' })
+  })
+
+  it('maps 404 to not found', async () => {
+    answer(404, {})
+    expect(await loadRavProof(auth, ID)).toEqual({ kind: 'notFound' })
+  })
+
+  it('uses a fixed message for a server error and never shows the body', async () => {
+    answer(500, { secret: 'SECRET-BODY' })
+    expect(await loadRavProof(auth, ID)).toEqual({
       kind: 'failed',
       message: 'The request failed (status 500).',
     })

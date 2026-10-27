@@ -67,6 +67,24 @@ export type ActionResult = { kind: 'done' } | Unauthorized | Failed
 export type TrackResult =
   { kind: 'tracked'; application: ApplicationSummary } | Unauthorized | Failed
 
+/** The fields of the Swiss RAV job-search proof. A null field is one the application does not have. */
+export interface RavProof {
+  companyAddress: string | null
+  position: string
+  contactPerson: string | null
+  contactPhone: string | null
+  contactEmail: string | null
+  postalCode: string | null
+  postingUrl: string
+}
+
+export type RavResult =
+  | { kind: 'loaded'; proof: RavProof }
+  | { kind: 'notApplied' }
+  | { kind: 'notFound' }
+  | Unauthorized
+  | Failed
+
 export type StagesResult =
   { kind: 'loaded'; stages: PostingStage[] } | Unauthorized | Failed
 
@@ -143,6 +161,20 @@ export function loadApplication(
       kind: 'loaded',
       application: (await res.json()) as ApplicationDetail,
     }
+  })
+}
+
+/** The RAV proof fields of an application that is in stage APPLIED. */
+export function loadRavProof(
+  auth: TokenSource,
+  id: string,
+): Promise<RavResult> {
+  return guarded<RavResult>(async () => {
+    const res = await apiFetch(auth, `${PATH}/${encodeURIComponent(id)}/rav`)
+    if (res.status === 404) return { kind: 'notFound' }
+    if (res.status === 409) return { kind: 'notApplied' }
+    if (!res.ok) return failure(res)
+    return { kind: 'loaded', proof: (await res.json()) as RavProof }
   })
 }
 

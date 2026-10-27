@@ -65,6 +65,23 @@ data class JobData(val url: String, val title: String, val company: String, val 
 /** The user already has [ApplicationService.MAX_PER_USER] applications. */
 class ApplicationLimitException : RuntimeException("Application limit reached")
 
+/**
+ * The fields of the Swiss RAV job-search proof for one applied job. A null field is one the application does not have.
+ * [position] is the job title, [postingUrl] the original link of the posting.
+ */
+data class RavProof(
+    val companyAddress: String?,
+    val position: String,
+    val contactPerson: String?,
+    val contactPhone: String?,
+    val contactEmail: String?,
+    val postalCode: String?,
+    val postingUrl: String,
+)
+
+/** The application is not in stage APPLIED, so there is no proof to give. */
+class ApplicationNotAppliedException : RuntimeException("Application is not applied")
+
 /** A patch broke a rule; [code] is a fixed word, never input. */
 class InvalidApplicationPatchException(val code: String) : RuntimeException(code)
 
@@ -95,6 +112,12 @@ interface ApplicationService {
     fun byPosting(sub: String, postingIds: Collection<UUID>): Map<UUID, PostingTracking>
 
     fun frozenJob(sub: String, id: UUID): FrozenJob?
+
+    /**
+     * The RAV proof fields of the caller's application. Null when there is no such application. Throws
+     * [ApplicationNotAppliedException] unless the stage is APPLIED.
+     */
+    fun ravProof(sub: String, id: UUID): RavProof?
 
     companion object {
         const val MAX_PER_USER = 500

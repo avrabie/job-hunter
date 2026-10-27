@@ -19,6 +19,7 @@ import {
   type ApplicationStage,
 } from './applicationsApi.ts'
 import { LetterWorkspace } from './LetterWorkspace.tsx'
+import { RavProofCard } from './RavProofCard.tsx'
 
 const LIVE_NOTICE: Record<'CHANGED' | 'GONE', string> = {
   CHANGED:
@@ -145,6 +146,8 @@ function ApplicationView({
       </Card>
 
       <Editor key={a.id} application={a} onChanged={() => void refresh()} />
+
+      {a.stage === 'APPLIED' && <RavProofCard applicationId={a.id} />}
 
       <LetterWorkspace applicationId={a.id} />
     </div>

@@ -340,3 +340,21 @@ describe('application page', () => {
     ).toEqual([])
   })
 })
+
+describe('RAV proof card on the application page', () => {
+  it('is shown only once the application is applied', async () => {
+    fakeServer({ stage: 'INTERESTED' })
+    const { unmount } = mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(
+      screen.queryByRole('button', { name: 'Show RAV fields' }),
+    ).not.toBeInTheDocument()
+    unmount()
+
+    fakeServer({ stage: 'APPLIED', appliedOn: '2026-10-24' })
+    mount()
+    expect(
+      await screen.findByRole('button', { name: 'Show RAV fields' }),
+    ).toBeInTheDocument()
+  })
+})

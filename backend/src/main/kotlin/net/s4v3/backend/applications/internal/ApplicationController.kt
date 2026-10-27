@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import net.s4v3.backend.accounts.CurrentUser
 import net.s4v3.backend.applications.ApplicationLimitException
+import net.s4v3.backend.applications.ApplicationNotAppliedException
 import net.s4v3.backend.applications.ApplicationPatch
 import net.s4v3.backend.applications.ApplicationService
 import net.s4v3.backend.applications.ApplicationStage
@@ -138,6 +139,25 @@ internal class ApplicationController(
             codeError(HttpStatus.BAD_REQUEST, e.code)
         }
     }
+
+    @GetMapping("/api/applications/{id}/rav")
+    @Operation(
+        summary = "The fields for the Swiss RAV job-search proof",
+        description = "Only for an application in stage APPLIED. Answers the position (job title), the original posting link and the " +
+            "fields the application does not store (company address, contact person, phone, e-mail, postal code): those are JSON null.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "The proof fields"),
+            ApiResponse(responseCode = "401", description = "No valid access token"),
+            ApiResponse(responseCode = "404", description = "No such application of the caller's"),
+            ApiResponse(responseCode = "409", description = "The application is not in stage APPLIED (`not_applied`)"),
+        ],
+    )
+    fun rav(@PathVariable id: UUID): ResponseEntity<Any> =
+        try {
+            applications.ravProof(currentUser.id(), id)?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build()
+        } catch (_: ApplicationNotAppliedException) {
+            codeError(HttpStatus.CONFLICT, "not_applied")
+        }
 
     @DeleteMapping("/api/applications/{id}")
     @Operation(

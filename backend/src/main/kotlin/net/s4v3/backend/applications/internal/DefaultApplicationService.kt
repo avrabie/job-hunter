@@ -2,6 +2,7 @@ package net.s4v3.backend.applications.internal
 
 import net.s4v3.backend.applications.ApplicationDetail
 import net.s4v3.backend.applications.ApplicationLimitException
+import net.s4v3.backend.applications.ApplicationNotAppliedException
 import net.s4v3.backend.applications.ApplicationPatch
 import net.s4v3.backend.applications.ApplicationService
 import net.s4v3.backend.applications.ApplicationStage
@@ -11,6 +12,7 @@ import net.s4v3.backend.applications.InvalidApplicationPatchException
 import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.applications.LiveStatus
 import net.s4v3.backend.applications.PostingTracking
+import net.s4v3.backend.applications.RavProof
 import net.s4v3.backend.applications.TrackResult
 import net.s4v3.backend.postings.PostingLiveState
 import net.s4v3.backend.postings.PostingQuery
@@ -117,6 +119,25 @@ internal class DefaultApplicationService(
     @Transactional(readOnly = true)
     override fun frozenJob(sub: String, id: UUID): FrozenJob? =
         repository.find(sub, id)?.let { FrozenJob(it.title, it.company, it.description, it.jobLanguage) }
+
+    /**
+     * Only the title and the original link are stored for an application. The company address, the contact person, phone
+     * and e-mail and the postal code are not, so they are null: nothing is guessed from the description.
+     */
+    @Transactional(readOnly = true)
+    override fun ravProof(sub: String, id: UUID): RavProof? {
+        val row = repository.find(sub, id) ?: return null
+        if (row.stage != ApplicationStage.APPLIED) throw ApplicationNotAppliedException()
+        return RavProof(
+            companyAddress = null,
+            position = row.title,
+            contactPerson = null,
+            contactPhone = null,
+            contactEmail = null,
+            postalCode = null,
+            postingUrl = row.url,
+        )
+    }
 
     private fun status(row: ApplicationRow, live: Map<UUID, PostingLiveState>): LiveStatus {
         if (row.source == IMPORT) return LiveStatus.OPEN // nothing live to compare with

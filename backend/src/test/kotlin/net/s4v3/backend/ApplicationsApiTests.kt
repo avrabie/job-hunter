@@ -342,4 +342,48 @@ internal class ApplicationsApiTests(
 
         assertFailsWith<ApplicationLimitException> { applications.trackImported(sub, importedJob()) }
     }
+
+    @Test
+    fun `the RAV proof of an applied job gives the title and the original link and null for what is not stored`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+        patchApp(sub, id, """{"stage":"APPLIED"}""").andExpect(status().isOk)
+
+        mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(sub))).andExpect(status().isOk)
+            .andExpect(jsonPath("$.position").value(org.hamcrest.Matchers.startsWith("Backend Engineer")))
+            .andExpect(jsonPath("$.postingUrl").value(org.hamcrest.Matchers.startsWith("https://example.org/")))
+            .andExpect(jsonPath("$.companyAddress").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contactPerson").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contactPhone").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contactEmail").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.postalCode").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.description").doesNotExist())
+    }
+
+    @Test
+    fun `the RAV proof answers 409 before the job is applied, for every earlier stage`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+
+        for (stage in listOf("INTERESTED", "APPLYING", "REJECTED")) {
+            patchApp(sub, id, """{"stage":"$stage"}""").andExpect(status().isOk)
+            mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(sub)))
+                .andExpect(status().isConflict).andExpect(jsonPath("$.error").value("not_applied"))
+        }
+    }
+
+    @Test
+    fun `the RAV proof answers 404 for another user's or an unknown application and 401 without a token`() {
+        val owner = newSub()
+        val other = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(owner, posting).andExpect(status().isCreated))
+        patchApp(owner, id, """{"stage":"APPLIED"}""").andExpect(status().isOk)
+
+        mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(other))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications/${UUID.randomUUID()}/rav").header("Authorization", bearer(owner))).andExpect(status().isNotFound)
+        mvc.perform(get("/api/applications/$id/rav")).andExpect(status().isUnauthorized)
+    }
 }
