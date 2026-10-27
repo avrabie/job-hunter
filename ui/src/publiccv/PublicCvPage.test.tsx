@@ -342,7 +342,9 @@ describe('the public CV page', () => {
     const calls = stubApi()
     mount(fakeAuth({ status: 'signedOut' }))
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(calls).toHaveLength(0)
+    expect(
+      calls.filter((c) => c.url !== '/api/public/postings?size=6'),
+    ).toHaveLength(0)
   })
 
   it('shows a failed load with its fixed message and no form', async () => {

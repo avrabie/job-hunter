@@ -200,7 +200,9 @@ describe('Job Tracking page', () => {
     mount(fakeAuth({ status: 'signedOut' }))
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(
+      calls.filter((c) => c.url !== '/api/public/postings?size=6'),
+    ).toEqual([])
   })
 
   it('shows a fixed message and a working retry on a server error', async () => {

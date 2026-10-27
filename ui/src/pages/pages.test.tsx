@@ -38,7 +38,9 @@ describe('landing page', () => {
     )
     await userEvent.click(main.getByRole('button', { name: 'Sign in' }))
     expect(auth.signIn).toHaveBeenCalledTimes(1)
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(fetchSpy.mock.calls.map((c) => String(c[0]))).toEqual([
+      '/api/public/postings?size=6',
+    ])
   })
 
   it('has the minimal header with Sign in and Register and no main navigation', () => {

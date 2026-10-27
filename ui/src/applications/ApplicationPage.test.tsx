@@ -335,6 +335,8 @@ describe('application page', () => {
     mount(fakeAuth({ status: 'signedOut' }))
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(calls).toEqual([])
+    expect(
+      calls.filter((c) => c.url !== '/api/public/postings?size=6'),
+    ).toEqual([])
   })
 })

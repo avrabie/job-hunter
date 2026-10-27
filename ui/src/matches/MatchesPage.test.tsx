@@ -142,7 +142,7 @@ describe('the matches page', () => {
     mount(fakeAuth({ status: 'signedOut' }))
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(urls).toEqual([])
+    expect(urls.filter((u) => u !== '/api/public/postings?size=6')).toEqual([])
   })
 
   it('pages forward when the page is full', async () => {

@@ -148,7 +148,7 @@ describe('the list', () => {
     mount('/postings', fakeAuth({ status: 'signedOut' }))
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(urls).toEqual([])
+    expect(urls.filter((u) => u !== '/api/public/postings?size=6')).toEqual([])
   })
 
   it('shows a fixed message and a working retry on a server error', async () => {

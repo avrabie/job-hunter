@@ -51,6 +51,8 @@ internal class SecurityConfig {
                 it.requestMatchers(HttpMethod.GET, "/api/public/cv/**", "/api/cv/public/preview/*").permitAll()
                 // Link previews and crawlers send HEAD; the public CV path tree, nothing broader.
                 it.requestMatchers(HttpMethod.HEAD, "/api/public/cv/**").permitAll()
+                // The newest postings (metadata and source links only) are public; the per-client limit is in the controller.
+                it.requestMatchers(HttpMethod.GET, "/api/public/postings").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) } }

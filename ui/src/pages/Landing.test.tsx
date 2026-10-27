@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -17,6 +17,43 @@ function mount(auth: AuthApi, ui = <Landing returnTo="/matches" />) {
 }
 
 afterEach(() => vi.unstubAllGlobals())
+
+function posting(i: number, over: Record<string, unknown> = {}) {
+  return {
+    id: `p${i}`,
+    title: `Engineer ${i}`,
+    company: `Company ${i}`,
+    city: 'Zurich',
+    canton: 'ZH',
+    remoteMode: null,
+    salaryMin: null,
+    salaryMax: null,
+    language: 'en',
+    firstSeen: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    links: [{ label: 'Source', url: 'https://example.com/job' }],
+    ...over,
+  }
+}
+
+function stubPublic(items: unknown[], status = 200) {
+  const fetchSpy = vi.fn((..._args: unknown[]) =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          total: items.length,
+          page: 0,
+          size: 6,
+          postings: items,
+        }),
+        {
+          status,
+        },
+      ),
+    ),
+  )
+  vi.stubGlobal('fetch', fetchSpy)
+  return fetchSpy
+}
 
 describe('Landing', () => {
   it('has a hero with one h1, a one-sentence lead, Sign in and Register', async () => {
@@ -101,9 +138,8 @@ describe('Landing', () => {
     expect(auth.signIn).toHaveBeenCalledWith('/matches')
   })
 
-  it('is what a signed-out visitor sees at / and makes no fetch call', async () => {
-    const fetchSpy = vi.fn()
-    vi.stubGlobal('fetch', fetchSpy)
+  it('is what a signed-out visitor sees at / and makes no /api call but the public list', async () => {
+    const fetchSpy = stubPublic([])
     const auth = fakeAuth({ status: 'signedOut' })
     render(
       <AuthContext.Provider value={auth}>
@@ -124,6 +160,82 @@ describe('Landing', () => {
       main.getByRole('button', { name: 'Sign in to get started' }),
     )
     expect(auth.signIn).toHaveBeenCalledWith(undefined)
-    expect(fetchSpy).not.toHaveBeenCalled()
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    expect(fetchSpy.mock.calls.map((c) => String(c[0]))).toEqual([
+      '/api/public/postings?size=6',
+    ])
+  })
+})
+
+describe('Landing latest postings', () => {
+  it('lists 6 postings with company, city, age and a sign-in action, and sends no token', async () => {
+    const fetchSpy = stubPublic(
+      Array.from({ length: 6 }, (_, i) =>
+        posting(i, { description: 'SECRET TEXT' }),
+      ),
+    )
+    const auth = fakeAuth({ status: 'signedOut' })
+    mount(auth)
+    const section = within(
+      await screen.findByRole('region', { name: 'Latest postings' }),
+    )
+    expect(section.getAllByRole('listitem')).toHaveLength(6)
+    expect(
+      section.getByText('Company 2 · Zurich · 3 days ago'),
+    ).toBeInTheDocument()
+    expect(section.queryByText(/SECRET TEXT/)).not.toBeInTheDocument()
+    const buttons = section.getAllByRole('button', {
+      name: /Sign in to read more/,
+    })
+    expect(buttons).toHaveLength(6)
+    await userEvent.click(buttons[0])
+    expect(auth.signIn).toHaveBeenCalledWith('/matches')
+    const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit
+    expect(JSON.stringify(init.headers ?? {}).toLowerCase()).not.toContain(
+      'authorization',
+    )
+    expect(init.credentials).toBe('omit')
+    expect(auth.signIn).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [
+      'a failing request',
+      () => vi.fn((..._args: unknown[]) => Promise.reject(new TypeError('x'))),
+    ],
+    [
+      'a 429',
+      () =>
+        vi.fn((..._args: unknown[]) =>
+          Promise.resolve(new Response('', { status: 429 })),
+        ),
+    ],
+  ])('is absent without an error on %s', async (_n, make) => {
+    const fetchSpy = make()
+    vi.stubGlobal('fetch', fetchSpy)
+    mount(fakeAuth({ status: 'signedOut' }))
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByRole('region', { name: 'Latest postings' })).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('region', { name: 'How it works' })).toBeVisible()
+  })
+
+  it('is absent when the list is empty', async () => {
+    const fetchSpy = stubPublic([])
+    mount(fakeAuth({ status: 'signedOut' }))
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByRole('region', { name: 'Latest postings' })).toBeNull()
+  })
+
+  it('shows markup in a title as literal text', async () => {
+    stubPublic([posting(1, { title: '<b>x</b>' })])
+    mount(fakeAuth({ status: 'signedOut' }))
+    const section = await screen.findByRole('region', {
+      name: 'Latest postings',
+    })
+    expect(within(section).getByText('<b>x</b>')).toBeInTheDocument()
+    expect(section.querySelector('b')).toBeNull()
   })
 })

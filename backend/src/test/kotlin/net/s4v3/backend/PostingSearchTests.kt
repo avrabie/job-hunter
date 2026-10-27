@@ -6,6 +6,9 @@ import net.s4v3.backend.postings.PostingQuery
 import net.s4v3.backend.postings.PostingSearch
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.jdbc.core.JdbcTemplate
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -14,7 +17,17 @@ import kotlin.test.assertTrue
 class PostingSearchTests(
     @Autowired private val ingest: PostingIngest,
     @Autowired private val query: PostingQuery,
+    @Autowired private val jdbc: JdbcTemplate,
 ) {
+
+    private fun seen(id: UUID, at: Instant) {
+        jdbc.update("UPDATE posting SET first_seen = ? WHERE id = ?", Timestamp.from(at), id)
+    }
+
+    private fun language(id: UUID, code: String) {
+        jdbc.update("UPDATE posting SET language = ? WHERE id = ?", code, id)
+    }
+
 
     private val english = "We are looking for an experienced engineer to build and run reliable services with Kotlin and PostgreSQL. " +
         "You will work in a small team, review code, and improve our delivery pipeline every week."
@@ -104,5 +117,48 @@ class PostingSearchTests(
     @Test
     fun `a blank text does not filter and nothing matches an unknown word`() {
         assertEquals(emptyList(), ids(PostingSearch(text = "nomatch" + unique())))
+    }
+
+    @Test
+    fun `first-seen bounds include the lower and exclude the upper bound, and count matches`() {
+        val tag = unique()
+        val base = Instant.parse("2020-03-10T12:00:00Z")
+        val before = add("Dev $tag a").also { seen(it, base.minusSeconds(1)) }
+        val atFrom = add("Dev $tag b").also { seen(it, base) }
+        val inside = add("Dev $tag c").also { seen(it, base.plusSeconds(3600)) }
+        val atBefore = add("Dev $tag d").also { seen(it, base.plusSeconds(7200)) }
+        val window = PostingSearch(text = tag, firstSeenFrom = base, firstSeenBefore = base.plusSeconds(7200))
+
+        assertEquals(listOf(inside, atFrom), ids(window))
+        assertEquals(2, query.count(window))
+        assertEquals(4, query.count(PostingSearch(text = tag)))
+        assertEquals(listOf(atBefore, inside, atFrom), ids(PostingSearch(text = tag, firstSeenFrom = base)))
+        assertEquals(listOf(before), ids(PostingSearch(text = tag, firstSeenBefore = base)))
+        assertEquals(4, query.count(PostingSearch(text = tag, size = 1, page = 3)))
+    }
+
+    @Test
+    fun `postings with one first-seen time are ordered by id so pages neither skip nor repeat`() {
+        val tag = unique()
+        val at = Instant.parse("2020-04-01T08:00:00Z")
+        val all = (1..5).map { add("Dev $tag $it").also { id -> seen(id, at) } }
+
+        val paged = (0..2).flatMap { ids(PostingSearch(text = tag, size = 2, page = it)) }
+
+        // Postgres compares uuids bytewise (unsigned), which is the order of their hex strings, not of UUID.compareTo.
+        assertEquals(all.map { it.toString() }.sorted(), paged.map { it.toString() })
+    }
+
+    @Test
+    fun `canton and language filters apply to the list and the count`() {
+        val tag = unique()
+        val zhDe = add("Dev $tag", canton = "ZH").also { language(it, "de") }
+        add("Dev $tag", company = "O " + unique(), canton = "ZH").also { language(it, "en") }
+        add("Dev $tag", company = "P " + unique(), canton = "GE").also { language(it, "de") }
+        val search = PostingSearch(text = tag, canton = "ZH", language = "de")
+
+        assertEquals(listOf(zhDe), ids(search))
+        assertEquals(1, query.count(search))
+        assertEquals(2, query.count(PostingSearch(text = tag, language = "de")))
     }
 }

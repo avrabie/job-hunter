@@ -8,7 +8,7 @@ through the gateway. Longer text: `docs/architecture-auth-gateway-ui.md`. Setup 
 - `main.tsx`, `App.tsx`: providers (auth, router) and the route table. Signed-in and signed-out pages share one `Layout` route.
 - `auth/`: sign-in with oidc-client-ts (code + PKCE, tokens in memory), `useAuth()`, `/callback`, return-to list.
 - `api/`: `apiFetch` (bearer token, one renew and retry on 401, only `/api/...` paths) and fixed error texts.
-- `pages/`: `Home` (signed-in overview with counts per stage), `Landing` (signed out; its copy is in `landingContent.ts`, a data file).
+- `pages/`: `Home` (signed-in overview with counts per stage), `Landing` (signed out; its copy is in `landingContent.ts`, a data file; `LatestPostings` is its optional section of up to 6 public postings, loaded without a token by `postings/publicPostingsApi.ts`, absent on failure, 429 or empty; the only `/api` call the landing makes).
 - `layout/`: `Layout` (skip link, header, `main#content`, footer) wraps every route. `NavBar` is the signed-in top bar
   (`BrandMark` too); the signed-out header is a small `PublicHeader` inside `Layout`. `Footer` holds the service status.
 - `ui/`: shared components, see "Shared components" below.

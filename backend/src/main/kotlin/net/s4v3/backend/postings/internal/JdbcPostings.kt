@@ -190,6 +190,25 @@ internal class JdbcPostings(
     @Transactional(readOnly = true)
     override fun search(search: PostingSearch): List<Posting> {
         val limit = search.size.coerceIn(1, PostingQuery.MAX_PAGE_SIZE)
+        val (clause, params) = filter(search)
+        var statement = jdbc.sql("$SELECT_POSTING$clause ORDER BY p.first_seen DESC, p.id LIMIT :limit OFFSET :offset")
+        params.forEach { (name, value) -> statement = statement.param(name, value) }
+        return withLinks(
+            statement.param("limit", limit).param("offset", search.page.coerceAtLeast(0).toLong() * limit)
+                .query { rs, _ -> map(rs) }.list(),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun count(search: PostingSearch): Long {
+        val (clause, params) = filter(search)
+        var statement = jdbc.sql("SELECT count(*) FROM posting p$clause")
+        params.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(Long::class.java).single()
+    }
+
+    /** The WHERE clause (with its leading space, or empty) and parameters of [search]. */
+    private fun filter(search: PostingSearch): Pair<String, Map<String, Any>> {
         val where = mutableListOf<String>()
         val params = mutableMapOf<String, Any>()
         search.text?.trim()?.takeIf { it.isNotEmpty() }?.let {
@@ -200,17 +219,23 @@ internal class JdbcPostings(
             where += "p.canton = :canton"
             params["canton"] = it
         }
+        search.language?.takeIf { it.isNotBlank() }?.let {
+            where += "p.language = :language"
+            params["language"] = it
+        }
         search.sourceId?.takeIf { it.isNotBlank() }?.let {
             where += "EXISTS (SELECT 1 FROM posting_source f WHERE f.posting_id = p.id AND f.source_id = :source)"
             params["source"] = it
         }
-        val clause = if (where.isEmpty()) "" else " WHERE " + where.joinToString(" AND ")
-        var statement = jdbc.sql("$SELECT_POSTING$clause ORDER BY p.first_seen DESC, p.id LIMIT :limit OFFSET :offset")
-        params.forEach { (name, value) -> statement = statement.param(name, value) }
-        return withLinks(
-            statement.param("limit", limit).param("offset", search.page.coerceAtLeast(0).toLong() * limit)
-                .query { rs, _ -> map(rs) }.list(),
-        )
+        search.firstSeenFrom?.let {
+            where += "p.first_seen >= :from"
+            params["from"] = ts(it)
+        }
+        search.firstSeenBefore?.let {
+            where += "p.first_seen < :before"
+            params["before"] = ts(it)
+        }
+        return (if (where.isEmpty()) "" else " WHERE " + where.joinToString(" AND ")) to params
     }
 
     @Transactional(readOnly = true)

@@ -33,6 +33,8 @@ function stubApi(
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/public/postings?size=6')
+        return new Response('{"items":[]}', { status: 200 })
       if (url === '/api/files') return new Response('[]', { status: 200 })
       if (url.startsWith('/api/files')) return new Response('', { status: 404 })
       // The public CV state of the notice: not recorded, the tests of the page look at the profile calls only.

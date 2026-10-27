@@ -106,7 +106,9 @@ describe('the schedule', () => {
     const calls = stubFetch(() => json(200, enabled))
     mountAdmin(fakeAuth({ status: 'signedOut' }))
     expect(screen.queryByText('Crawl schedule')).toBeNull()
-    expect(calls).toHaveLength(0)
+    expect(
+      calls.filter((c) => c.url !== '/api/public/postings?size=6'),
+    ).toHaveLength(0)
   })
 })
 

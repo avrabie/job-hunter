@@ -14,6 +14,9 @@ interface PostingQuery {
     /** Postings matching [search], newest first-seen first. Wildcard characters in the text are literal. */
     fun search(search: PostingSearch): List<Posting>
 
+    /** How many postings match [search] (its page and size are ignored). */
+    fun count(search: PostingSearch): Long
+
     /** The current `lastSeen` and content hash of each of [ids] that still exists (one query, no descriptions). */
     fun liveState(ids: Collection<UUID>): Map<UUID, PostingLiveState>
 
@@ -24,12 +27,17 @@ interface PostingQuery {
 
 /**
  * What to look for: [text] is a case-insensitive part of the title or company, [canton] and [sourceId] must match
- * exactly; a null field does not filter. [size] is capped at [PostingQuery.MAX_PAGE_SIZE].
+ * exactly; a null field does not filter. [language] is a detected language code (`en`, `de`, ...). [firstSeenFrom] is
+ * inclusive and [firstSeenBefore] exclusive. [size] is capped at [PostingQuery.MAX_PAGE_SIZE]. Order is first seen, newest first,
+ * then id, so paging neither skips nor repeats a posting.
  */
 data class PostingSearch(
     val text: String? = null,
     val canton: String? = null,
     val sourceId: String? = null,
+    val language: String? = null,
+    val firstSeenFrom: Instant? = null,
+    val firstSeenBefore: Instant? = null,
     val page: Int = 0,
     val size: Int = 20,
 )

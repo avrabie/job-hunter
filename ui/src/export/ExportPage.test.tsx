@@ -171,7 +171,9 @@ describe('the export page', () => {
     expect(
       await screen.findByRole('button', { name: 'Sign in' }),
     ).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls.map((c) => String(c[0]))).toEqual([
+      '/api/public/postings?size=6',
+    ])
   })
 
   it('sends the sections in the order chosen, without the unticked ones', async () => {

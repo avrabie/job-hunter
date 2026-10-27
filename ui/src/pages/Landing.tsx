@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
+import { LatestPostings } from './LatestPostings.tsx'
 import {
   CAPABILITIES,
   HERO,
@@ -91,9 +92,9 @@ function Section({
 }
 
 /**
- * What a signed-out visitor sees; `returnTo` is the page to open after signing in. Static content only: it shows
- * no user data and makes no call to the API, so it renders the same for everyone and works while the backend is
- * down.
+ * What a signed-out visitor sees; `returnTo` is the page to open after signing in. It shows no user data and makes
+ * one call to the API, the public latest postings without a token; if that call fails the section is absent and
+ * the page works while the backend is down.
  */
 export function Landing({ returnTo }: { returnTo?: string }) {
   const { signIn } = useAuth()
@@ -112,6 +113,8 @@ export function Landing({ returnTo }: { returnTo?: string }) {
           </Link>
         </div>
       </section>
+
+      <LatestPostings onSignIn={() => void signIn(returnTo)} />
 
       <Section title="What you can do">
         <ul className="landing__capabilities">
