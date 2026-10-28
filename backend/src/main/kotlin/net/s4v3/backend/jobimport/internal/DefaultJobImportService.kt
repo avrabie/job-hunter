@@ -2,8 +2,10 @@ package net.s4v3.backend.jobimport.internal
 
 import net.s4v3.backend.applications.ApplicationLimitException
 import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.ContactDetails
 import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.jobimport.ImportConfirmation
+import net.s4v3.backend.jobimport.ImportContact
 import net.s4v3.backend.jobimport.ImportEdits
 import net.s4v3.backend.jobimport.ImportError
 import net.s4v3.backend.jobimport.ImportPreview
@@ -94,9 +96,11 @@ internal class DefaultJobImportService(
             !Grounding.isGrounded(job.company, pageText)
         ) throw JobImportException(ImportError.EXTRACTION_FAILED)
 
-        val draft = Draft(UUID.randomUUID(), url.canonical, job.title, job.company, job.location, job.description, job.language.name)
+        val draft = Draft(UUID.randomUUID(), url.canonical, job.title, job.company, job.location, job.description, job.language.name,
+            JobContactGrounding.ground(job, pageText),
+        )
         drafts.insert(sub, draft, Instant.now())
-        return ImportPreview(draft.id, draft.title, draft.company, draft.location, draft.description, draft.language)
+        return ImportPreview(draft.id, draft.title, draft.company, draft.location, draft.description, draft.language, draft.contact)
     }
 
     override fun confirm(sub: String, draftId: UUID, edits: ImportEdits): ImportConfirmation {
@@ -118,11 +122,15 @@ internal class DefaultJobImportService(
         val company = field(edits.company, draft.company, MAX_COMPANY, required = true)!!
         field(edits.location, draft.location, MAX_LOCATION, required = false) // checked; a location is not kept on an application
         val description = field(edits.description, draft.description, MAX_DESCRIPTION, required = true)!!
+        val contact = contact(edits.contact, draft.contact)
         confirmLimiter.tryAcquire(sub, now)?.let { throw JobImportException(ImportError.RATE_LIMITED, it) }
 
         val tracked = try {
             applications.trackImported(
-                sub, JobData(draft.url, title, company, description, draft.language.lowercase()),
+                sub, JobData(
+                    draft.url, title, company, description, draft.language.lowercase(),
+                    ContactDetails(contact.street, contact.postalCode, contact.city, contact.person, contact.phone, contact.email),
+                ),
             )
         } catch (_: ApplicationLimitException) {
             throw JobImportException(ImportError.APPLICATION_LIMIT)
@@ -139,6 +147,21 @@ internal class DefaultJobImportService(
         if (value.isEmpty()) return if (required) throw JobImportException(ImportError.INVALID_EDIT) else null
         if (value.length > max || HTML.containsMatchIn(value)) throw JobImportException(ImportError.INVALID_EDIT)
         return value
+    }
+
+    /** The contact after the edits: a null edit keeps the draft's value, a blank one clears it. Same limits as the application's. */
+    private fun contact(edit: ImportContact?, current: ImportContact): ImportContact {
+        if (edit == null) return current
+        val email = field(edit.email, current.email, MAX_EMAIL, required = false)
+        if (email != null && email != current.email && !EMAIL.matches(email)) throw JobImportException(ImportError.INVALID_EDIT)
+        return ImportContact(
+            street = field(edit.street, current.street, MAX_LOCATION, required = false),
+            postalCode = field(edit.postalCode, current.postalCode, MAX_POSTAL_CODE, required = false),
+            city = field(edit.city, current.city, MAX_LOCATION, required = false),
+            person = field(edit.person, current.person, MAX_LOCATION, required = false),
+            phone = field(edit.phone, current.phone, MAX_PHONE, required = false),
+            email = email,
+        )
     }
 
     private fun FetchError.toImportError() = when (this) {
@@ -158,6 +181,10 @@ internal class DefaultJobImportService(
         const val MAX_COMPANY = 200
         const val MAX_LOCATION = 200
         const val MAX_DESCRIPTION = 20_000
+        const val MAX_POSTAL_CODE = 10
+        const val MAX_PHONE = 40
+        const val MAX_EMAIL = 254
+        val EMAIL = Regex("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")
         val HTML = Regex("<\\s*[a-zA-Z/!]")
     }
 }

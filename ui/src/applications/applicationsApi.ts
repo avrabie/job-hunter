@@ -26,6 +26,16 @@ export interface ApplicationSummary {
   liveStatus: LiveStatus
 }
 
+/** The hiring company's address and the application contact. A null field is unknown. */
+export interface ContactDetails {
+  street: string | null
+  postalCode: string | null
+  city: string | null
+  person: string | null
+  phone: string | null
+  email: string | null
+}
+
 /** The frozen copy of the posting as the user saw it, plus notes. */
 export interface ApplicationDetail extends ApplicationSummary {
   url: string
@@ -34,13 +44,15 @@ export interface ApplicationDetail extends ApplicationSummary {
   postingLastSeen: string | null
   notes: string
   letterCount: number
+  contact: ContactDetails
 }
 
-/** The fields the user can change; `appliedOn: null` clears the date. */
+/** The fields the user can change; `appliedOn: null` clears the date. In `contact` an omitted field stays and a blank one clears. */
 export interface ApplicationPatch {
   stage?: ApplicationStage
   notes?: string
   appliedOn?: string | null
+  contact?: Partial<Record<keyof ContactDetails, string>>
 }
 
 /** The application that a posting already has for this user. */
@@ -94,6 +106,8 @@ const PATH = '/api/applications'
 const CODE_MESSAGES: Record<string, string> = {
   application_limit:
     'You can keep at most 500 applications. Remove one to track another.',
+  contact_invalid:
+    'Check the company and contact details: the email must look like an address and no value may be too long or contain markup.',
 }
 
 const NOT_FOUND = 'That application no longer exists.'

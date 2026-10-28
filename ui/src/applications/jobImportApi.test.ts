@@ -14,6 +14,14 @@ const draft: JobDraft = {
   location: 'Zurich',
   description: 'Invented job text',
   language: 'en',
+  contact: {
+    street: null,
+    postalCode: null,
+    city: null,
+    person: null,
+    phone: null,
+    email: null,
+  },
 }
 
 const auth = {
@@ -122,6 +130,14 @@ describe('confirmJobImport', () => {
     company: 'Employer1 AG',
     location: 'Zurich',
     description: 'Invented job text',
+    contact: {
+      street: 'Bahnhofstrasse 1',
+      postalCode: '8001',
+      city: 'Zürich',
+      person: '',
+      phone: '',
+      email: '',
+    },
   }
 
   it('posts the draft id and the edits and returns the import', async () => {
@@ -155,7 +171,7 @@ describe('confirmJobImport', () => {
   it.each([
     [
       'invalid_edit',
-      'Check the title, company and description: they must not be empty, too long or contain markup.',
+      'Check the title, company, description and contact details: the first three must not be empty, no value may be too long or contain markup, and the email must look like an address.',
     ],
     ['application_limit', 'You have reached the limit of tracked jobs.'],
   ])('maps %s to its fixed message', async (code, message) => {

@@ -33,6 +33,14 @@ const detail: ApplicationDetail = {
   postingLastSeen: '2026-10-23T10:00:00Z',
   notes: 'Call on Monday',
   letterCount: 0,
+  contact: {
+    street: 'Bahnhofstrasse 1',
+    postalCode: '8001',
+    city: 'Zürich',
+    person: null,
+    phone: null,
+    email: null,
+  },
 }
 
 const auth = {
@@ -204,6 +212,27 @@ describe('updateApplication', () => {
     expect(JSON.parse(lastCall()[1].body as string)).toEqual({
       stage: 'APPLIED',
       appliedOn: null,
+    })
+  })
+
+  it('sends the contact details, a blank value clears one', async () => {
+    answer(200, detail)
+    await updateApplication(auth, ID, {
+      contact: { postalCode: '8001', phone: '' },
+    })
+    expect(JSON.parse(lastCall()[1].body as string)).toEqual({
+      contact: { postalCode: '8001', phone: '' },
+    })
+  })
+
+  it('maps contact_invalid to its fixed message', async () => {
+    answer(400, { error: 'contact_invalid', secret: 'SECRET-BODY' })
+    expect(
+      await updateApplication(auth, ID, { contact: { email: 'anna' } }),
+    ).toEqual({
+      kind: 'failed',
+      message:
+        'Check the company and contact details: the email must look like an address and no value may be too long or contain markup.',
     })
   })
 

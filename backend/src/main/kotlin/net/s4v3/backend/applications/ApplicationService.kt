@@ -10,6 +10,19 @@ enum class ApplicationStage { INTERESTED, APPLYING, APPLIED, REJECTED }
 /** What the shared posting looks like now compared with the frozen copy. `GONE`: not seen for 14 days, or no longer exists. */
 enum class LiveStatus { OPEN, CHANGED, GONE }
 
+/**
+ * The hiring company's address and the application contact, as the ad states them or the user typed them. A null field is
+ * unknown. Personal data of a third party (the contact person): never logged, shown only to the owner of the application.
+ */
+data class ContactDetails(
+    val street: String? = null,
+    val postalCode: String? = null,
+    val city: String? = null,
+    val person: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+)
+
 /** One line of the list: no description and no notes. */
 data class ApplicationSummary(
     val id: UUID,
@@ -39,6 +52,7 @@ data class ApplicationDetail(
     val postingLastSeen: Instant?,
     val notes: String,
     val letterCount: Int,
+    val contact: ContactDetails = ContactDetails(),
     /** True when the live posting's description differs from the frozen copy. */
     val liveChanged: Boolean,
 )
@@ -49,18 +63,25 @@ data class FrozenJob(val title: String, val company: String, val description: St
 /** The stage of the caller's application for one posting, for the postings list. */
 data class PostingTracking(val applicationId: UUID, val stage: ApplicationStage)
 
-/** A change to an application. A null field is left as it is. */
+/**
+ * A change to an application. A null field is left as it is. In [contact] too a null field is left as it is and a blank one
+ * clears the detail.
+ */
 data class ApplicationPatch(
     val stage: ApplicationStage? = null,
     val notes: String? = null,
     val appliedOn: LocalDate? = null,
+    val contact: ContactDetails? = null,
 )
 
 /** The result of tracking a posting: [created] is false when the user already tracked it. */
 data class TrackResult(val application: ApplicationDetail, val created: Boolean)
 
 /** A job that has no posting: what the user imported, [url] already in canonical form. [language] is `en` or `de`. */
-data class JobData(val url: String, val title: String, val company: String, val description: String, val language: String)
+data class JobData(
+    val url: String, val title: String, val company: String, val description: String, val language: String,
+    val contact: ContactDetails = ContactDetails(),
+)
 
 /** The user already has [ApplicationService.MAX_PER_USER] applications. */
 class ApplicationLimitException : RuntimeException("Application limit reached")
@@ -82,7 +103,7 @@ data class RavProof(
 /** The application is not in stage APPLIED, so there is no proof to give. */
 class ApplicationNotAppliedException : RuntimeException("Application is not applied")
 
-/** A patch broke a rule; [code] is a fixed word, never input. */
+/** A patch broke a rule; [code] is a fixed word, never input (`notes_invalid`, `contact_invalid`). */
 class InvalidApplicationPatchException(val code: String) : RuntimeException(code)
 
 /** The caller's tracked jobs. Every method is scoped by [sub], the token's `sub`; another user's id is the same as an unknown id. */
@@ -123,5 +144,9 @@ interface ApplicationService {
         const val MAX_PER_USER = 500
         const val MAX_LOOKUP = 100
         const val MAX_NOTES = 5000
+        const val MAX_TEXT = 200
+        const val MAX_POSTAL_CODE = 10
+        const val MAX_PHONE = 40
+        const val MAX_EMAIL = 254
     }
 }

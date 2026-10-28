@@ -1,6 +1,7 @@
 package net.s4v3.backend.applications.internal
 
 import net.s4v3.backend.applications.ApplicationStage
+import net.s4v3.backend.applications.ContactDetails
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
@@ -27,6 +28,7 @@ internal data class ApplicationRow(
     val stageChangedAt: Instant,
     /** `POSTING` (tracked from a shared posting) or `IMPORT` (imported by the user, no posting). */
     val source: String = "POSTING",
+    val contact: ContactDetails = ContactDetails(),
 )
 
 /** `application`. Every statement is scoped by the owner's `sub`. */
@@ -65,9 +67,11 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         jdbc.sql(
             """
             INSERT INTO application (id, owner_sub, posting_id, stage, title, company, url, description, job_language,
-                captured_at, posting_last_seen, content_hash, notes, applied_on, stage_changed_at, created_at, updated_at, source)
+                captured_at, posting_last_seen, content_hash, notes, applied_on, stage_changed_at, created_at, updated_at, source,
+                company_street, company_postal_code, company_city, contact_person, contact_phone, contact_email)
             VALUES (:id, :sub, :posting, :stage, :title, :company, :url, :description, :language,
-                :captured, :lastSeen, :hash, :notes, :appliedOn, :changed, :now, :now, :source)
+                :captured, :lastSeen, :hash, :notes, :appliedOn, :changed, :now, :now, :source,
+                :street, :postalCode, :city, :person, :phone, :email)
             """.trimIndent(),
         )
             .param("id", row.id).param("sub", sub).param("posting", row.postingId).param("stage", row.stage.name)
@@ -77,6 +81,7 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
             .param("hash", row.contentHash).param("notes", row.notes)
             .param("appliedOn", row.appliedOn?.let { java.sql.Date.valueOf(it) }, java.sql.Types.DATE)
             .param("changed", ts(row.stageChangedAt)).param("now", ts(now)).param("source", row.source)
+            .contactParams(row.contact)
             .update()
     }
 
@@ -85,13 +90,15 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         jdbc.sql(
             """
             UPDATE application SET stage = :stage, notes = :notes, applied_on = :appliedOn,
-                stage_changed_at = :changed, updated_at = :now
+                stage_changed_at = :changed, updated_at = :now, company_street = :street, company_postal_code = :postalCode,
+                company_city = :city, contact_person = :person, contact_phone = :phone, contact_email = :email
             WHERE owner_sub = :sub AND id = :id
             """.trimIndent(),
         )
             .param("stage", row.stage.name).param("notes", row.notes)
             .param("appliedOn", row.appliedOn?.let { java.sql.Date.valueOf(it) }, java.sql.Types.DATE)
             .param("changed", ts(row.stageChangedAt)).param("now", ts(now)).param("sub", sub).param("id", row.id)
+            .contactParams(row.contact)
             .update() == 1
 
     fun delete(sub: String, id: UUID): Boolean =
@@ -111,6 +118,10 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
             }.list()
     }
 
+    private fun JdbcClient.StatementSpec.contactParams(c: ContactDetails) =
+        param("street", c.street).param("postalCode", c.postalCode).param("city", c.city)
+            .param("person", c.person).param("phone", c.phone).param("email", c.email)
+
     private fun ts(instant: Instant) = Timestamp.from(instant)
 
     private fun row(rs: ResultSet) = ApplicationRow(
@@ -129,12 +140,18 @@ internal class ApplicationRepository(private val jdbc: JdbcClient) {
         appliedOn = rs.getDate("applied_on")?.toLocalDate(),
         stageChangedAt = rs.getTimestamp("stage_changed_at").toInstant(),
         source = rs.getString("source"),
+        contact = ContactDetails(
+            street = rs.getString("company_street"), postalCode = rs.getString("company_postal_code"),
+            city = rs.getString("company_city"), person = rs.getString("contact_person"),
+            phone = rs.getString("contact_phone"), email = rs.getString("contact_email"),
+        ),
     )
 
     private companion object {
         const val SELECT = """
             SELECT id, posting_id, stage, title, company, url, description, job_language, captured_at, posting_last_seen,
-                   content_hash, notes, applied_on, stage_changed_at, source
+                   content_hash, notes, applied_on, stage_changed_at, source,
+                   company_street, company_postal_code, company_city, contact_person, contact_phone, contact_email
             FROM application
         """
     }

@@ -17,7 +17,9 @@ Rules, all of them binding
 2. Copy, never invent. "title" and "company" are the job title and the hiring company as written on the page. "location" is the place as written, or null. If title or company are not on the page, "found" is false.
 3. "description" is the text of the advertisement as plain text, copied faithfully from the page: the tasks, requirements and offer. Keep the original wording and paragraph breaks. Do not summarise, shorten, reorder or add anything. No HTML, no Markdown, no navigation, cookie notices or footer text.
 4. "language" is "EN" if the advertisement is written in English and "DE" if it is written in German.
-5. Answer with one JSON object and nothing else: no code fence, no remarks. Keys: "found" (boolean), "title", "company", "location" (string or null), "description", "language" ("EN" or "DE").
+5. The hiring company's address and the application contact are optional: "street" (street and house number), "postalCode", "city", "contactPerson", "contactPhone" and "contactEmail". Each is a string copied exactly as written on the page, or null. Use null whenever the page does not state it; never infer, complete, correct, guess or look up a value.
+6. The contact is the person the advertisement names for applications or questions about this job, with that person's own phone and e-mail. Never use generic details: site footers, cookie notices, support or switchboard numbers, general info@ addresses of a job portal, or the address of a recruitment agency that is not the hiring company's stated contact. If the page names no such contact, leave the three contact fields null.
+7. Answer with one JSON object and nothing else: no code fence, no remarks, no explanation in words. Do this also when you decline, are unsure or the page looks closed or odd: then use "found": false and empty fields. Keys: "found" (boolean), "title", "company", "location" (string or null), "description", "language" ("EN" or "DE"), "street", "postalCode", "city", "contactPerson", "contactPhone", "contactEmail" (each a string or null).
 """.trim()
 
     fun user(pageText: String): String = buildString {

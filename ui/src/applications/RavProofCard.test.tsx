@@ -8,14 +8,14 @@ import { RavProofCard } from './RavProofCard.tsx'
 const ID = '0b6f2c1e-7d3a-4e8b-9f1a-2c3d4e5f6a7b'
 const URL_PATH = `/api/applications/${ID}/rav`
 
-// Only the proof fields the backend has: the position and the original link. The rest is null.
+// The stored details: an address and a contact person, no phone and no email.
 const proof = {
-  companyAddress: null,
+  companyAddress: 'Bahnhofstrasse 1, 8001 Zürich',
   position: 'Backend Engineer',
-  contactPerson: null,
+  contactPerson: 'Anna Muster',
   contactPhone: null,
   contactEmail: null,
-  postalCode: null,
+  postalCode: '8001',
   postingUrl: 'https://example.org/jobs/1',
 }
 
@@ -68,6 +68,28 @@ describe('RAV proof card', () => {
     expect(calls).toEqual([URL_PATH])
   })
 
+  it('shows the stored values with a copy action and points to the section for the missing ones', async () => {
+    stubRav(() => json(200, proof))
+    const user = userEvent.setup()
+    mount()
+
+    await user.click(screen.getByRole('button', { name: 'Show RAV fields' }))
+
+    expect(
+      await screen.findByText('Bahnhofstrasse 1, 8001 Zürich'),
+    ).toBeVisible()
+    expect(screen.getByText('Anna Muster')).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Copy Contact person' }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole('button', { name: 'Copy Contact phone' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('link', { name: 'Company & contact' }),
+    ).toHaveAttribute('href', '#company-contact')
+  })
+
   it('copies a value to the clipboard and says which field was copied', async () => {
     stubRav(() => json(200, proof))
     const user = userEvent.setup()
@@ -97,7 +119,7 @@ describe('RAV proof card', () => {
       screen.getByRole('button', { name: 'Copy Contact email' }),
     ).toBeDisabled()
     expect(
-      screen.getByRole('button', { name: 'Copy Postal code (Postleitzahl)' }),
+      screen.getByRole('button', { name: 'Copy Contact phone' }),
     ).toBeDisabled()
     expect(
       screen.getByRole('button', { name: 'Copy Original posting URL' }),

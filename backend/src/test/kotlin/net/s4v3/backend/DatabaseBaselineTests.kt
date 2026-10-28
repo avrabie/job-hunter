@@ -34,7 +34,15 @@ class DatabaseBaselineTests(
         assertTrue("application" in tables && "motivation_letter" in tables, tables.toString())
         assertTrue("job_import_draft" in tables && "posting_import" !in tables, tables.toString())
         assertTrue("letter_skill_analysis" in tables, tables.toString())
-        assertEquals(19, count("select count(*) from databasechangelog"))
+        for (table in listOf("application", "job_import_draft"))
+            assertEquals(
+                6,
+                count(
+                    "select count(*) from information_schema.columns where table_name = '$table' and is_nullable = 'YES' and column_name in " +
+                        "('company_street', 'company_postal_code', 'company_city', 'contact_person', 'contact_phone', 'contact_email')",
+                ),
+            )
+        assertEquals(20, count("select count(*) from databasechangelog"))
     }
 
     @Test

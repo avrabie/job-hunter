@@ -6,6 +6,11 @@ import { Card } from '../ui/Card.tsx'
 import { FormField } from '../ui/FormField.tsx'
 import '../styles/applications.css'
 import {
+  CompanyContactFields,
+  contactInput,
+  type ContactKey,
+} from './CompanyContactFields.tsx'
+import {
   confirmJobImport,
   previewJobImport,
   type ImportErrorCode,
@@ -20,6 +25,7 @@ const PASTE_CODES: readonly ImportErrorCode[] = [
   'too_large',
   'blocked_address',
   'unreachable',
+  'extraction_failed',
 ]
 
 /**
@@ -117,12 +123,18 @@ function ReviewForm({
     company: draft.company,
     location: draft.location,
     description: draft.description,
+    contact: contactInput(draft.contact),
   })
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  const change = (field: keyof JobEdits, value: string) =>
+  const change = (field: Exclude<keyof JobEdits, 'contact'>, value: string) =>
     setEdits((current) => ({ ...current, [field]: value }))
+  const changeContact = (key: ContactKey, value: string) =>
+    setEdits((current) => ({
+      ...current,
+      contact: { ...current.contact, [key]: value },
+    }))
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -191,6 +203,12 @@ function ReviewForm({
             />
           )}
         </FormField>
+        <h3 className="card__title">Company &amp; contact</h3>
+        <p className="form-field__hint">
+          These values come from the ad and may be wrong or incomplete. Check
+          them before saving; leave a field empty if the ad does not say.
+        </p>
+        <CompanyContactFields value={edits.contact} onChange={changeContact} />
         <div className="application-actions">
           <button type="submit" disabled={busy || !complete}>
             Save and track

@@ -3,6 +3,19 @@ package net.s4v3.backend.jobimport
 import java.time.Duration
 import java.util.UUID
 
+/**
+ * The hiring company's address and the application contact, as the ad states them. A null field is unknown. Personal data of a
+ * third party (the contact person): never logged. [ImportEdits] uses the same type, where a blank value clears a field.
+ */
+data class ImportContact(
+    val street: String? = null,
+    val postalCode: String? = null,
+    val city: String? = null,
+    val person: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+)
+
 /** The body of a preview. With [text] (the page's text, pasted by the user) nothing is fetched. */
 data class ImportRequest(val url: String?, val text: String? = null)
 
@@ -14,14 +27,19 @@ data class ImportPreview(
     val location: String?,
     val description: String,
     val language: String,
+    val contact: ImportContact = ImportContact(),
 )
 
-/** Fields the user corrected in the review step; null keeps the draft's value. The URL cannot be edited. */
+/**
+ * Fields the user corrected in the review step; null keeps the draft's value. The URL cannot be edited. In [contact] a null
+ * field keeps the draft's value and a blank one clears it.
+ */
 data class ImportEdits(
     val title: String? = null,
     val company: String? = null,
     val location: String? = null,
     val description: String? = null,
+    val contact: ImportContact? = null,
 )
 
 /** [created] is false when the caller had already imported the same link; [applicationId] is then the existing application. */

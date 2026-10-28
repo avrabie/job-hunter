@@ -34,6 +34,14 @@ const detail = (over: Partial<ApplicationDetail> = {}): ApplicationDetail => ({
   postingLastSeen: '2026-10-23T10:00:00Z',
   notes: '',
   letterCount: 0,
+  contact: {
+    street: null,
+    postalCode: null,
+    city: null,
+    person: null,
+    phone: null,
+    email: null,
+  },
   ...over,
 })
 
@@ -247,6 +255,96 @@ describe('application page', () => {
     )
     expect(screen.queryByText(/SECRET-BODY/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Notes')).toHaveValue('Draft')
+  })
+
+  it('shows the company and contact section empty, for every stage', async () => {
+    fakeServer({ stage: 'REJECTED' })
+    mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+
+    expect(
+      screen.getByRole('group', { name: 'Company & contact' }),
+    ).toBeInTheDocument()
+    for (const label of [
+      'Street',
+      'Postal code',
+      'City',
+      'Contact person',
+      'Contact phone',
+      'Contact email',
+    ])
+      expect(screen.getByLabelText(label)).toHaveValue('')
+    expect(screen.queryByText('null')).not.toBeInTheDocument()
+  })
+
+  it('saves a company detail with the notes and shows it after a reload', async () => {
+    const { calls } = fakeServer()
+    const first = mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+
+    await userEvent.type(screen.getByLabelText('Postal code'), '8001')
+    await userEvent.type(
+      screen.getByLabelText('Contact email'),
+      'a@example.com',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved.')).toBeInTheDocument()
+    const patch = calls.find((c) => c.init.method === 'PATCH')
+    expect(JSON.parse(patch?.init.body as string)).toMatchObject({
+      notes: '',
+      contact: { postalCode: '8001', email: 'a@example.com', street: '' },
+    })
+
+    first.unmount()
+    mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(screen.getByLabelText('Postal code')).toHaveValue('8001')
+    expect(screen.getByLabelText('Contact email')).toHaveValue('a@example.com')
+  })
+
+  it('sends a blank value to clear a stored detail', async () => {
+    const { calls } = fakeServer({
+      contact: {
+        street: null,
+        postalCode: null,
+        city: null,
+        person: null,
+        phone: '+41 44 123 45 67',
+        email: null,
+      },
+    })
+    mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+    expect(screen.getByLabelText('Contact phone')).toHaveValue(
+      '+41 44 123 45 67',
+    )
+
+    await userEvent.clear(screen.getByLabelText('Contact phone'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await screen.findByText('Saved.')
+    const patch = calls.find((c) => c.init.method === 'PATCH')
+    expect(JSON.parse(patch?.init.body as string).contact.phone).toBe('')
+  })
+
+  it('shows a fixed message for a refused contact detail and keeps what was typed', async () => {
+    stubFetch((_url, init) =>
+      init.method === 'PATCH'
+        ? json(400, { error: 'contact_invalid', secret: 'SECRET-BODY' })
+        : json(200, detail()),
+    )
+    mount()
+    await screen.findByRole('heading', { name: 'Backend Engineer' })
+
+    await userEvent.type(screen.getByLabelText('Contact email'), 'anna')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Check the company and contact details',
+    )
+    expect(screen.queryByText(/SECRET-BODY/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Contact email')).toHaveValue('anna')
   })
 
   it('changes the stage and shows the new one', async () => {

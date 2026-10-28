@@ -1,5 +1,7 @@
 import { apiFetch, ApiError, type TokenSource } from '../api/apiFetch.ts'
 import { messageForError, messageForStatus } from '../api/messages.ts'
+import type { ContactInput } from './CompanyContactFields.tsx'
+import type { ContactDetails } from './applicationsApi.ts'
 
 /** What the server read from a page, kept on the server until it is confirmed or expires. */
 export interface JobDraft {
@@ -9,6 +11,8 @@ export interface JobDraft {
   location: string
   description: string
   language: string
+  /** The company address and contact the page states; an unknown one is null. */
+  contact: ContactDetails
 }
 
 /** The fields the user may change before saving. */
@@ -17,6 +21,8 @@ export interface JobEdits {
   company: string
   location: string
   description: string
+  /** An empty string clears a detail. */
+  contact: ContactInput
 }
 
 /** The application a confirmed import leads to. `created` is false when the user already tracked it. */
@@ -62,14 +68,14 @@ const CODE_MESSAGES: Record<ImportErrorCode, string> = {
     'The job description could not be read from this page. Paste it instead.',
   not_a_job: 'This page does not seem to be a single job posting.',
   extraction_failed:
-    'The job details could not be extracted from this page. Try again later.',
+    'The job details could not be extracted from this page. Paste the job description instead.',
   rate_limited:
     'Too many imports in a short time. Wait a few minutes and try again.',
   llm_unavailable:
     'The import service is unavailable right now. Please try again later.',
   draft_not_found: 'This preview has expired. Preview the URL again.',
   invalid_edit:
-    'Check the title, company and description: they must not be empty, too long or contain markup.',
+    'Check the title, company, description and contact details: the first three must not be empty, no value may be too long or contain markup, and the email must look like an address.',
   application_limit: 'You have reached the limit of tracked jobs.',
 }
 

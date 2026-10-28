@@ -7,6 +7,7 @@ import net.s4v3.backend.accounts.CurrentUser
 import net.s4v3.backend.applications.ApplicationLimitException
 import net.s4v3.backend.applications.ApplicationNotAppliedException
 import net.s4v3.backend.applications.ApplicationPatch
+import net.s4v3.backend.applications.ContactDetails
 import net.s4v3.backend.applications.ApplicationService
 import net.s4v3.backend.applications.ApplicationStage
 import net.s4v3.backend.applications.InvalidApplicationPatchException
@@ -29,7 +30,12 @@ import java.util.UUID
 internal data class TrackRequest(val postingId: UUID)
 
 /** The body of `PATCH /api/applications/{id}`: an absent field is left as it is. `appliedOn` is `YYYY-MM-DD`. */
-internal data class PatchRequest(val stage: String? = null, val notes: String? = null, val appliedOn: String? = null)
+internal data class PatchRequest(
+    val stage: String? = null,
+    val notes: String? = null,
+    val appliedOn: String? = null,
+    val contact: ContactDetails? = null,
+)
 
 /** The caller's tracked jobs. The owner is always the token's `sub`; no field names a user. */
 @RestController
@@ -112,11 +118,13 @@ internal class ApplicationController(
 
     @PatchMapping("/api/applications/{id}")
     @Operation(
-        summary = "Change the stage, the notes or the applied date",
-        description = "Body fields `stage`, `notes` (at most 5 000 characters) and `appliedOn` (`YYYY-MM-DD`) are all optional. Entering APPLIED without a date records today.",
+        summary = "Change the stage, the notes, the applied date or the company contact",
+        description = "Body fields `stage`, `notes` (at most 5 000 characters), `appliedOn` (`YYYY-MM-DD`) and `contact` are all optional. " +
+            "`contact` holds `street`, `postalCode`, `city`, `person`, `phone` and `email`; an omitted or null one is left as it is and a blank one clears it. " +
+            "Entering APPLIED without a date records today.",
         responses = [
             ApiResponse(responseCode = "200", description = "The changed application"),
-            ApiResponse(responseCode = "400", description = "Unknown stage, over-long notes or a bad date (`stage_invalid`, `notes_invalid`, `applied_on_invalid`)"),
+            ApiResponse(responseCode = "400", description = "Unknown stage, over-long notes, a bad date or a bad contact detail (`stage_invalid`, `notes_invalid`, `applied_on_invalid`, `contact_invalid`)"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "404", description = "No such application of the caller's"),
         ],
@@ -133,7 +141,7 @@ internal class ApplicationController(
             }
         }
         return try {
-            applications.update(currentUser.id(), id, ApplicationPatch(stage, request.notes, appliedOn))
+            applications.update(currentUser.id(), id, ApplicationPatch(stage, request.notes, appliedOn, request.contact))
                 ?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build()
         } catch (e: InvalidApplicationPatchException) {
             codeError(HttpStatus.BAD_REQUEST, e.code)
@@ -143,8 +151,8 @@ internal class ApplicationController(
     @GetMapping("/api/applications/{id}/rav")
     @Operation(
         summary = "The fields for the Swiss RAV job-search proof",
-        description = "Only for an application in stage APPLIED. Answers the position (job title), the original posting link and the " +
-            "fields the application does not store (company address, contact person, phone, e-mail, postal code): those are JSON null.",
+        description = "Only for an application in stage APPLIED. Answers the position (job title), the original posting link and the stored " +
+            "company address (\"street, postal code city\", built from the parts present), postal code, contact person, phone and e-mail; a missing one is JSON null.",
         responses = [
             ApiResponse(responseCode = "200", description = "The proof fields"),
             ApiResponse(responseCode = "401", description = "No valid access token"),

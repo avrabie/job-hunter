@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import net.s4v3.backend.accounts.CurrentUser
+import net.s4v3.backend.jobimport.ImportContact
 import net.s4v3.backend.jobimport.ImportEdits
 import net.s4v3.backend.jobimport.ImportError
 import net.s4v3.backend.jobimport.ImportRequest
@@ -24,6 +25,7 @@ internal data class ConfirmImportRequest(
     val company: String? = null,
     val location: String? = null,
     val description: String? = null,
+    val contact: ImportContact? = null,
 )
 
 /** Imports a job from a link. The owner is always the token's `sub`. */
@@ -38,11 +40,11 @@ internal class JobImportController(
     @Operation(
         summary = "Preview a job import",
         description = "Body `{\"url\": \"https://...\"}`, or `{\"url\", \"text\"}` with the page's text pasted by the user (then nothing is " +
-            "fetched). Fetches the https page, extracts title, company, location, description and language with the language model " +
+            "fetched). Fetches the https page, extracts title, company, location, description, language and, when the page states them, the company address and contact (`contact`: street, postalCode, city, person, phone, email; each null unless found in the page text) with the language model " +
             "and stores a draft for one hour. Nothing is created yet. Counts against `jobhunter.import.previews-per-hour`. " +
             "Errors are `{\"error\": code, \"message\": ...}`.",
         responses = [
-            ApiResponse(responseCode = "200", description = "`{draftId, title, company, location, description, language}`"),
+            ApiResponse(responseCode = "200", description = "`{draftId, title, company, location, description, language, contact}`"),
             ApiResponse(responseCode = "400", description = "`invalid_url`, `unsupported_site` or `blocked_address`"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "413", description = "The request body is over 256 KB (`too_large`)"),
@@ -57,13 +59,13 @@ internal class JobImportController(
     @PostMapping("/api/job-imports")
     @Operation(
         summary = "Confirm a job import",
-        description = "Body `{draftId, title?, company?, location?, description?}`. Turns the caller's own unexpired draft into an " +
+        description = "Body `{draftId, title?, company?, location?, description?, contact?}`. Turns the caller's own unexpired draft into an " +
             "INTERESTED application that only the caller can see (no shared posting is created). Importing the same link again " +
             "returns the existing application with `created` false. Edits replace the draft's fields within their length " +
-            "limits. Counts against `jobhunter.import.confirms-per-day`.",
+            "limits; in `contact` an omitted field keeps the draft's value and a blank one clears it. Counts against `jobhunter.import.confirms-per-day`.",
         responses = [
             ApiResponse(responseCode = "201", description = "`{applicationId, created}`"),
-            ApiResponse(responseCode = "400", description = "An edit is blank, too long or contains HTML (`invalid_edit`)"),
+            ApiResponse(responseCode = "400", description = "An edit is blank, too long, contains HTML or is not an e-mail address (`invalid_edit`)"),
             ApiResponse(responseCode = "401", description = "No valid access token"),
             ApiResponse(responseCode = "404", description = "No such draft of the caller's, or it expired (`draft_not_found`)"),
             ApiResponse(responseCode = "409", description = "The caller already tracks 500 jobs (`application_limit`)"),
@@ -76,7 +78,7 @@ internal class JobImportController(
         } catch (_: IllegalArgumentException) {
             return error(JobImportException(ImportError.DRAFT_NOT_FOUND))
         }
-        val edits = ImportEdits(request?.title, request?.company, request?.location, request?.description)
+        val edits = ImportEdits(request?.title, request?.company, request?.location, request?.description, request?.contact)
         return respond(HttpStatus.CREATED) { imports.confirm(currentUser.id(), draftId, edits) }
     }
 

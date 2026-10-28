@@ -3,6 +3,7 @@ package net.s4v3.backend
 import com.jayway.jsonpath.JsonPath
 import net.s4v3.backend.applications.ApplicationLimitException
 import net.s4v3.backend.applications.ApplicationService
+import net.s4v3.backend.applications.ContactDetails
 import net.s4v3.backend.applications.JobData
 import net.s4v3.backend.postings.PostingCandidate
 import net.s4v3.backend.postings.PostingIngest
@@ -385,5 +386,123 @@ internal class ApplicationsApiTests(
         mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(other))).andExpect(status().isNotFound)
         mvc.perform(get("/api/applications/${UUID.randomUUID()}/rav").header("Authorization", bearer(owner))).andExpect(status().isNotFound)
         mvc.perform(get("/api/applications/$id/rav")).andExpect(status().isUnauthorized)
+    }
+
+    private val fullContact = ContactDetails(
+        "Bahnhofstrasse 1", "8001", "Zürich", "Anna Muster", "+41 44 123 45 67", "anna.muster@example.com",
+    )
+
+    @Test
+    fun `an application created before the contact columns reads null for all six`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+
+        read(sub, id).andExpect(status().isOk)
+            .andExpect(jsonPath("$.contact.street").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.postalCode").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.city").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.person").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.phone").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.email").value(org.hamcrest.Matchers.nullValue()))
+    }
+
+    @Test
+    fun `an imported job keeps its contact details, returned by the detail and absent from the list`() {
+        val sub = provisionedSub()
+        val result = applications.trackImported(sub, importedJob().copy(contact = fullContact))
+
+        read(sub, result.application.id.toString()).andExpect(status().isOk)
+            .andExpect(jsonPath("$.contact.street").value("Bahnhofstrasse 1"))
+            .andExpect(jsonPath("$.contact.postalCode").value("8001"))
+            .andExpect(jsonPath("$.contact.city").value("Zürich"))
+            .andExpect(jsonPath("$.contact.person").value("Anna Muster"))
+            .andExpect(jsonPath("$.contact.phone").value("+41 44 123 45 67"))
+            .andExpect(jsonPath("$.contact.email").value("anna.muster@example.com"))
+        mvc.perform(get("/api/applications").header("Authorization", bearer(sub))).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].contact").doesNotExist()).andExpect(jsonPath("$[0].street").doesNotExist())
+            .andExpect(jsonPath("$[0].contactEmail").doesNotExist())
+    }
+
+    @Test
+    fun `a patch sets contact details, a blank clears one and an omitted one stays`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+
+        patchApp(sub, id, """{"contact":{"person":" Anna Muster ","city":"Zürich"}}""").andExpect(status().isOk)
+            .andExpect(jsonPath("$.contact.person").value("Anna Muster")).andExpect(jsonPath("$.contact.city").value("Zürich"))
+        patchApp(sub, id, """{"contact":{"person":"   "}}""").andExpect(status().isOk)
+            .andExpect(jsonPath("$.contact.person").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.city").value("Zürich"))
+        patchApp(sub, id, """{"notes":"x"}""").andExpect(status().isOk).andExpect(jsonPath("$.contact.city").value("Zürich"))
+        read(sub, id).andExpect(jsonPath("$.contact.person").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.city").value("Zürich"))
+    }
+
+    @Test
+    fun `a patch with a broken contact rule answers 400 contact_invalid and changes nothing`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+        patchApp(sub, id, """{"contact":{"email":"anna@example.com"}}""").andExpect(status().isOk)
+
+        for (bad in listOf(
+            """{"email":"anna"}""", """{"postalCode":"12345678901"}""", """{"phone":"${"1".repeat(41)}"}""",
+            """{"street":"${"a".repeat(201)}"}""", """{"person":"<b>x</b>"}""",
+        )) {
+            patchApp(sub, id, """{"notes":"changed","contact":$bad}""").andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.error").value("contact_invalid"))
+        }
+        read(sub, id).andExpect(jsonPath("$.contact.email").value("anna@example.com")).andExpect(jsonPath("$.notes").value(""))
+    }
+
+    @Test
+    fun `another user cannot patch the contact details`() {
+        val owner = newSub()
+        val other = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(owner, posting).andExpect(status().isCreated))
+        patchApp(owner, id, """{"contact":{"city":"Bern"}}""").andExpect(status().isOk)
+
+        patchApp(other, id, """{"contact":{"city":"Basel"}}""").andExpect(status().isNotFound)
+        read(owner, id).andExpect(jsonPath("$.contact.city").value("Bern"))
+    }
+
+    private fun ravAddress(contact: String): String? {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+        patchApp(sub, id, """{"stage":"APPLIED","contact":$contact}""").andExpect(status().isOk)
+        val json = mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(sub))).andExpect(status().isOk)
+            .andReturn().response.contentAsString
+        return JsonPath.read<String?>(json, "$.companyAddress")
+    }
+
+    @Test
+    fun `the RAV proof builds the address from the stored parts and returns the contact fields`() {
+        val sub = newSub()
+        val (_, posting) = newPosting()
+        val id = idOf(track(sub, posting).andExpect(status().isCreated))
+        patchApp(
+            sub, id,
+            """{"stage":"APPLIED","contact":{"street":"Bahnhofstrasse 1","postalCode":"8001","city":"Zürich","person":"Anna Muster","phone":"+41 44 123 45 67","email":"anna.muster@example.com"}}""",
+        ).andExpect(status().isOk)
+
+        mvc.perform(get("/api/applications/$id/rav").header("Authorization", bearer(sub))).andExpect(status().isOk)
+            .andExpect(jsonPath("$.companyAddress").value("Bahnhofstrasse 1, 8001 Zürich"))
+            .andExpect(jsonPath("$.postalCode").value("8001"))
+            .andExpect(jsonPath("$.contactPerson").value("Anna Muster"))
+            .andExpect(jsonPath("$.contactPhone").value("+41 44 123 45 67"))
+            .andExpect(jsonPath("$.contactEmail").value("anna.muster@example.com"))
+    }
+
+    @Test
+    fun `the RAV address skips missing parts and is null when none is stored`() {
+        assertEquals("Zürich", ravAddress("""{"city":"Zürich"}"""))
+        assertEquals("8001", ravAddress("""{"postalCode":"8001"}"""))
+        assertEquals("8001 Zürich", ravAddress("""{"postalCode":"8001","city":"Zürich"}"""))
+        assertEquals("Bahnhofstrasse 1", ravAddress("""{"street":"Bahnhofstrasse 1"}"""))
+        assertEquals(null, ravAddress("{}"))
     }
 }

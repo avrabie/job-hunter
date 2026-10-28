@@ -15,6 +15,14 @@ const draft = {
   location: 'Zurich',
   description: 'Invented job text for the review',
   language: 'en',
+  contact: {
+    street: 'Bahnhofstrasse 1',
+    postalCode: '8001',
+    city: 'Zürich',
+    person: null,
+    phone: null,
+    email: null,
+  },
 }
 
 const imported = {
@@ -104,6 +112,15 @@ describe('Add job from URL: preview', () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save and track' })).toBeEnabled()
+    expect(screen.getByLabelText('Street')).toHaveValue('Bahnhofstrasse 1')
+    expect(screen.getByLabelText('Postal code')).toHaveValue('8001')
+    expect(screen.getByLabelText('City')).toHaveValue('Zürich')
+    expect(screen.getByLabelText('Contact person')).toHaveValue('')
+    expect(screen.getByLabelText('Contact phone')).toHaveValue('')
+    expect(screen.getByLabelText('Contact email')).toHaveValue('')
+    expect(
+      screen.getByText(/These values come from the ad .* Check them/),
+    ).toBeInTheDocument()
     expect(calls).toHaveLength(1)
     expect(calls[0].url).toBe('/api/job-imports/preview')
     expect(calls[0].init.method).toBe('POST')
@@ -133,16 +150,12 @@ describe('Add job from URL: fixed messages per error code', () => {
     ],
     ['not_a_job', 'This page does not seem to be a single job posting.'],
     [
-      'extraction_failed',
-      'The job details could not be extracted from this page. Try again later.',
-    ],
-    [
       'llm_unavailable',
       'The import service is unavailable right now. Please try again later.',
     ],
     [
       'invalid_edit',
-      'Check the title, company and description: they must not be empty, too long or contain markup.',
+      'Check the title, company, description and contact details: the first three must not be empty, no value may be too long or contain markup, and the email must look like an address.',
     ],
     ['application_limit', 'You have reached the limit of tracked jobs.'],
   ])(
@@ -195,6 +208,10 @@ describe('Add job from URL: paste fallback', () => {
     [
       'unreachable',
       'The page could not be reached. Paste the job description instead.',
+    ],
+    [
+      'extraction_failed',
+      'The job details could not be extracted from this page. Paste the job description instead.',
     ],
   ])(
     'reveals the paste field after %s and resubmits the URL with the text',
@@ -277,6 +294,10 @@ describe('Add job from URL: confirm', () => {
     await userEvent.type(title, 'Senior Backend Engineer')
     await userEvent.clear(screen.getByLabelText(/Location/))
     await userEvent.type(screen.getByLabelText(/Location/), 'Bern')
+    await userEvent.type(
+      screen.getByLabelText('Contact email'),
+      'jobs@employer1.example',
+    )
     await userEvent.click(
       screen.getByRole('button', { name: 'Save and track' }),
     )
@@ -293,6 +314,14 @@ describe('Add job from URL: confirm', () => {
       company: 'Employer1 AG',
       location: 'Bern',
       description: 'Invented job text for the review',
+      contact: {
+        street: 'Bahnhofstrasse 1',
+        postalCode: '8001',
+        city: 'Zürich',
+        person: '',
+        phone: '',
+        email: 'jobs@employer1.example',
+      },
     })
   })
 
@@ -332,6 +361,30 @@ describe('Add job from URL: confirm', () => {
     expect(
       screen.queryByRole('button', { name: 'Save and track' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('keeps the typed contact values and shows the message on invalid_edit', async () => {
+    stubFetch((url) =>
+      url === '/api/job-imports/preview'
+        ? json(200, draft)
+        : json(400, { error: 'invalid_edit', secret: 'SECRET-BODY' }),
+    )
+    mount()
+    await previewUrl()
+    await userEvent.type(
+      await screen.findByLabelText('Contact email'),
+      'not-an-email',
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save and track' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Check the title, company, description and contact details',
+    )
+    expect(screen.queryByText(/SECRET-BODY/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Contact email')).toHaveValue('not-an-email')
+    expect(screen.getByLabelText('Street')).toHaveValue('Bahnhofstrasse 1')
   })
 
   it('stays on the review and shows a fixed message when saving fails', async () => {

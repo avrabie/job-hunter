@@ -73,7 +73,8 @@ export function RavProofCard({ applicationId }: { applicationId: string }) {
     <Card title="RAV proof fields" headingLevel={2} className="rav-proof">
       <p>
         The fields of the Swiss RAV job-search proof for this application. Copy
-        each value into the form.
+        each value into the form. A value shown as null is not stored: fill it
+        in under <a href="#company-contact">Company &amp; contact</a> and save.
       </p>
       <div className="application-actions">
         <button

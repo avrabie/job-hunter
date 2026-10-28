@@ -18,6 +18,11 @@ import {
   type ApplicationDetail,
   type ApplicationStage,
 } from './applicationsApi.ts'
+import {
+  CompanyContactFields,
+  contactInput,
+  type ContactKey,
+} from './CompanyContactFields.tsx'
 import { LetterWorkspace } from './LetterWorkspace.tsx'
 import { RavProofCard } from './RavProofCard.tsx'
 
@@ -147,14 +152,17 @@ function ApplicationView({
 
       <Editor key={a.id} application={a} onChanged={() => void refresh()} />
 
-      {a.stage === 'APPLIED' && <RavProofCard applicationId={a.id} />}
+      {a.stage === 'APPLIED' && (
+        // Keyed by the details so the fields shown are never older than the saved ones.
+        <RavProofCard key={JSON.stringify(a.contact)} applicationId={a.id} />
+      )}
 
       <LetterWorkspace applicationId={a.id} />
     </div>
   )
 }
 
-/** The editable parts: stage, applied date, notes and removal. `onChanged` reloads the application after a save. */
+/** The editable parts: stage, applied date, notes, company and contact, and removal. `onChanged` reloads the application after a save. */
 function Editor({
   application,
   onChanged,
@@ -166,6 +174,7 @@ function Editor({
   const navigate = useNavigate()
   const [notes, setNotes] = useState(application.notes)
   const [appliedOn, setAppliedOn] = useState(application.appliedOn ?? '')
+  const [contact, setContact] = useState(contactInput(application.contact))
   const [saved, setSaved] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -177,6 +186,7 @@ function Editor({
     const result = await updateApplication(auth, application.id, {
       notes,
       appliedOn: appliedOn || null,
+      contact,
     })
     if (result.kind === 'done') {
       setSaved(true)
@@ -246,6 +256,16 @@ function Editor({
             />
           )}
         </FormField>
+        <fieldset id="company-contact">
+          <legend>Company &amp; contact</legend>
+          <CompanyContactFields
+            value={contact}
+            onChange={(key: ContactKey, value) => {
+              setContact((current) => ({ ...current, [key]: value }))
+              setSaved(false)
+            }}
+          />
+        </fieldset>
         <div className="application-actions">
           <button type="submit">Save</button>
           {saved && <span role="status">Saved.</span>}

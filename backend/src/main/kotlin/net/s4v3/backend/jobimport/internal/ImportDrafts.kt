@@ -1,5 +1,6 @@
 package net.s4v3.backend.jobimport.internal
 
+import net.s4v3.backend.jobimport.ImportContact
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
@@ -18,6 +19,7 @@ internal data class Draft(
     val location: String?,
     val description: String,
     val language: String,
+    val contact: ImportContact = ImportContact(),
 )
 
 /** Drafts. Every read and delete of a draft is by id and owner, so another user's id is an unknown id. */
@@ -26,21 +28,29 @@ internal class ImportDrafts(private val jdbc: JdbcTemplate) {
 
     fun insert(owner: String, draft: Draft, now: Instant) {
         jdbc.update(
-            "insert into job_import_draft (id, owner, url, title, company, location, description, language, created_at, expires_at) " +
-                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "insert into job_import_draft (id, owner, url, title, company, location, description, language, created_at, expires_at, " +
+                "company_street, company_postal_code, company_city, contact_person, contact_phone, contact_email) " +
+                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             draft.id, owner, draft.url, draft.title, draft.company, draft.location, draft.description, draft.language,
             Timestamp.from(now), Timestamp.from(now.plus(TTL)),
+            draft.contact.street, draft.contact.postalCode, draft.contact.city, draft.contact.person, draft.contact.phone,
+            draft.contact.email,
         )
     }
 
     /** The owner's draft that has not expired at [now], or null. */
     fun find(owner: String, id: UUID, now: Instant): Draft? = jdbc.query(
-        "select id, url, title, company, location, description, language from job_import_draft " +
+        "select id, url, title, company, location, description, language, company_street, company_postal_code, " +
+            "company_city, contact_person, contact_phone, contact_email from job_import_draft " +
             "where id = ? and owner = ? and expires_at > ?",
         { rs, _ ->
             Draft(
                 rs.getObject("id", UUID::class.java), rs.getString("url"), rs.getString("title"), rs.getString("company"),
                 rs.getString("location"), rs.getString("description"), rs.getString("language"),
+                ImportContact(
+                    rs.getString("company_street"), rs.getString("company_postal_code"), rs.getString("company_city"),
+                    rs.getString("contact_person"), rs.getString("contact_phone"), rs.getString("contact_email"),
+                ),
             )
         },
         id, owner, Timestamp.from(now),

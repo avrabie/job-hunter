@@ -96,8 +96,12 @@ internal class JobImportApiTests(
 
         fun page(text: String) = "<html><body><h1>Backend Engineer</h1><p>$text</p></body></html>"
 
-        fun job(title: String = "Backend Engineer", company: String = "Employer1 AG", location: String? = "Zurich", description: String = DESCRIPTION) =
-            JobDraft(true, title, company, location, description, LetterLanguage.EN)
+        fun job(title: String = "Backend Engineer", company: String = "Employer1 AG", location: String? = "Zurich", description: String = DESCRIPTION,
+            street: String? = null, postalCode: String? = null, city: String? = null, person: String? = null,
+            phone: String? = null, email: String? = null,
+        ) = JobDraft(true, title, company, location, description, LetterLanguage.EN, street, postalCode, city, person, phone, email)
+
+        const val CONTACT_TEXT = "Muster AG, Bahnhofstrasse 1, 8001 Zürich. Questions? Anna Muster, anna.muster@example.com, +41 44 123 45 67."
     }
 
     private fun bearer(sub: String) = "Bearer " + SharedMockIssuer.instance.token(sub)
@@ -496,5 +500,96 @@ internal class JobImportApiTests(
         assertTrue(Grounding.isGrounded("alpha beta gamma delta other", page))
         assertFalse(Grounding.isGrounded("alpha beta gamma other another", page))
         assertFalse(Grounding.isGrounded("   ", page))
+    }
+
+    private fun contactPage() {
+        fetcher.answer = { FetchResult.Page(page("$DESCRIPTION $CONTACT_TEXT")) }
+    }
+
+    @Test
+    fun `the preview carries the grounded address and contact and drops what the page does not state`() {
+        val sub = newSub()
+        contactPage()
+        extractor.answer = {
+            job(street = "Bahnhofstrasse 1", postalCode = "8001", city = "Zürich", person = "Anna Muster", email = "hr@other.example")
+        }
+
+        previewUrl(sub, "https://jobs.example.com/c-${unique()}").andExpect(status().isOk)
+            .andExpect(jsonPath("$.contact.street").value("Bahnhofstrasse 1")).andExpect(jsonPath("$.contact.postalCode").value("8001"))
+            .andExpect(jsonPath("$.contact.city").value("Zürich")).andExpect(jsonPath("$.contact.person").value("Anna Muster"))
+            .andExpect(jsonPath("$.contact.phone").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.email").value(org.hamcrest.Matchers.nullValue()))
+    }
+
+    @Test
+    fun `an edit to a contact detail is applied on confirm and the other extracted values stay`() {
+        val sub = newSub()
+        contactPage()
+        extractor.answer = { job(street = "Bahnhofstrasse 1", postalCode = "8001", city = "Zürich", email = "anna.muster@example.com") }
+        val id = draftId(sub)
+
+        val result = confirm(sub, """{"draftId":"$id","contact":{"email":"jobs@muster.example","city":" "}}""").andExpect(status().isCreated)
+
+        mvc.perform(get("/api/applications/${field(result, "$.applicationId")}").header("Authorization", bearer(sub)))
+            .andExpect(jsonPath("$.contact.email").value("jobs@muster.example"))
+            .andExpect(jsonPath("$.contact.city").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.contact.street").value("Bahnhofstrasse 1")).andExpect(jsonPath("$.contact.postalCode").value("8001"))
+    }
+
+    @Test
+    fun `a contact edit that breaks a rule is 400 invalid_edit and creates nothing`() {
+        val sub = newSub()
+        val id = draftId(sub)
+
+        for (bad in listOf(
+            """{"email":"not-an-email"}""", """{"street":"${"s".repeat(201)}"}""", """{"city":"${"c".repeat(201)}"}""",
+            """{"person":"${"p".repeat(201)}"}""", """{"phone":"${"1".repeat(41)}"}""", """{"email":"${"e".repeat(250)}@x.io"}""",
+            """{"postalCode":"12345678901"}""", """{"person":"<b>x</b>"}""",
+        )) {
+            confirm(sub, """{"draftId":"$id","contact":$bad}""").andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.error").value("invalid_edit"))
+        }
+        mvc.perform(get("/api/applications").header("Authorization", bearer(sub))).andExpect(jsonPath("$.length()").value(0))
+        confirm(sub, """{"draftId":"$id","contact":{"postalCode":"AB-1234"}}""").andExpect(status().isCreated)
+    }
+
+    @Test
+    fun `another user's draft with contact details is 404 and returns none of them`() {
+        val a = newSub()
+        val b = newSub()
+        contactPage()
+        extractor.answer = { job(person = "Anna Muster", email = "anna.muster@example.com") }
+        val id = draftId(a)
+
+        confirm(b, """{"draftId":"$id","contact":{"city":"Bern"}}""").andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.error").value("draft_not_found")).andExpect(jsonPath("$.contact").doesNotExist())
+    }
+
+    @Test
+    fun `logs carry none of the six address and contact values`() {
+        val sub = newSub()
+        val marker = "zq" + unique()
+        fetcher.answer = {
+            FetchResult.Page(page("$DESCRIPTION Marker${marker}street 1, 8001 Zürich$marker. Contact Person$marker, p$marker@example.com, +41 44 555 66 77."))
+        }
+        extractor.answer = {
+            job(
+                street = "Marker${marker}street 1", postalCode = "8001", city = "Zürich$marker", person = "Person$marker",
+                phone = "+41 44 555 66 77", email = "p$marker@example.com",
+            )
+        }
+
+        val events = captureAppLogs {
+            val id = field(previewUrl(sub, "https://jobs.example.com/l-${unique()}").andExpect(status().isOk), "$.draftId")
+            confirm(sub, """{"draftId":"$id","contact":{"phone":"+41 44 999 88 77"}}""").andExpect(status().isCreated)
+            val bad = field(previewUrl(sub, "https://jobs.example.com/m-${unique()}").andExpect(status().isOk), "$.draftId")
+            confirm(sub, """{"draftId":"$bad","contact":{"email":"bad$marker"}}""").andExpect(status().isBadRequest)
+        }
+
+        val text = events.joinToString("\n") { it.fullText() }
+        assertTrue("Import preview ok" in text && "Import confirm ok" in text && "code=invalid_edit" in text, text)
+        for (secret in listOf(marker, "example.com", "Zürich", "555 66 77", "999 88 77", "8001")) {
+            assertFalse(secret in text, "log output contains: $secret")
+        }
     }
 }

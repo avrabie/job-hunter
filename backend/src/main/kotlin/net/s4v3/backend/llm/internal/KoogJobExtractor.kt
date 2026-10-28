@@ -45,7 +45,11 @@ internal class KoogJobExtractor(
                     executor.execute(p, model).textContent()
                 }
             }
-            val draft = JobDraftCleaner.clean(raw) ?: throw LlmFailure(LlmFailureKind.FAILED)
+            val draft = JobDraftCleaner.clean(raw) ?: run {
+                // A fixed word and a length, never the answer itself.
+                log.warn("Job extraction refused the answer: {} ({} chars)", JobDraftCleaner.refusalReason(raw), raw.length)
+                throw LlmFailure(LlmFailureKind.FAILED)
+            }
             log.info("Job extracted by the model in {} ms (found: {})", elapsedMs(started), draft.found)
             return draft
         } catch (e: LlmFailure) {
@@ -74,6 +78,12 @@ internal data class JobDraftJson(
     val location: String? = null,
     val description: String = "",
     val language: String = "EN",
+    val street: String? = null,
+    val postalCode: String? = null,
+    val city: String? = null,
+    val contactPerson: String? = null,
+    val contactPhone: String? = null,
+    val contactEmail: String? = null,
 )
 
 /** Output cleaning of design decision 5 (the grounding check is the caller's). Returns null when the answer must be refused. */
@@ -82,13 +92,48 @@ internal object JobDraftCleaner {
     const val MAX_COMPANY_CHARS = 200
     const val MAX_LOCATION_CHARS = 200
     const val MAX_DESCRIPTION_CHARS = 20_000
+    const val MAX_DETAIL_CHARS = 200
     private val FENCE = Regex("^```[A-Za-z]*[ \\t]*\\n(.*)\\n```$", RegexOption.DOT_MATCHES_ALL)
     private val HTML_TAG = Regex("<\\s*[A-Za-z/!]")
     private val JSON = Json { ignoreUnknownKeys = true }
 
-    fun clean(raw: String): JobDraft? {
+    /** The answer's JSON text: without a code fence, and without prose around the object. */
+    private fun jsonText(raw: String): String {
         var text = raw.trim()
         FENCE.matchEntire(text)?.let { text = it.groupValues[1].trim() }
+        if (!text.startsWith("{")) {
+            val from = text.indexOf('{')
+            val to = text.lastIndexOf('}')
+            if (from >= 0 && to > from) text = text.substring(from, to + 1)
+        }
+        return text
+    }
+
+    /** Why [clean] refuses [raw], as a fixed word for the log (never the answer's text). */
+    fun refusalReason(raw: String): String {
+        val parsed = try {
+            JSON.decodeFromString(JobDraftJson.serializer(), jsonText(raw))
+        } catch (_: Exception) {
+            return "not_json"
+        }
+        if (!parsed.found) return "not_found"
+        val title = parsed.title.trim()
+        val company = parsed.company.trim()
+        val description = parsed.description.trim()
+        return when {
+            title.isEmpty() -> "empty_title"
+            company.isEmpty() -> "empty_company"
+            description.isEmpty() -> "empty_description"
+            title.length > MAX_TITLE_CHARS || company.length > MAX_COMPANY_CHARS -> "too_long"
+            description.length > MAX_DESCRIPTION_CHARS -> "description_too_long"
+            listOfNotNull(title, company, parsed.location, description).any { HTML_TAG.containsMatchIn(it) } -> "markup"
+            parsed.language.trim().uppercase() !in setOf("EN", "DE") -> "bad_language"
+            else -> "other"
+        }
+    }
+
+    fun clean(raw: String): JobDraft? {
+        val text = jsonText(raw)
         val parsed = try {
             JSON.decodeFromString(JobDraftJson.serializer(), text)
         } catch (_: Exception) {
@@ -108,6 +153,15 @@ internal object JobDraftCleaner {
             "DE" -> LetterLanguage.DE
             else -> return null
         }
-        return JobDraft(true, title, company, location, description, language)
+        return JobDraft(
+            true, title, company, location, description, language,
+            street = detail(parsed.street), postalCode = detail(parsed.postalCode), city = detail(parsed.city),
+            contactPerson = detail(parsed.contactPerson), contactPhone = detail(parsed.contactPhone),
+            contactEmail = detail(parsed.contactEmail),
+        )
     }
+
+    /** An address or contact value: blank, over-long or tag-like becomes null, since a missing value never fails the answer. */
+    private fun detail(value: String?): String? =
+        value?.trim()?.takeIf { it.isNotEmpty() && it.length <= MAX_DETAIL_CHARS && !HTML_TAG.containsMatchIn(it) }
 }
