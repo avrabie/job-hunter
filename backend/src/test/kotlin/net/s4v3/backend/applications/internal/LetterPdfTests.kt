@@ -59,6 +59,15 @@ class LetterPdfTests {
     }
 
     @Test
+    fun `the sender block shows name, email and linkedin above the letter and escapes markup`() {
+        val extracted = text(letter.render("Hallo", LetterPdf.Sender("Ada <b>Example</b>", "ada@example.com", null, "https://www.linkedin.com/in/ada/", "Zürich")))
+        assertTrue(extracted.indexOf("ada@example.com") in 0 until extracted.indexOf("Hallo"))
+        assertTrue(extracted.contains("Ada <b>Example</b>") && extracted.contains("linkedin.com/in/ada") && extracted.contains("Zürich"))
+        assertEquals("", letter.header(LetterPdf.Sender(" ", null)))
+        assertEquals("", letter.header(null))
+    }
+
+    @Test
     fun `a long letter paginates`() {
         val pdf = letter.render((1..80).joinToString("\n\n") { "Paragraph $it with some words to fill the line and a bit more." })
         assertTrue(Loader.loadPDF(pdf).use { it.numberOfPages } > 1)

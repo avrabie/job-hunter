@@ -151,7 +151,12 @@ internal class DefaultLetterService(
     override fun pdf(sub: String, applicationId: UUID, version: Int): LetterFile? {
         val job = applications.frozenJob(sub, applicationId) ?: return null
         val row = repository.find(sub, applicationId, version) ?: return null
-        return LetterFile(pdfs.render(row.text), letterFileName(job.company, job.title, version).removeSuffix(".md") + ".pdf")
+        return LetterFile(pdfs.render(row.text, sender(sub)), letterFileName(job.company, job.title, version).removeSuffix(".md") + ".pdf")
+    }
+
+    private fun sender(sub: String): LetterPdf.Sender {
+        val p = profiles.get(sub).profile
+        return LetterPdf.Sender(p.contact.fullName, p.contact.email, p.contact.phone, p.contact.linkedin, p.location?.city)
     }
 
     override fun delete(sub: String, applicationId: UUID, version: Int): Boolean =

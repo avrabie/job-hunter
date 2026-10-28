@@ -33,7 +33,10 @@ internal class LetterPdf {
 
     private val permits = Semaphore(MAX_PARALLEL)
 
-    fun render(markdown: String): ByteArray {
+    /** The sender block at the top of the page: the name, then the contact lines. Personal data: never log it. */
+    data class Sender(val name: String?, val email: String? = null, val phone: String? = null, val linkedin: String? = null, val city: String? = null)
+
+    fun render(markdown: String, sender: Sender? = null): ByteArray {
         if (!permits.tryAcquire(WAIT_SECONDS, TimeUnit.SECONDS)) throw LetterPdfBusyException()
         try {
             val out = ByteArrayOutputStream()
@@ -45,7 +48,7 @@ internal class LetterPdf {
                 val bytes = FONT_BYTES.getValue(file)
                 builder.useFont(FSSupplier<InputStream> { ByteArrayInputStream(bytes) }, FAMILY, weight, style, true)
             }
-            builder.withHtmlContent(html(markdown), null)
+            builder.withHtmlContent(html(markdown, sender), null)
             builder.toStream(out)
             builder.run()
             return out.toByteArray()
@@ -58,11 +61,32 @@ internal class LetterPdf {
         }
     }
 
-    internal fun html(markdown: String): String =
+    internal fun html(markdown: String, sender: Sender? = null): String =
         "<!DOCTYPE html>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta charset=\"UTF-8\"/>\n" +
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'\"/>\n" +
             "<title>Motivation letter</title>\n<style>$CSS</style>\n</head>\n<body>\n" +
-            renderer.render(parser.parse(withSalutation(markdown))) + "</body>\n</html>\n"
+            header(sender) + renderer.render(parser.parse(withSalutation(markdown))) + "</body>\n</html>\n"
+
+    private fun esc(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+
+    /** Name in large type, contact details on one line below it, a thin rule under both. Empty when nothing is known. */
+    internal fun header(sender: Sender?): String {
+        if (sender == null) return ""
+        val name = sender.name?.trim().orEmpty()
+        val parts = listOfNotNull(
+            sender.city?.trim()?.takeIf { it.isNotEmpty() }?.let { esc(it) },
+            sender.email?.trim()?.takeIf { it.isNotEmpty() }?.let { esc(it) },
+            sender.phone?.trim()?.takeIf { it.isNotEmpty() }?.let { esc(it) },
+            sender.linkedin?.trim()?.takeIf { it.startsWith("https://") }?.let {
+                "<a href=\"${esc(it)}\">${esc(it.removePrefix("https://").removePrefix("www.").trimEnd('/'))}</a>"
+            },
+        )
+        if (name.isEmpty() && parts.isEmpty()) return ""
+        return "<div class=\"sender\">" +
+            (if (name.isEmpty()) "" else "<div class=\"sender-name\">${esc(name)}</div>") +
+            (if (parts.isEmpty()) "" else "<div class=\"sender-contact\">${parts.joinToString(" &#183; ")}</div>") +
+            "</div>\n"
+    }
 
     /**
      * The letter prompt leaves "[Salutation]" for the applicant to fill in. When it is still there, the PDF greets the
@@ -114,6 +138,10 @@ li { margin: 0 0 3pt 0; }
 blockquote { margin: 0 0 10pt 0; padding-left: 10pt; border-left: 2pt solid #999; color: #333; }
 pre, code { font-family: monospace; font-size: 10pt; }
 a { color: #111; }
+.sender { margin: 0 0 22pt 0; padding-bottom: 8pt; border-bottom: 1pt solid #2b4a6f; }
+.sender-name { font-size: 20pt; font-weight: 700; color: #2b4a6f; line-height: 1.2; }
+.sender-contact { font-size: 10pt; color: #444; margin-top: 3pt; }
+.sender-contact a { color: #2b4a6f; text-decoration: none; }
 hr { border: 0; border-top: 0.5pt solid #999; margin: 12pt 0; }
 """
     }
