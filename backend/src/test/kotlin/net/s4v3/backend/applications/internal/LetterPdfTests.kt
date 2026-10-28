@@ -44,6 +44,13 @@ class LetterPdfTests {
     }
 
     @Test
+    fun `the default greeting keeps its own paragraph`() {
+        listOf("[Salutation],\n\nText.", "[Salutation]\n\nText.", "\\[Salutation\\]\nText.").forEach {
+            assertTrue(letter.withSalutation(it).startsWith("Sehr geehrtes Recruiting-Team,\n\nText."), it)
+        }
+    }
+
+    @Test
     fun `a given salutation is kept and the name stays on its own line`() {
         val extracted = text(letter.render("Sehr geehrte Frau Muster,\n\nText.\n\nFreundliche Grüsse\nAdrian Vrabie"))
         assertTrue(extracted.contains("Sehr geehrte Frau Muster,"))

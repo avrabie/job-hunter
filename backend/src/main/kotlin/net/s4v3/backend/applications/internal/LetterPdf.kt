@@ -71,7 +71,8 @@ internal class LetterPdf {
     internal fun withSalutation(markdown: String): String {
         val english = Regex("kind regards", RegexOption.IGNORE_CASE).containsMatchIn(markdown)
         val greeting = if (english) "Dear Recruiting Team," else "Sehr geehrtes Recruiting-Team,"
-        return PLACEHOLDER.replace(markdown, greeting)
+        // The pattern swallows the whitespace after the placeholder, so the greeting gets its own paragraph back.
+        return PLACEHOLDER.replace(markdown, greeting + "\n\n")
     }
 
     /** Never opens a connection: every request gets an empty stream. */
@@ -97,7 +98,7 @@ internal class LetterPdf {
             file to LetterPdf::class.java.getResourceAsStream("/cv-export/fonts/$file")!!.use { it.readAllBytes() }
         }
         val parser: Parser = Parser.builder().build()
-        val PLACEHOLDER = Regex("""\\?\[Salutation\\?\]\s*,?""", RegexOption.IGNORE_CASE)
+        val PLACEHOLDER = Regex("""\\?\[Salutation\\?\]\s*,?\s*""", RegexOption.IGNORE_CASE)
         // A single newline is a line break, so the closing line and the name stay on separate lines.
         val renderer: HtmlRenderer = HtmlRenderer.builder().softbreak("<br />\n").escapeHtml(true).sanitizeUrls(true).percentEncodeUrls(true).build()
 
