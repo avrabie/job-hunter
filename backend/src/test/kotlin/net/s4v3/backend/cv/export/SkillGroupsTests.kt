@@ -100,6 +100,7 @@ class SkillGroupsTests {
             listOf(
                 "Programming languages",
                 "Frameworks",
+                "Frontend",
                 "Messaging",
                 "Security & identity",
                 "Cloud & containers",
@@ -115,6 +116,7 @@ class SkillGroupsTests {
             listOf(
                 "Programmiersprachen",
                 "Frameworks",
+                "Frontend",
                 "Messaging",
                 "Sicherheit & Identität",
                 "Cloud & Container",

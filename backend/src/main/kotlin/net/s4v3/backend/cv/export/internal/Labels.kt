@@ -42,6 +42,7 @@ internal object Labels {
         CvLanguage.EN -> when (group) {
             SkillGroup.LANGUAGES -> "Programming languages"
             SkillGroup.FRAMEWORKS -> "Frameworks"
+            SkillGroup.FRONTEND -> "Frontend"
             SkillGroup.MESSAGING -> "Messaging"
             SkillGroup.SECURITY -> "Security & identity"
             SkillGroup.CLOUD -> "Cloud & containers"
@@ -53,6 +54,7 @@ internal object Labels {
         CvLanguage.DE -> when (group) {
             SkillGroup.LANGUAGES -> "Programmiersprachen"
             SkillGroup.FRAMEWORKS -> "Frameworks"
+            SkillGroup.FRONTEND -> "Frontend"
             SkillGroup.MESSAGING -> "Messaging"
             SkillGroup.SECURITY -> "Sicherheit & Identität"
             SkillGroup.CLOUD -> "Cloud & Container"

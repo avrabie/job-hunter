@@ -9,6 +9,7 @@ import net.s4v3.backend.cv.export.CvSectionKind
 import net.s4v3.backend.cv.export.CvTemplate
 import net.s4v3.backend.cv.export.EntrySection
 import net.s4v3.backend.cv.export.ExportOptions
+import net.s4v3.backend.cv.export.GroupedTagSection
 import net.s4v3.backend.cv.export.LineSection
 import net.s4v3.backend.cv.export.ProseSection
 import net.s4v3.backend.cv.export.TagSection
@@ -18,6 +19,8 @@ import net.s4v3.backend.cv.export.internal.MarkdownRenderer
 import net.s4v3.backend.cv.export.internal.PdfRenderer
 import net.s4v3.backend.profile.Contact
 import net.s4v3.backend.profile.Preferences
+import net.s4v3.backend.profile.Skill
+import net.s4v3.backend.profile.SkillLevel
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.WorkAuthorisation
 import net.s4v3.backend.profile.internal.ProfileJson
@@ -217,6 +220,25 @@ class CvBuilderTests {
             val entry = (experience.sections.single() as EntrySection).entries.first()
             assertEquals(listOf(achievement), entry.bullets)
         }
+    }
+
+    @Test
+    fun `professional skills print only beginner and expert levels and react and angular sit under frontend`() {
+        val skills = listOf(
+            Skill("React", SkillLevel.ADVANCED),
+            Skill("Angular", SkillLevel.INTERMEDIATE),
+            Skill("Spring Boot", SkillLevel.ADVANCED),
+            Skill("Rust", SkillLevel.BEGINNER),
+            Skill("Kotlin", SkillLevel.EXPERT),
+        )
+        val document = build(
+            profile().copy(skills = skills),
+            options(sections = listOf(CvSectionKind.SKILLS)).copy(template = CvTemplate.PROFESSIONAL),
+        )
+        val groups = (document.sections[0] as GroupedTagSection).groups.associate { it.name to it.tags }
+        assertEquals(listOf("Rust (Beginner)", "Kotlin (Expert)"), groups["Programming languages"])
+        assertEquals(listOf("Spring Boot"), groups["Frameworks"])
+        assertEquals(listOf("React", "Angular"), groups["Frontend"])
     }
 
     @Test

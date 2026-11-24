@@ -27,6 +27,7 @@ import net.s4v3.backend.profile.OpenSourceProject
 import net.s4v3.backend.profile.Profile
 import net.s4v3.backend.profile.Publication
 import net.s4v3.backend.profile.Skill
+import net.s4v3.backend.profile.SkillLevel
 
 /**
  * Turns a [Profile] and the export options into a [CvDocument]: which sections, in which order, with which entries.
@@ -169,9 +170,11 @@ internal object CvBuilder {
         }.ifEmpty { null }?.let { GroupedTagSection(title, it) }
     }
 
+    /** The level is printed for beginner and expert only; intermediate and advanced skills show the name alone. */
     private fun skillTag(skill: Skill, language: CvLanguage): String? {
         val name = clean(skill.name) ?: return null
-        return skill.level?.let { "$name (${Labels.skillLevel(it, language)})" } ?: name
+        val shownLevel = skill.level?.takeIf { it == SkillLevel.BEGINNER || it == SkillLevel.EXPERT }
+        return shownLevel?.let { "$name (${Labels.skillLevel(it, language)})" } ?: name
     }
 
     private fun codeAccountLink(account: CodeAccount): CvLink = when (account.provider) {

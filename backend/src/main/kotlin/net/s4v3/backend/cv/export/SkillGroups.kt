@@ -1,7 +1,7 @@
 package net.s4v3.backend.cv.export
 
 /** The groups of skills in the Professional template, in print order. [OTHER] is printed last. */
-enum class SkillGroup { LANGUAGES, FRAMEWORKS, MESSAGING, SECURITY, CLOUD, TESTING, DATABASES, TOOLS, OTHER }
+enum class SkillGroup { LANGUAGES, FRAMEWORKS, FRONTEND, MESSAGING, SECURITY, CLOUD, TESTING, DATABASES, TOOLS, OTHER }
 
 /**
  * Puts a skill name into one [SkillGroup] by a fixed keyword list. A keyword matches a whole token of the name
@@ -17,9 +17,10 @@ internal object SkillGroups {
             "pl/sql", "julia", "r", "php", "ruby", "swift", "bash",
         ),
         SkillGroup.FRAMEWORKS to listOf(
-            "spring", "spring boot", "webflux", "hibernate", "jpa", "react", "angular", "vue", "django", "flask",
-            "quarkus", "micronaut", "jax-rs", "jsf", "jsp",
+            "spring", "spring boot", "webflux", "hibernate", "jpa", "django", "flask",
+            "quarkus", "micronaut", "jax-rs",
         ),
+        SkillGroup.FRONTEND to listOf("react", "angular", "vue", "htmx", "jsf", "jsp"),
         SkillGroup.MESSAGING to listOf("kafka", "activemq", "rabbitmq", "jms", "mqtt", "nats", "pulsar"),
         SkillGroup.SECURITY to listOf("oauth2", "oidc", "jwt", "saml", "mtls", "scim", "keycloak", "tls", "sso"),
         SkillGroup.CLOUD to listOf(

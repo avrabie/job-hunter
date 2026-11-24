@@ -26,6 +26,7 @@ describe('labels', () => {
     expect(SKILL_GROUPS.map((g) => SKILL_GROUP_LABELS[g])).toEqual([
       'Programming languages',
       'Frameworks',
+      'Frontend',
       'Messaging',
       'Security & identity',
       'Cloud & containers',

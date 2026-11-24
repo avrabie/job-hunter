@@ -72,7 +72,7 @@ its fields; they stay mounted, so nothing is lost or saved differently.
 
 ## Skill groups (`profile/skillGroups.ts`)
 
-Skills are sorted into nine groups, in display order: `LANGUAGES`, `FRAMEWORKS`, `MESSAGING`, `SECURITY`, `CLOUD`,
+Skills are sorted into ten groups, in display order: `LANGUAGES`, `FRAMEWORKS`, `FRONTEND`, `MESSAGING`, `SECURITY`, `CLOUD`,
 `TESTING`, `DATABASES`, `TOOLS`, `OTHER` (last). `groupSkills` matches each skill name against keyword lists (the
 first matching group wins; no match is `OTHER`). `SKILL_GROUPS` and the keywords are ported from the backend's
 `SkillGroups.kt`, which is the reference. The shared case table `skillGroups.cases.json` is also read by the backend's
