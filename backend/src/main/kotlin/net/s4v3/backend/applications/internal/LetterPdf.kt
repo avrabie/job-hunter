@@ -129,12 +129,12 @@ internal class LetterPdf {
         const val CSS = """
 @page { size: A4; margin: 25mm; }
 body { font-family: 'Source Sans 3', sans-serif; font-size: 11pt; line-height: 1.45; color: #111; }
-p { margin: 0 0 10pt 0; }
+p { margin: 0 0 10pt 0; text-align: justify; }
 h1 { font-size: 16pt; margin: 0 0 10pt 0; }
 h2 { font-size: 13pt; margin: 14pt 0 6pt 0; }
 h3, h4, h5, h6 { font-size: 11pt; margin: 12pt 0 4pt 0; }
 ul, ol { margin: 0 0 10pt 0; padding-left: 18pt; }
-li { margin: 0 0 3pt 0; }
+li { margin: 0 0 3pt 0; text-align: justify; }
 blockquote { margin: 0 0 10pt 0; padding-left: 10pt; border-left: 2pt solid #999; color: #333; }
 pre, code { font-family: monospace; font-size: 10pt; }
 a { color: #111; }

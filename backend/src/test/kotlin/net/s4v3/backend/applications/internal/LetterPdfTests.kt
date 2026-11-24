@@ -68,6 +68,13 @@ class LetterPdfTests {
     }
 
     @Test
+    fun `paragraphs and list items are justified`() {
+        val html = letter.html("Text.")
+        assertTrue(Regex("""p \{[^}]*text-align: justify""").containsMatchIn(html))
+        assertTrue(Regex("""li \{[^}]*text-align: justify""").containsMatchIn(html))
+    }
+
+    @Test
     fun `a long letter paginates`() {
         val pdf = letter.render((1..80).joinToString("\n\n") { "Paragraph $it with some words to fill the line and a bit more." })
         assertTrue(Loader.loadPDF(pdf).use { it.numberOfPages } > 1)
