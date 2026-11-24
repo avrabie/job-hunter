@@ -146,7 +146,7 @@ class CvBuilderTests {
             assertEquals("octocat/hello-world", entry.link?.text)
             assertEquals("https://github.com/octocat/hello-world", entry.link?.url)
             assertEquals("My first repository", entry.text)
-            assertEquals("Kotlin · 42 stars", entry.subheading)
+            assertEquals("Kotlin", entry.subheading)
             assertTrue("Maintainer since 2022" in entry.bullets)
         }
     }

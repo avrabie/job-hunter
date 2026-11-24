@@ -137,10 +137,7 @@ internal object CvBuilder {
         val analysis = if (options.includeAnalysis) project.analysis else null
         return CvEntry(
             heading = project.name,
-            subheading = listOfNotNull(
-                clean(project.language),
-                project.stars?.let { Labels.stars(it, options.language) },
-            ).joinToString(" · ").ifEmpty { null },
+            subheading = clean(project.language),
             link = CvLink(project.fullName, project.url),
             text = clean(project.description),
             bullets = listOfNotNull(clean(project.note), analysis?.let { clean(it.summary) }),

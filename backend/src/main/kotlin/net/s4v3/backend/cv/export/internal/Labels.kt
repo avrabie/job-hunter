@@ -152,9 +152,4 @@ internal object Labels {
         }
         return Locale.forLanguageTag(code).getDisplayLanguage(locale).ifBlank { code }
     }
-
-    fun stars(count: Int, language: CvLanguage): String = when (language) {
-        CvLanguage.EN -> if (count == 1) "1 star" else "$count stars"
-        CvLanguage.DE -> if (count == 1) "1 Stern" else "$count Sterne"
-    }
 }

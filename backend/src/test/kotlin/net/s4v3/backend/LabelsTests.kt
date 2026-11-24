@@ -40,7 +40,6 @@ class LabelsTests {
                 SkillLevel.entries.forEach { add(Labels.skillLevel(it, language)) }
                 LanguageLevel.entries.forEach { add(Labels.languageLevel(it, language)) }
                 WorkAuthorisation.entries.forEach { add(Labels.workAuthorisation(it, language)) }
-                add(Labels.stars(2, language))
             }
         }
         assertFalse(labels.any { "ß" in it }, labels.toString())
@@ -95,12 +94,5 @@ class LabelsTests {
         assertEquals("English", Labels.languageName("en", CvLanguage.EN))
         assertEquals("Englisch", Labels.languageName("en", CvLanguage.DE))
         assertEquals("Französisch", Labels.languageName("fr", CvLanguage.DE))
-    }
-
-    @Test
-    fun `stars use singular for one`() {
-        assertEquals("1 star", Labels.stars(1, CvLanguage.EN))
-        assertEquals("42 stars", Labels.stars(42, CvLanguage.EN))
-        assertEquals("42 Sterne", Labels.stars(42, CvLanguage.DE))
     }
 }
