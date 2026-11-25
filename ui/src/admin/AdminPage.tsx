@@ -3,6 +3,7 @@ import { PageLoading } from '../ui/PageLoading.tsx'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext.ts'
 import { Landing } from '../pages/Landing.tsx'
+import { AdminUsers } from './AdminUsers.tsx'
 import { Alert } from '../ui/Alert.tsx'
 import { Card } from '../ui/Card.tsx'
 import { FormField } from '../ui/FormField.tsx'
@@ -33,7 +34,12 @@ export function AdminPage() {
         </div>
       )
     case 'signedIn':
-      return <ScheduleEditor />
+      return (
+        <>
+          <ScheduleEditor />
+          <AdminUsers />
+        </>
+      )
   }
 }
 

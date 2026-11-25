@@ -24,6 +24,8 @@ function stubFetch(handler: (url: string, init?: RequestInit) => Response) {
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ url, init })
+      // The users section on the same page is answered with an empty list; the schedule tests are about the schedule.
+      if (url.startsWith('/api/admin/users')) return json(200, [])
       return handler(url, init)
     }),
   )
